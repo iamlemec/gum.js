@@ -8,8 +8,8 @@
 let ns_svg = 'http://www.w3.org/2000/svg';
 
 // sizing
-let size_base = 100;
-let rect_base = [0, 0, 100, 100];
+let size_base = 250;
+let rect_base = [0, 0, size_base, size_base];
 let frac_base = [0, 0, 1, 1];
 let prec_base = 13;
 
@@ -21,7 +21,7 @@ function merge() {
     return Object.assign({}, ...arguments);
 }
 
-function* zip0(...iterables) {
+function* gzip(...iterables) {
     let iterators = iterables.map(i => i[Symbol.iterator]());
     while (true) {
         let results = iterators.map(iter => iter.next());
@@ -34,7 +34,7 @@ function* zip0(...iterables) {
 }
 
 function zip(...iterables) {
-    return [...zip0(...iterables)];
+    return [...gzip(...iterables)];
 }
 
 function sum(arr) {
@@ -45,6 +45,11 @@ function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
     return (first ?? true) ? [0, ...ret] : ret;
+}
+
+function range(i0, i1) {
+    [i0, i1] = (i1 === undefined) ? [0, i0] : [i0, i1];
+    return [...Array(i1-i0).keys()].map(i => i + i0);
 }
 
 /**
@@ -266,6 +271,12 @@ class SVG extends Container {
  ** layout classes
  **/
 
+class Group extends Container {
+    constructor(children, aspect, attr) {
+        super(children, 'g', aspect, attr);
+    }
+}
+
 class VStack extends Container {
     constructor(children, expand, aspect, attr) {
         expand = expand ?? true;
@@ -340,6 +351,56 @@ class HStack extends Container {
  ** basic geometry
  **/
 
+// unary | aspect
+class Ray extends Element {
+    constructor(theta, attr) {
+        theta = theta ?? -45;
+
+        // map into (-90, 90];
+        if (theta == -90) {
+            theta = 90;
+        } else if (theta < -90 || theta > 90) {
+            theta = ((theta + 90) % 180) - 90;
+        }
+
+        // map theta into direction and aspect
+        let direc;
+        let aspect;
+        if (theta == 90) {
+            direc = Infinity;
+            aspect = null;
+        } else if (theta == 0) {
+            direc = 0;
+            aspect = null;
+        } else {
+            let direc0 = Math.tan(theta*(Math.PI/180));
+            direc = direc0;
+            aspect = 1/Math.abs(direc0);
+        }
+
+        // pass to Element
+        let attr1 = merge({stroke: 'black'}, attr);
+        super('line', true, aspect, attr1);
+        this.direc = direc;
+    }
+
+    props(ctx) {
+        let [x1, y1, x2, y2] = ctx.rect;
+        let [w, h] = [x2 - x1, y2 - y1];
+
+        if (!isFinite(this.direc)) {
+            x1 = x2 = x1 + 0.5*w;
+        } else if (this.direc == 0) {
+            y1 = y2 = y1 + 0.5*h;
+        } else if (this.direc > 0) {
+            [y1, y2] = [y2, y1];
+        }
+
+        let base = {x1: x1, y1: y1, x2: x2, y2: y2};
+        return merge(base, this.attr);
+    }
+}
+
 // unary | null-aspect
 class Rect extends Element {
     constructor(attr) {
@@ -362,6 +423,8 @@ class Rect extends Element {
 
 export {
     map_coords, pos_rect, demangle, rounder, props_repr,
-    Context, Element, Container, SVG, VStack, HStack,
-    Rect
+    range,
+    Context, Element, Container, Group, SVG,
+    VStack, HStack,
+    Ray, Rect
 };
