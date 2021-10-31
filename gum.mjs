@@ -43,9 +43,11 @@ function cumsum(arr, first) {
     return (first ?? true) ? [0, ...ret] : ret;
 }
 
-function range(i0, i1) {
+function range(i0, i1, step) {
+    step = step ?? 1;
     [i0, i1] = (i1 === undefined) ? [0, i0] : [i0, i1];
-    return [...Array(i1-i0).keys()].map(i => i + i0);
+    let n = Math.floor((i1-i0)/step);
+    return [...Array(n).keys()].map(i => i0 + step*i);
 }
 
 /**

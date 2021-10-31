@@ -1,6 +1,6 @@
 /* gum test suite */
 
-import { SVG, Container, VStack, HStack, Ray, Rect } from './gum.mjs';
+import { range, SVG, Container, VStack, HStack, Ray, Rect } from './gum.mjs';
 
 function example(name, elem) {
     console.log(`${name}:\n${elem.svg()}\n`);
@@ -32,6 +32,6 @@ example('Simple Ray', y);
 
 // starburst
 let sb = new Container(
-    [10, 20, 30, 40].map(t => new Ray(t))
+    range(10, 40, 10).map(t => new Ray(t))
 )
 example('Starburst', sb);
