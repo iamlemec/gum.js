@@ -108,12 +108,9 @@ function height(el) {
 }
 
 function renderGum(e, size) {
-    if (e instanceof SVG) {
-        let rect = [0, 0, size, size];
-        let ctx = new Context({rect: rect, prec: prec});
-        return e.svg(ctx);
-    } else if (e instanceof Element) {
-        return new SVG([e], {size: size}).svg(prec);
+    if (e instanceof Element) {
+        e = (e instanceof SVG) ? e : new SVG([e]);
+        return e.svg({size: size, prec: prec});
     } else {
         return e;
     }

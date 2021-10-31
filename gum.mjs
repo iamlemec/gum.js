@@ -228,12 +228,14 @@ class Container extends Element {
 
 class SVG extends Container {
     constructor(children, args) {
-        let {clip, ...attr} = args ?? {};
+        let {clip, aspect, ...attr} = args ?? {};
         children = children ?? [];
         clip = clip ?? true;
         super(children, {tag: 'svg', ...attr});
 
-        if (clip) {
+        if (aspect != null) {
+            this.aspect = aspect;
+        } else if (clip) {
             let ctx = new Context({rect: frac_base});
             let rects = this.children
                 .map(([c, r]) => ctx.map(r, c.aspect).rect);
