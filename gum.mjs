@@ -166,8 +166,9 @@ function props_repr(d, prec) {
 
 class Context {
     constructor(args) {
-        let {rect, prec, ...attr} = args ?? {};
+        let {rect, prec, size, ...attr} = args ?? {};
         this.rect = rect ?? rect_base;
+        this.size = size;
         this.prec = prec;
         this.attr = attr;
     }
@@ -231,43 +232,43 @@ class Container extends Element {
 
 class SVG extends Container {
     constructor(children, args) {
-        let {size, clip, ...attr} = args ?? {};
+        let {clip, ...attr} = args ?? {};
         children = children ?? [];
-        size = size ?? size_base;
         clip = clip ?? true;
         super(children, {tag: 'svg', ...attr});
 
-        let aspect;
         if (clip) {
             let ctx = new Context({rect: frac_base});
             let rects = this.children
-                .map(([c, r]) => ctx.map(r, aspect=c.aspect).rect);
+                .map(([c, r]) => ctx.map(r, c.aspect).rect);
             let total = merge_rects(rects);
-            aspect = rect_aspect(total);
+            this.aspect = rect_aspect(total);
         } else {
-            aspect = 1;
+            this.aspect = 1;
         }
-
-        if (!isNaN(size)) {
-            if (aspect >= 1) {
-                size = [size, size/aspect];
-            } else {
-                size = [size*aspect, size];
-            }
-        }
-        this.size = size;
     }
 
     props(ctx) {
-        let [w, h] = this.size;
+        let [w, h] = ctx.size;
         let base = {width: w, height: h, xmlns: ns_svg};
         return merge(base, this.attr);
     }
 
-    svg(prec) {
-        let [w, h] = this.size;
-        let rect = [0, 0, w, h];
-        let ctx = new Context({rect: rect, prec: prec});
+    svg(args) {
+        let {size, prec} = args ?? {};
+        size = size ?? size_base;
+
+        let w, h;
+        if (typeof(size) == 'number') {
+            if (this.aspect >= 1) {
+                size = [size, size/this.aspect];
+            } else {
+                size = [size*this.aspect, size];
+            }
+        }
+
+        let rect = [0, 0, ...size];
+        let ctx = new Context({rect: rect, size: size, prec: prec});
         return super.svg(ctx);
     }
 }
