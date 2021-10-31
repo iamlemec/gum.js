@@ -74,14 +74,15 @@ html, body {
 <textarea id="code">
 let n = 12;
 let r = new Rect();
-let g = new Group(
+let s = new Group(
     range(n)
     .map(i => (180/n)*(i-n/2))
     .map(t => new Ray(t))
 );
-let gr = new Group([r, g]);
-let vs = new HStack([gr, gr]);
-new SVG([vs], {size: [500, 250]})
+let hs = new HStack([s, s]);
+let vs = new VStack([hs, hs]);
+let gg = new Group([vs, r]);
+gg
 </textarea>
 
 </div>
