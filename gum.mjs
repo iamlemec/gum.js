@@ -17,10 +17,6 @@ let prec_base = 13;
  ** general utils
  **/
 
-function merge() {
-    return Object.assign({}, ...arguments);
-}
-
 function* gzip(...iterables) {
     let iterators = iterables.map(i => i[Symbol.iterator]());
     while (true) {
@@ -261,7 +257,7 @@ class SVG extends Container {
     props(ctx) {
         let [w, h] = this.size;
         let base = {width: w, height: h, xmlns: ns_svg};
-        return merge(base, this.attr);
+        return {...base, ...this.attr};
     }
 
     svg(prec) {
@@ -386,7 +382,7 @@ class Ray extends Element {
         }
 
         // pass to Element
-        let attr1 = merge({stroke: 'black'}, attr);
+        let attr1 = {stroke: 'black', ...attr};
         super('line', true, {aspect: aspect, ...attr1});
         this.direc = direc;
     }
@@ -404,7 +400,7 @@ class Ray extends Element {
         }
 
         let base = {x1: x1, y1: y1, x2: x2, y2: y2};
-        return merge(base, this.attr);
+        return {...base, ...this.attr};
     }
 }
 
@@ -412,7 +408,7 @@ class Ray extends Element {
 class Rect extends Element {
     constructor(attr) {
         let attr0 = {fill: 'none', stroke: 'black'};
-        let attr1 = merge(attr0, attr ?? {});
+        let attr1 = {...attr0, ...attr};
         super('rect', true, attr1);
     }
 
@@ -420,7 +416,7 @@ class Rect extends Element {
         let [x1, y1, x2, y2] = ctx.rect;
         let [w, h] = [x2 - x1, y2 - y1];
         let base = {x: x1, y: y1, width: w, height: h};
-        return merge(base, this.attr);
+        return {...base, ...this.attr};
     }
 }
 
