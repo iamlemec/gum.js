@@ -145,8 +145,8 @@ function rounder(x, prec) {
     }
 
     let ret;
-    if (!isNaN(x)) {
-        ret = x.toFixed(prec).replace(/\.?0+$/, '');
+    if (typeof(x) == 'number') {
+        ret = x.toFixed(prec);
     } else {
         ret = x;
     }
@@ -165,24 +165,26 @@ function props_repr(d, prec) {
  **/
 
 class Context {
-    constructor(rect, prec, attr) {
+    constructor(args) {
+        let {rect, prec, ...attr} = args ?? {};
         this.rect = rect ?? rect_base;
         this.prec = prec;
-        this.attr = attr ?? {};
+        this.attr = attr;
     }
 
     map(frect, aspect) {
         let rect1 = map_coords(this.rect, frect, aspect);
-        return new Context(rect1, this.prec);
+        return new Context({rect: rect1, prec: this.prec});
     }
 }
 
 class Element {
-    constructor(tag, unary, aspect, attr) {
+    constructor(tag, unary, args) {
+        let {aspect, ...attr} = args ?? {};
         this.tag = tag;
-        this.unary = unary ?? false;
+        this.unary = unary;
         this.aspect = aspect ?? null;
-        this.attr = attr ?? {};
+        this.attr = attr;
     }
 
     props(ctx) {
@@ -194,7 +196,7 @@ class Element {
     }
 
     svg(ctx, prec) {
-        ctx = ctx ?? new Context(null, prec);
+        ctx = ctx ?? new Context({prec: prec});
 
         let props = props_repr(this.props(ctx), ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
@@ -208,10 +210,12 @@ class Element {
 }
 
 class Container extends Element {
-    constructor(children, tag, aspect, attr) {
+    constructor(children, args) {
+        let {tag, ...attr} = args ?? {};
         children = children ?? [];
         tag = tag ?? 'g';
-        super(tag, false, aspect, attr);
+        super(tag, false, attr);
+
         this.children = children
             .map(c => c instanceof Element ? [c, null] : c)
             .map(([c, r]) => [c, pos_rect(r)]);
@@ -226,15 +230,16 @@ class Container extends Element {
 }
 
 class SVG extends Container {
-    constructor(children, size, clip, attr) {
+    constructor(children, args) {
+        let {size, clip, ...attr} = args ?? {};
         children = children ?? [];
         size = size ?? size_base;
         clip = clip ?? true;
-        super(children, 'svg', null, attr);
+        super(children, {tag: 'svg', ...attr});
 
         let aspect;
         if (clip) {
-            let ctx = new Context(frac_base);
+            let ctx = new Context({rect: frac_base});
             let rects = this.children
                 .map(([c, r]) => ctx.map(r, aspect=c.aspect).rect);
             let total = merge_rects(rects);
@@ -262,7 +267,7 @@ class SVG extends Container {
     svg(prec) {
         let [w, h] = this.size;
         let rect = [0, 0, w, h];
-        let ctx = new Context(rect, prec);
+        let ctx = new Context({rect: rect, prec: prec});
         return super.svg(ctx);
     }
 }
@@ -272,13 +277,14 @@ class SVG extends Container {
  **/
 
 class Group extends Container {
-    constructor(children, aspect, attr) {
-        super(children, 'g', aspect, attr);
+    constructor(children, args) {
+        super(children, args);
     }
 }
 
 class VStack extends Container {
-    constructor(children, expand, aspect, attr) {
+    constructor(children, args) {
+        let {expand, aspect, attr} = args ?? {};
         expand = expand ?? true;
 
         // get children, heights, and aspects
@@ -313,7 +319,8 @@ class VStack extends Container {
 }
 
 class HStack extends Container {
-    constructor(children, expand, aspect, attr) {
+    constructor(children, args) {
+        let {expand, aspect, attr} = args ?? {};
         expand = expand ?? true;
 
         // get children, heights, and aspects
@@ -380,7 +387,7 @@ class Ray extends Element {
 
         // pass to Element
         let attr1 = merge({stroke: 'black'}, attr);
-        super('line', true, aspect, attr1);
+        super('line', true, {aspect: aspect, ...attr1});
         this.direc = direc;
     }
 
@@ -405,8 +412,8 @@ class Ray extends Element {
 class Rect extends Element {
     constructor(attr) {
         let attr0 = {fill: 'none', stroke: 'black'};
-        let attr1 = merge(attr0, attr);
-        super('rect', true, null, attr1);
+        let attr1 = merge(attr0, attr ?? {});
+        super('rect', true, attr1);
     }
 
     props(ctx) {

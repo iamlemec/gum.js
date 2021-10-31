@@ -9,6 +9,13 @@
 
 <style>
 
+textarea, textarea:focus {
+    box-sizing: border-box;
+    outline: none;
+    border: 0.5px solid black;
+    padding: 2px;
+}
+
 html, body {
     height: 98%;
 }
@@ -40,8 +47,7 @@ html, body {
 
 #code, #conv {
     width: 100%;
-    height: 99.5%;
-    outline: 0;
+    height: 100%;
     margin: 0;
     padding: 0;
     resize: none;
@@ -73,7 +79,9 @@ let g = new Group(
     .map(i => (180/n)*(i-n/2))
     .map(t => new Ray(t))
 );
-new Group([r, g])
+let gr = new Group([r, g]);
+let vs = new HStack([gr, gr]);
+new SVG([vs], {size: [500, 250]})
 </textarea>
 
 </div>
@@ -101,10 +109,10 @@ function height(el) {
 function renderGum(e, size) {
     if (e instanceof SVG) {
         let rect = [0, 0, size, size];
-        let ctx = Context(rect, prec);
+        let ctx = new Context({rect: rect, prec: prec});
         return e.svg(ctx);
     } else if (e instanceof Element) {
-        return new SVG([e], size).svg(prec);
+        return new SVG([e], {size: size}).svg(prec);
     } else {
         return e;
     }
