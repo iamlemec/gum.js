@@ -1,0 +1,8 @@
+{
+  "name": "gum.js",
+  "version": "0.1",
+  "description": "Grammar for SVG creation.",
+  "type": "module",
+  "author": "Doug Hanley",
+  "license": "MIT"
+}
