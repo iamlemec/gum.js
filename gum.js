@@ -546,6 +546,27 @@ class Bullet extends Circle {
     }
 }
 
+// expose
+
+let Gum = [
+Context,
+Element,
+Container,
+Group,
+SVG,
+Frame,
+VStack,
+HStack,
+Ray,
+HLine,
+VLine,
+Rect,
+Circle,
+Ellipse,
+Bullet,
+range
+];
+
 /**
  ** exports
  **/
@@ -555,5 +576,5 @@ export {
     range,
     Context, Element, Container, Group, SVG,
     Frame, VStack, HStack,
-    Ray, Rect
+    Ray, Rect, Gum
 };

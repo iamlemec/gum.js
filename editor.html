@@ -92,7 +92,7 @@ let s = new Group(
 let hs = new HStack([s, s]);
 let vs = new VStack([hs, hs]);
 let gg = new Group([vs, r]);
-gg
+return gg
 </textarea>
 
 </div>
@@ -111,7 +111,7 @@ gg
 
 import {
     range, Context, Element, Container, Group, SVG,
-    Frame, HStack, VStack, Ray, Rect
+    Frame, HStack, VStack, Ray, Rect, Gum
 } from './gum.js'
 
 let prec = 2;
@@ -145,14 +145,19 @@ function flash(msg) {
 
 function renderCode() {
     let c = code.value;
-    let e = eval(c);
-    if (e == null) {
-        flash(err_nodata);
-    } else {
-        let size = 0.95*height(disp);
-        let s = renderGum(e, size);
-        conv.value = s;
-        disp.innerHTML = s;
+    let e = new Function(Gum.map(g => g.name), c);
+    try {
+        e=e(...Gum);
+        if (e == null) {
+            flash(err_nodata);
+        } else {
+            let size = 0.95*height(disp);
+            let s = renderGum(e, size);
+            conv.value = s;
+            disp.innerHTML = s;
+        }
+    } catch (error) {
+        console.error('---gum code did not compile---', error);
     }
 }
 
