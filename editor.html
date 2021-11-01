@@ -23,9 +23,18 @@ html, body {
 #main {
     width: 80%;
     height: 85%;
-    padding-top: 3%;
+    padding-top: 5%;
     display: flex;
     margin: auto;
+}
+
+#ebox {
+    position: absolute;
+    top: 0;
+    height: 50px;
+    width: 80%;
+    text-align: center;
+    padding-top: 25px;
 }
 
 #left {
@@ -69,6 +78,8 @@ html, body {
 
 <div id="main">
 
+<div id="ebox"></div>
+
 <div id="left">
 
 <textarea id="code">
@@ -98,7 +109,10 @@ gg
 
 <script type="module">
 
-import { range, Context, Element, Container, Group, SVG, HStack, VStack, Ray, Rect } from './gum.mjs'
+import {
+    range, Context, Element, Container, Group, SVG,
+    Frame, HStack, VStack, Ray, Rect
+} from './gum.mjs'
 
 let prec = 2;
 
@@ -118,14 +132,28 @@ function renderGum(e, size) {
 let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
+let ebox = document.querySelector('#ebox');
+
+let err_nodata = 'No data. Does your final line return an element?';
+
+function flash(msg) {
+    ebox.innerHTML = msg;
+    setTimeout(function() {
+        ebox.innerHTML = '';
+    }, 2500);
+}
 
 function renderCode() {
     let c = code.value;
     let e = eval(c);
-    let size = 0.95*height(disp);
-    let s = renderGum(e, size);
-    conv.value = s;
-    disp.innerHTML = s;
+    if (e == null) {
+        flash(err_nodata);
+    } else {
+        let size = 0.95*height(disp);
+        let s = renderGum(e, size);
+        conv.value = s;
+        disp.innerHTML = s;
+    }
 }
 
 renderCode();

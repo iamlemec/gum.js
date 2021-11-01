@@ -1,9 +1,24 @@
 /* gum test suite */
 
-import { range, SVG, Container, VStack, HStack, Ray, Rect } from './gum.mjs';
+import {
+    range, Context, SVG, Container, Frame, VStack, HStack, Ray, Rect
+} from './gum.mjs';
 
+// options
+let size = [100, 100];
+let rect = [0, 0, ...size];
+let prec = 2;
+let ctx = new Context({rect: rect, prec: prec});
+
+// display
 function example(name, elem) {
-    console.log(`${name}:\n${elem.svg()}\n`);
+    let src;
+    if (elem instanceof SVG) {
+        src = elem.svg({size: size, prec: prec});
+    } else {
+        src = elem.svg(ctx);
+    }
+    console.log(`${name}:\n${src}\n`);
 }
 
 // element
@@ -35,3 +50,7 @@ let sb = new Container(
     range(10, 40, 10).map(t => new Ray(t))
 )
 example('Starburst', sb);
+
+// frame
+let f = new Frame(r, {margin: 0.1, padding: 0.1, border: 1});
+example('Frame:', f);

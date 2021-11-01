@@ -103,6 +103,22 @@ function pos_rect(r) {
     }
 }
 
+function pad_rect(p, base) {
+    base = base ?? frac_base;
+    let [xa, ya, xb, yb] = base;
+    if (p == null) {
+        return base;
+    } else if (typeof(p) == 'number') {
+        return [xa+p, ya+p, xb-p, yb-p];
+    } else if (p.length == 2) {
+        let [px, py] = p;
+        return [xa+px, ya+py, xb-px, yb-py];
+    } else {
+        let [pxa, pya, pxb, pyb] = p;
+        return [xa+pxa, ya+pya, xb-pxb, yb-pyb];
+    }
+}
+
 function merge_rects(rects) {
     let [xa, ya, xb, yb] = [0,1,2,3]
         .map(i => rects.map(r => r[i]));
@@ -145,6 +161,7 @@ function rounder(x, prec) {
     let ret;
     if (typeof(x) == 'number') {
         ret = x.toFixed(prec);
+        ret = ret.replace(/(\.[0-9]*?)0+$/, '$1').replace(/\.$/, '');
     } else {
         ret = x;
     }
@@ -194,8 +211,8 @@ class Element {
         return '';
     }
 
-    svg(ctx, prec) {
-        ctx = ctx ?? new Context({prec: prec});
+    svg(ctx) {
+        ctx = ctx ?? new Context();
 
         let props = props_repr(this.props(ctx), ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
@@ -210,14 +227,29 @@ class Element {
 
 class Container extends Element {
     constructor(children, args) {
-        let {tag, ...attr} = args ?? {};
+        let {tag, aspect, clip, ...attr} = args ?? {};
         children = children ?? [];
         tag = tag ?? 'g';
+        clip = clip ?? true;
         super(tag, false, attr);
 
+        // handle default positioning
         this.children = children
             .map(c => c instanceof Element ? [c, null] : c)
             .map(([c, r]) => [c, pos_rect(r)]);
+
+        // inherit aspect of clipped contents
+        if (aspect != null) {
+            this.aspect = aspect;
+        } else if (clip) {
+            let ctx = new Context({rect: frac_base});
+            let rects = this.children
+                .map(([c, r]) => ctx.map(r, c.aspect).rect);
+            let total = merge_rects(rects);
+            this.aspect = rect_aspect(total);
+        } else {
+            this.aspect = 1;
+        }
     }
 
     inner(ctx) {
@@ -232,20 +264,7 @@ class SVG extends Container {
     constructor(children, args) {
         let {clip, aspect, ...attr} = args ?? {};
         children = children ?? [];
-        clip = clip ?? true;
         super(children, {tag: 'svg', ...attr});
-
-        if (aspect != null) {
-            this.aspect = aspect;
-        } else if (clip) {
-            let ctx = new Context({rect: frac_base});
-            let rects = this.children
-                .map(([c, r]) => ctx.map(r, c.aspect).rect);
-            let total = merge_rects(rects);
-            this.aspect = rect_aspect(total);
-        } else {
-            this.aspect = 1;
-        }
     }
 
     props(ctx) {
@@ -280,6 +299,43 @@ class SVG extends Container {
 class Group extends Container {
     constructor(children, args) {
         super(children, args);
+    }
+}
+
+class Frame extends Container {
+    constructor(child, args) {
+        let {padding, margin, border, aspect, ...attr} = args ?? {};
+        padding = padding ?? 0;
+        margin = margin ?? 0;
+
+        let mrect = pad_rect(margin);
+        let prect = pad_rect(padding);
+        let trect = pad_rect(padding, mrect);
+
+        let children = [];
+
+        if (border != null) {
+            let raspect;
+            if (aspect == null && child.aspect != null) {
+                let [pw, ph] = rect_dims(prect);
+                raspect = child.aspect*(ph/pw);
+            } else {
+                raspect = aspect;
+            }
+            let rargs = {stroke_width: border, aspect: raspect};
+            let rect = new Rect(rargs);
+            children.push([rect, mrect]);
+        }
+
+        children.push([child, trect]);
+
+        if (aspect == null && child.aspect != null) {
+            let [tw, th] = rect_dims(trect);
+            aspect = child.aspect*(th/tw);
+        }
+
+        let attr1 = {aspect: aspect, ...attr};
+        super(children, attr1);
     }
 }
 
@@ -410,6 +466,42 @@ class Ray extends Element {
 }
 
 // unary | null-aspect
+class VLine extends Element {
+    constructor(args) {
+        let {pos, ...attr} = args ?? {};
+        let attr1 = {stroke: 'black', ...attr};
+        super('line', true, attr1);
+        this.pos = pos ?? 0.5;
+    }
+
+    props(ctx) {
+        let [x1, y1, x2, y2] = ctx.rect;
+        let [w, h] = [x2 - x1, y2 - y1];
+        let xm = x1 + this.pos*w;
+        let base = {x1: xm, y1: y1, x2: xm, y2: y2};
+        return {...base, ...this.attr};
+    }
+}
+
+// unary | null-aspect
+class HLine extends Element {
+    constructor(args) {
+        let {pos, ...attr} = args ?? {};
+        let attr1 = {stroke: 'black', ...attr};
+        super('line', true, attr1);
+        this.pos = pos ?? 0.5;
+    }
+
+    props(self, ctx) {
+        let [x1, y1, x2, y2] = ctx.rect;
+        let [w, h] = [x2 - x1, y2 - y1];
+        let ym = y1 + this.pos*h;
+        let base = {x1: x1, y1: ym, x2: x2, y2: ym};
+        return {...base, ...this.attr};
+    }
+}
+
+// unary | null-aspect
 class Rect extends Element {
     constructor(attr) {
         let attr0 = {fill: 'none', stroke: 'black'};
@@ -425,14 +517,43 @@ class Rect extends Element {
     }
 }
 
+class Ellipse extends Element {
+    constructor(attr) {
+        let attr0 = {fill: 'none', stroke: 'black'};
+        let attr1 = {...attr0, ...attr};
+        super('ellipse', true, attr1);
+    }
+
+    props(ctx) {
+        let [x1, y1, x2, y2] = ctx.rect;
+        let [w, h] = [x2 - x1, y2 - y1];
+        let [cx, cy] = [x1 + 0.5*w, y1 + 0.5*h];
+        let [rx, ry] = [0.5*w, 0.5*h];
+        let base = {cx: cx, cy: cy, rx: rx, ry: ry};
+        return {...base, ...this.attr};
+    }
+}
+
+class Circle extends Ellipse {
+    constructor(attr) {
+        super({aspect: 1, ...attr});
+    }
+}
+
+class Bullet extends Circle {
+    constructor(attr) {
+        super({fill: 'black', ...attr});
+    }
+}
+
 /**
  ** exports
  **/
 
 export {
-    map_coords, pos_rect, demangle, rounder, props_repr,
+    map_coords, pos_rect, pad_rect, demangle, rounder, props_repr,
     range,
     Context, Element, Container, Group, SVG,
-    VStack, HStack,
+    Frame, VStack, HStack,
     Ray, Rect
 };
