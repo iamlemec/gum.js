@@ -443,8 +443,7 @@ class Ray extends Element {
         }
 
         // pass to Element
-        let attr1 = {stroke: 'black', ...attr};
-        super('line', true, {aspect: aspect, ...attr1});
+        super('line', true, {aspect: aspect, ...attr});
         this.direc = direc;
     }
 
@@ -469,8 +468,7 @@ class Ray extends Element {
 class VLine extends Element {
     constructor(args) {
         let {pos, ...attr} = args ?? {};
-        let attr1 = {stroke: 'black', ...attr};
-        super('line', true, attr1);
+        super('line', true, attr);
         this.pos = pos ?? 0.5;
     }
 
@@ -487,8 +485,7 @@ class VLine extends Element {
 class HLine extends Element {
     constructor(args) {
         let {pos, ...attr} = args ?? {};
-        let attr1 = {stroke: 'black', ...attr};
-        super('line', true, attr1);
+        super('line', true, attr);
         this.pos = pos ?? 0.5;
     }
 
@@ -504,9 +501,7 @@ class HLine extends Element {
 // unary | null-aspect
 class Rect extends Element {
     constructor(attr) {
-        let attr0 = {fill: 'none', stroke: 'black'};
-        let attr1 = {...attr0, ...attr};
-        super('rect', true, attr1);
+        super('rect', true, attr);
     }
 
     props(ctx) {
@@ -519,9 +514,7 @@ class Rect extends Element {
 
 class Ellipse extends Element {
     constructor(attr) {
-        let attr0 = {fill: 'none', stroke: 'black'};
-        let attr1 = {...attr0, ...attr};
-        super('ellipse', true, attr1);
+        super('ellipse', true, attr);
     }
 
     props(ctx) {
@@ -540,31 +533,11 @@ class Circle extends Ellipse {
     }
 }
 
-class Bullet extends Circle {
-    constructor(attr) {
-        super({fill: 'black', ...attr});
-    }
-}
-
 // expose
 
 let Gum = [
-Context,
-Element,
-Container,
-Group,
-SVG,
-Frame,
-VStack,
-HStack,
-Ray,
-HLine,
-VLine,
-Rect,
-Circle,
-Ellipse,
-Bullet,
-range
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Ray, HLine, VLine, Rect,
+    Ellipse, Circle, range
 ];
 
 /**
@@ -572,9 +545,6 @@ range
  **/
 
 export {
-    map_coords, pos_rect, pad_rect, demangle, rounder, props_repr,
-    range,
-    Context, Element, Container, Group, SVG,
-    Frame, VStack, HStack,
-    Ray, Rect, Gum
+    Gum, map_coords, pos_rect, pad_rect, demangle, rounder, props_repr, range, Context, Element,
+    Container, Group, SVG, Frame, VStack, HStack, Ray, Rect, Ellipse, Circle
 };

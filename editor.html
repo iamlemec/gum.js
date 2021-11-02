@@ -9,15 +9,21 @@
 
 <style>
 
-textarea, textarea:focus {
+textarea {
     box-sizing: border-box;
-    outline: none;
     border: 0.5px solid black;
-    padding: 2px;
+    outline: none;
+    padding: 10px;
+    resize: none;
 }
 
 html, body {
     height: 98%;
+}
+
+svg {
+    fill: none;
+    stroke: black;
 }
 
 #main {
@@ -58,8 +64,6 @@ html, body {
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 0;
-    resize: none;
 }
 
 #disp {
@@ -84,15 +88,15 @@ html, body {
 
 <textarea id="code">
 let n = 12;
-let r = new Rect();
-let s = new Group(
+let r = Rect();
+let s = Group(
     range(-90, 90, 180/n)
-    .map(t => new Ray(t))
+    .map(t => Ray(t))
 );
-let hs = new HStack([s, s]);
-let vs = new VStack([hs, hs]);
-let gg = new Group([vs, r]);
-return gg
+let hs = HStack([s, s]);
+let vs = VStack([hs, hs]);
+let gg = Group([vs, r]);
+return gg;
 </textarea>
 
 </div>
@@ -109,12 +113,12 @@ return gg
 
 <script type="module">
 
-import {
-    range, Context, Element, Container, Group, SVG,
-    Frame, HStack, VStack, Ray, Rect, Gum
-} from './gum.js'
+import { Gum, SVG, Element } from './gum.js'
 
+// gum.js interface mapper
 let prec = 2;
+let gums = Gum.map(g => g.name);
+let mako = Gum.map(g => function(...args) { return new g(...args); });
 
 function height(el) {
     return parseFloat(getComputedStyle(el, null).height.replace("px", ""));
@@ -145,14 +149,14 @@ function flash(msg) {
 
 function renderCode() {
     let c = code.value;
-    let e = new Function(Gum.map(g => g.name), c);
+    let e = new Function(gums, c);
     try {
-        e=e(...Gum);
-        if (e == null) {
+        let p = e(...mako);
+        if (p == null) {
             flash(err_nodata);
         } else {
             let size = 0.95*height(disp);
-            let s = renderGum(e, size);
+            let s = renderGum(p, size);
             conv.value = s;
             disp.innerHTML = s;
         }
