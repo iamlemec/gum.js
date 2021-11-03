@@ -10,68 +10,59 @@
 <style>
 
 textarea {
-    box-sizing: border-box;
-    border: 0.5px solid black;
+    margin: 0;
+    border: 0;
     outline: none;
-    padding: 10px;
     resize: none;
-}
-
-html, body {
-    height: 98%;
+    padding: 10px;
 }
 
 svg {
     fill: none;
     stroke: black;
+    background-color: white;
 }
 
-#main {
-    width: 80%;
-    height: 85%;
-    padding-top: 5%;
-    display: flex;
-    margin: auto;
-}
-
-#ebox {
-    position: absolute;
-    top: 0;
-    height: 50px;
-    width: 80%;
-    text-align: center;
-    padding-top: 25px;
-}
-
-#left {
-    width: 40%;
-}
-
-#right {
-    width: 60%;
-}
-
-#left, #right {
-    padding: 10px;
-    display: flex;
-}
-
-#right {
-    flex-direction: column;
-}
-
-#code, #conv {
-    width: 100%;
-    height: 100%;
+body {
     margin: 0;
 }
 
-#disp {
+#main {
+    position: fixed;
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+#left, #right {
+    display: flex;
+    justify-content: space-between;
+}
+
+#left {
+    flex-direction: column;
+    width: 50%;
+    border-right: 1px solid gray;
+}
+
+#right {
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+    background-color: #EEE;
+}
+
+#code {
     height: 50%;
 }
 
 #conv {
     height: 50%;
+    border-top: 1px solid gray;
+}
+
+#disp {
+    width: 80%;
 }
 
 </style>
@@ -81,8 +72,6 @@ svg {
 <body>
 
 <div id="main">
-
-<div id="ebox"></div>
 
 <div id="left">
 
@@ -96,16 +85,15 @@ let s = Group(
 let hs = HStack([s, s]);
 let vs = VStack([hs, hs]);
 let gg = Group([vs, r]);
-return gg;
-</textarea>
+return gg;</textarea>
+
+<textarea id="conv" readonly></textarea>
 
 </div>
 
 <div id="right">
 
 <div id="disp"></div>
-
-<textarea id="conv" readonly></textarea>
 
 </div>
 
@@ -115,66 +103,56 @@ return gg;
 
 import { Gum, SVG, Element } from './gum.js'
 
-// gum.js interface mapper
+// svg presets
 let prec = 2;
+let size = 500;
+
+// gum.js interface mapper
 let gums = Gum.map(g => g.name);
 let mako = Gum.map(g => function(...args) { return new g(...args); });
 
-function height(el) {
-    return parseFloat(getComputedStyle(el, null).height.replace("px", ""));
-}
-
-function renderGum(e, size) {
-    if (e instanceof Element) {
-        e = (e instanceof SVG) ? e : new SVG([e]);
-        return e.svg({size: size, prec: prec});
-    } else {
-        return e;
-    }
-}
-
+// html elements
 let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
-let ebox = document.querySelector('#ebox');
 
+// canned error messages
 let err_nodata = 'No data. Does your final line return an element?';
 
-function flash(msg) {
-    ebox.innerHTML = msg;
-    setTimeout(function() {
-        ebox.innerHTML = '';
-    }, 2500);
+// wrap in SVG if needed
+function renderGum(elem, size) {
+    if (elem instanceof Element) {
+        elem = (elem instanceof SVG) ? elem : new SVG([elem]);
+        return elem.svg({size: size, prec: prec});
+    } else {
+        return elem;
+    }
 }
 
 function renderCode() {
-    let c = code.value;
-    let e = new Function(gums, c);
+    let elem;
     try {
-        let p = e(...mako);
-        if (p == null) {
-            flash(err_nodata);
-        } else {
-            let size = 0.95*height(disp);
-            let s = renderGum(p, size);
-            conv.value = s;
-            disp.innerHTML = s;
-        }
-    } catch (error) {
-        console.error('---gum code did not compile---', error);
+        let expr = new Function(gums, code.value);
+        elem = expr(...mako);
+    } catch (e) {
+        conv.value = `error, line ${e.lineNumber}: ${e.message}`;
+        return;
+    }
+
+    if (elem == null) {
+        conv.value = err_nodata;
+    } else {
+        let svg = renderGum(elem, size);
+        conv.value = svg;
+        disp.innerHTML = svg;
     }
 }
 
+// auto update
+code.addEventListener('input', renderCode);
+
+// initialize
 renderCode();
-
-code.addEventListener('keypress', function(event) {
-    let key = event.key.toLowerCase();
-    let ctrl = event.ctrlKey;
-
-    if (ctrl && key == 'enter') {
-        renderCode();
-    }
-});
 
 </script>
 

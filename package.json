@@ -3,6 +3,6 @@
   "version": "0.1",
   "description": "Grammar for SVG creation.",
   "type": "module",
-  "author": "Doug Hanley",
+  "author": "Doug Hanley and Evan Piermont",
   "license": "MIT"
 }

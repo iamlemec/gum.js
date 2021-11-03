@@ -262,14 +262,15 @@ class Container extends Element {
 
 class SVG extends Container {
     constructor(children, args) {
-        let {clip, aspect, ...attr} = args ?? {};
+        let {clip, ...attr} = args ?? {};
         children = children ?? [];
         super(children, {tag: 'svg', ...attr});
     }
 
     props(ctx) {
         let [w, h] = ctx.size;
-        let base = {width: w, height: h, xmlns: ns_svg};
+        let box = `0 0 ${w} ${h}`;
+        let base = {viewBox: box, xmlns: ns_svg};
         return {...base, ...this.attr};
     }
 
@@ -371,7 +372,8 @@ class VStack extends Container {
         aspect = aspect ?? aspect0;
 
         // pass to Container
-        super(children, null, aspect, attr);
+        let attr1 = {aspect: aspect, ...attr};
+        super(children, attr1);
     }
 }
 
@@ -407,7 +409,8 @@ class HStack extends Container {
         aspect = aspect ?? aspect0;
 
         // pass to Container
-        super(children, null, aspect, attr);
+        let attr1 = {aspect: aspect, ...attr};
+        super(children, attr1);
     }
 }
 
