@@ -15,6 +15,7 @@ textarea {
     outline: none;
     resize: none;
     padding: 10px;
+    scrollbar-width: none;
 }
 
 svg {
@@ -37,6 +38,7 @@ body {
 #left, #right {
     display: flex;
     justify-content: space-between;
+    position: relative;
 }
 
 #left {
@@ -73,6 +75,25 @@ body {
     max-height: 80%;
 }
 
+#stat {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 15px;
+    height: 15px;
+    border-radius: 15px;
+    margin: 5px;
+
+}
+
+#stat.good {
+    background-color: #1e88e5;
+}
+
+#stat.bad {
+    background-color: #ff0d57;
+}
+
 </style>
 
 </head>
@@ -82,6 +103,8 @@ body {
 <div id="main">
 
 <div id="left">
+
+<div id="stat"></div>
 
 <textarea id="code">
 let n = 12;
@@ -123,6 +146,7 @@ let mako = Gum.map(g => function(...args) { return new g(...args); });
 let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
+let stat = document.querySelector('#stat');
 
 // canned error messages
 let err_nodata = 'No data. Does your final line return an element?';
@@ -144,15 +168,18 @@ function renderCode() {
         elem = expr(...mako);
     } catch (e) {
         conv.value = `error, line ${e.lineNumber}: ${e.message}`;
+        stat.classList = ['bad'];
         return;
     }
 
     if (elem == null) {
         conv.value = err_nodata;
+        stat.classList = [];
     } else {
         let svg = renderGum(elem, size);
         conv.value = svg;
         disp.innerHTML = svg;
+        stat.classList = ['good'];
     }
 }
 

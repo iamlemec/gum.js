@@ -4,5 +4,5 @@
   "description": "Grammar for SVG creation.",
   "type": "module",
   "author": "Doug Hanley and Evan Piermont",
-  "license": "MIT"
+  "license": "MIT",
 }

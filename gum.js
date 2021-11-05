@@ -50,6 +50,11 @@ function range(i0, i1, step) {
     return [...Array(n).keys()].map(i => i0 + step*i);
 }
 
+function linspace(x0, x1, n) {
+    let step = (x1-x0)/(n-1);
+    return [...Array(n).keys()].map(i => x0 + step*i);
+}
+
 /**
  ** coordinate utils
  **/
@@ -119,8 +124,26 @@ function pad_rect(p, base) {
     }
 }
 
+function rad_rect(p, r0) {
+    let x, y, r, rx, ry;
+    if (p.length == 1) {
+        [r, ] = p;
+        [x, y] = [0.5, 0.5];
+        [rx, ry] = [r, r];
+    } else if (p.length == 2) {
+        [x, y] = p;
+        [rx, ry] = (typeof(r0) == 'number') ? [r0, r0] : r0;
+    } else if (p.length == 3) {
+        [x, y, r] = p;
+        [rx, ry] = [r, r];
+    } else if (p.length == 4) {
+        [x, y, rx, ry] = p;
+    }
+    return [x-rx, y-ry, x+rx, y+ry];
+}
+
 function merge_rects(rects) {
-    let [xa, ya, xb, yb] = [0,1,2,3]
+    let [xa, ya, xb, yb] = range(4)
         .map(i => rects.map(r => r[i]));
     return [
         Math.min(...xa), Math.min(...ya),
@@ -228,28 +251,26 @@ class Element {
 class Container extends Element {
     constructor(children, args) {
         let {tag, aspect, clip, ...attr} = args ?? {};
-        children = children ?? [];
         tag = tag ?? 'g';
-        clip = clip ?? true;
-        super(tag, false, attr);
+        clip = clip ?? false;
 
         // handle default positioning
-        this.children = children
+        children = children
             .map(c => c instanceof Element ? [c, null] : c)
             .map(([c, r]) => [c, pos_rect(r)]);
 
         // inherit aspect of clipped contents
-        if (aspect != null) {
-            this.aspect = aspect;
-        } else if (clip) {
+        if (aspect == null && clip) {
             let ctx = new Context({rect: frac_base});
-            let rects = this.children
-                .map(([c, r]) => ctx.map(r, c.aspect).rect);
+            let rects = children.map(([c, r]) => ctx.map(r, c.aspect).rect);
             let total = merge_rects(rects);
-            this.aspect = rect_aspect(total);
-        } else {
-            this.aspect = 1;
+            aspect = rect_aspect(total);
         }
+
+        // pass to Element
+        let attr1 = {aspect: aspect, ...attr};
+        super(tag, false, attr1);
+        this.children = children;
     }
 
     inner(ctx) {
@@ -262,9 +283,7 @@ class Container extends Element {
 
 class SVG extends Container {
     constructor(children, args) {
-        let {clip, ...attr} = args ?? {};
-        children = children ?? [];
-        super(children, {tag: 'svg', ...attr});
+        super(children, {tag: 'svg', ...args});
     }
 
     props(ctx) {
@@ -280,7 +299,9 @@ class SVG extends Container {
 
         let w, h;
         if (typeof(size) == 'number') {
-            if (this.aspect >= 1) {
+            if (this.aspect == null) {
+                size = [size, size];
+            } else if (this.aspect >= 1) {
                 size = [size, size/this.aspect];
             } else {
                 size = [size*this.aspect, size];
@@ -414,6 +435,31 @@ class HStack extends Container {
     }
 }
 
+class Point extends Container {
+    constructor(child, args) {
+        let {x, y, r, ...attr} = args ?? {};
+        x = x ?? 0.5;
+        y = y ?? 0.5;
+        r = r ?? 0.5;
+        r = (typeof(r) == 'number') ? [r, r] : r;
+
+        let pos = [x, y, ...r];
+        let rect = rad_rect(pos);
+        let children = [[child, rect]];
+
+        super(children, attr);
+    }
+}
+
+class Scatter extends Container {
+    constructor(locs, args) {
+        let {r, ...attr} = args ?? {};
+        r = r ?? 0.5;
+        let children = locs.map(([c, p]) => [c, rad_rect(p, r)]);
+        super(children, attr);
+    }
+}
+
 /**
  ** basic geometry
  **/
@@ -492,7 +538,7 @@ class HLine extends Element {
         this.pos = pos ?? 0.5;
     }
 
-    props(self, ctx) {
+    props(ctx) {
         let [x1, y1, x2, y2] = ctx.rect;
         let [w, h] = [x2 - x1, y2 - y1];
         let ym = y1 + this.pos*h;
@@ -512,6 +558,12 @@ class Rect extends Element {
         let [w, h] = [x2 - x1, y2 - y1];
         let base = {x: x1, y: y1, width: w, height: h};
         return {...base, ...this.attr};
+    }
+}
+
+class Square extends Rect {
+    constructor(attr) {
+        super({aspect: 1, ...attr});
     }
 }
 
@@ -539,8 +591,8 @@ class Circle extends Ellipse {
 // expose
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Ray, HLine, VLine, Rect,
-    Ellipse, Circle, range
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Scatter, Ray, HLine,
+    VLine, Rect, Square, Ellipse, Circle, range, linspace
 ];
 
 /**
@@ -548,6 +600,7 @@ let Gum = [
  **/
 
 export {
-    Gum, map_coords, pos_rect, pad_rect, demangle, rounder, props_repr, range, Context, Element,
-    Container, Group, SVG, Frame, VStack, HStack, Ray, Rect, Ellipse, Circle
+    Gum, map_coords, pos_rect, pad_rect, rad_rect, demangle, rounder, props_repr, range, linspace,
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Scatter, Ray, Rect,
+    Square, Ellipse, Circle
 };
