@@ -7,11 +7,16 @@
   "license": "MIT",
   "scripts": {
     "dev": "npx snowpack dev",
-    "build": "npx snowpack build"
+    "build": "npx snowpack build",
+    "serve": "npx http-server build -o"
   },
   "dependencies": {
     "@codemirror/basic-setup": "^0.19.0",
     "@codemirror/lang-html": "^0.19.3",
     "@codemirror/lang-xml": "^0.19.2"
+  },
+  "devDependencies": {
+    "http-server": "^14.0.0",
+    "snowpack": "^3.8.8"
   }
 }
