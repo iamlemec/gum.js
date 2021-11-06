@@ -109,7 +109,7 @@ let conv_text = new EditorView({
             drawSelection(),
             defaultHighlightStyle.fallback,
             EditorState.readOnly.of(true),
-            // EditorView.editable.of(false),
+            EditorView.editable.of(false),
         ],
     }),
     parent: conv,
