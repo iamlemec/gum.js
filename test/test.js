@@ -2,7 +2,7 @@
 
 import {
     range, Context, SVG, Container, Frame, VStack, HStack, Ray, Rect
-} from './gum.js';
+} from '../lib/gum.js';
 
 // options
 let size = [100, 100];

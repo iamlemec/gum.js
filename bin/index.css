@@ -1,0 +1,83 @@
+svg {
+    fill: none;
+    stroke: black;
+    background-color: white;
+}
+
+body {
+    margin: 0;
+}
+
+#main {
+    position: fixed;
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+#left, #right {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+}
+
+#left {
+    flex-direction: column;
+    width: 50%;
+    border-right: 1px solid gray;
+}
+
+#right {
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+    background-color: #EEE;
+}
+
+#code, #conv {
+    height: 50%;
+    overflow: scroll;
+    scrollbar-width: none;
+}
+
+.cm-editor {
+    height: 100%;
+}
+
+.cm-scroller {
+    scrollbar-width: none;
+}
+
+#conv {
+    border-top: 1px solid gray;
+}
+
+#disp {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+    height: 100%;
+}
+
+#disp svg {
+    max-height: 80%;
+}
+
+#stat {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 15px;
+    margin: 5px;
+}
+
+#stat.good {
+    background-color: #1e88e5;
+}
+
+#stat.bad {
+    background-color: #ff0d57;
+}
