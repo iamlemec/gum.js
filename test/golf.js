@@ -1,3 +1,14 @@
+// copy icon
+
+let x = 0.35;
+let r = Rect();
+let s = Scatter([
+  [r, [x, x, x]],
+  [r, [1-x, 1-x, x]],
+]);
+let f = Frame(s, {margin: 0.05});
+return SVG(f).svg({size: [20, 25]});
+
 // scatter squares
 
 let n = 13;

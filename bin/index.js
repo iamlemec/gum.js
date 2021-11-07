@@ -99,6 +99,7 @@ let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
+let copy = document.querySelector('#copy');
 
 // init convert
 let conv_text = new EditorView({
@@ -138,6 +139,12 @@ let edit_text = new EditorView({
         ],
     }),
     parent: code,
+});
+
+// connect handlers
+copy.addEventListener('click', function() {
+    let text = conv_text.state.doc.toString();
+    navigator.clipboard.writeText(text);
 });
 
 // trigger input

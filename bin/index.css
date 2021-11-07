@@ -1,11 +1,10 @@
+body {
+    margin: 0;
+}
+
 svg {
     fill: none;
     stroke: black;
-    background-color: white;
-}
-
-body {
-    margin: 0;
 }
 
 #main {
@@ -62,6 +61,7 @@ body {
 
 #disp svg {
     max-height: 80%;
+    background-color: white;
 }
 
 #stat {
@@ -80,4 +80,29 @@ body {
 
 #stat.bad {
     background-color: #ff0d57;
+}
+
+#copy {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+    padding: 2px;
+    margin: 3px;
+    z-index: 10;
+    border-radius: 5px;
+}
+
+#copy svg {
+    fill: white;
+}
+
+#copy:active svg {
+    fill: #DDD;
+}
+
+#copy:hover svg {
+    stroke-width: 1.3px;
 }
