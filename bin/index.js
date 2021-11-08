@@ -31,7 +31,7 @@ function renderGum(elem, size) {
         elem = (elem instanceof SVG) ? elem : new SVG([elem]);
         return elem.svg({size: size, prec: prec});
     } else {
-        return elem;
+        return String(elem);
     }
 }
 
@@ -45,7 +45,7 @@ let s = Group(
 let hs = HStack([s, s]);
 let vs = VStack([hs, hs]);
 let gg = Group([vs, r]);
-return gg;
+return Frame(gg, {border: 1, margin: 0.05});
 `.trim();
 
 // canned error messages

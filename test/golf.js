@@ -23,3 +23,15 @@ let p2 = Scatter(
 );
 let gg = Group([p1, p2]);
 return Frame(gg, {margin: 0.05});
+
+// starburst pattern
+
+let n = 12;
+let r = Rect();
+let s = Group(
+  range(-90, 90, 180/n).map(t => Ray(t))
+);
+let hs = HStack([s, s]);
+let vs = VStack([hs, hs]);
+let gg = Group([vs, r]);
+return Frame(gg, {border: 1, margin: 0.05});
