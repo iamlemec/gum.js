@@ -134,7 +134,8 @@ let edit_text = new EditorView({
             ]),
             defaultHighlightStyle.fallback,
             EditorView.updateListener.of(function(upd) {
-                updateView(getText(upd.state));
+                let text = getText(upd.state);
+                updateView(text);
             }),
         ],
     }),
@@ -148,4 +149,5 @@ copy.addEventListener('click', function() {
 });
 
 // trigger input
-updateView(getText(edit_text.state));
+let text = getText(edit_text.state);
+updateView(text);
