@@ -35,3 +35,9 @@ let hs = HStack([s, s]);
 let vs = VStack([hs, hs]);
 let gg = Group([vs, r]);
 return Frame(gg, {border: 1, margin: 0.05});
+
+// basic text
+let t = Text('hello');
+let pad = [0.05, 0.1];
+let f = Frame(t, {padding: pad, margin: pad, border: 1});
+return f;
