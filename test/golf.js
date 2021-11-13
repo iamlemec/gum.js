@@ -38,6 +38,24 @@ return Frame(gg, {border: 1, margin: 0.05});
 
 // basic text
 let t = Text('hello');
-let pad = [0.05, 0.1];
-let f = Frame(t, {padding: pad, margin: pad, border: 1});
+let f = Frame(t, {padding: 0.1, margin: 0.1, border: 1});
+return f;
+
+// combined text
+let t1 = Text('🍄');
+let t2 = Text('gello');
+B = x => Frame(x, {padding: 0.15, border: 1});
+let t = HStack([B(t1), B(t2)], {expand: true});
+return Frame(t, {padding: 0.05});
+
+// rect node
+let n = Node('hello');
+let f = Frame(n, {margin: [0.05, 0.1]});
+return f;
+
+// letter stack
+let a = Node('A');
+let n1 = VStack([a, a]);
+let n2 = HStack([n1, a]);
+let f = Frame(n2, {margin: 0.1});
 return f;

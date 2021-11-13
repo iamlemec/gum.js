@@ -87,7 +87,14 @@ function updateView(src) {
         setConvert(err_nodata);
         setState();
     } else {
-        let svg = renderGum(elem, size);
+        let svg;
+        try {
+            svg = renderGum(elem, size);
+        } catch (e) {
+            setConvert(`error, line ${e.lineNumber}: ${e.message}`);
+            setState(false);
+            return;
+        }
         setConvert(svg);
         setState(true);
         disp.innerHTML = svg;
