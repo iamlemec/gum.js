@@ -36,7 +36,7 @@ function renderGum(elem, size) {
 }
 
 // example code
-let example = `
+let example0 = `
 let n = 12;
 let r = Rect();
 let s = Group(
@@ -47,6 +47,7 @@ let vs = VStack([hs, hs]);
 let gg = Group([vs, r]);
 return Frame(gg, {border: 1, margin: 0.05});
 `.trim();
+let example = getCookie() ?? example0;
 
 // canned error messages
 let err_nodata = 'No data. Does your final line return an element?';
@@ -73,7 +74,25 @@ function setState(good) {
     }
 }
 
+function getCookie() {
+    let cookies = document.cookie.split(';').map(x => x.trim().split('='));
+    let cgum = cookies.filter(([k, v]) => k == 'gum').shift();
+    if (cgum == null) {
+        return null;
+    } else {
+        let [_, vgum] = cgum;
+        return decodeURIComponent(vgum);
+    }
+}
+
+function setCookie(src) {
+    let vgum = encodeURIComponent(src);
+    document.cookie = `gum=${vgum}; SameSite=Lax`;
+}
+
 function updateView(src) {
+    setCookie(src);
+
     let elem;
     try {
         elem = parseGum(src);
