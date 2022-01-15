@@ -74,8 +74,8 @@ let a = 0.027;
 let s = SymPath({
   fx: t => exp(-a*t)*cos(t),
   fy: t => exp(-a*t)*sin(t),
-  xlim: [-1, 1], ylim: [-1, 1],
+  xlim: [-2, 2], ylim: [-1.1, 1.1],
   tlim: [0, 150], N: 100,
 });
-let p = Plot([s]);
-return Frame(p, {padding: 0.1});
+let p = Plot(s);
+return Frame(p, {padding: [0.06, 0.1]});
