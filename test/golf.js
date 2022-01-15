@@ -59,3 +59,23 @@ let n1 = VStack([a, a]);
 let n2 = HStack([n1, a]);
 let f = Frame(n2, {margin: 0.1});
 return f;
+
+// symbolic path
+let s = SymPath({
+  fx: t => exp(-0.1*t)*cos(t),
+  fy: t => exp(-0.1*t)*sin(t),
+  xlim: [-1, 1], ylim: [-1, 1],
+  tlim: [0, 100], N: 1000,
+});
+return s;
+
+// basic plot
+let a = 0.027;
+let s = SymPath({
+  fx: t => exp(-a*t)*cos(t),
+  fy: t => exp(-a*t)*sin(t),
+  xlim: [-1, 1], ylim: [-1, 1],
+  tlim: [0, 150], N: 100,
+});
+let p = Plot([s]);
+return Frame(p, {padding: 0.1});

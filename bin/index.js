@@ -18,7 +18,13 @@ let size = 500;
 
 // gum.js interface mapper
 let gums = Gum.map(g => g.name);
-let mako = Gum.map(g => function(...args) { return new g(...args); });
+let mako = Gum.map(g => function(...args) {
+    if ('prototype' in g) {
+        return new g(...args);
+    } else {
+        return g(...args);
+    }
+});
 
 function parseGum(src) {
     let expr = new Function(gums, src);
@@ -93,6 +99,7 @@ function setCookie(src) {
 function updateView(src) {
     setCookie(src);
 
+    // parse gum into tree
     let elem;
     try {
         elem = parseGum(src);
@@ -102,6 +109,7 @@ function updateView(src) {
         return;
     }
 
+    // render gum tree
     if (elem == null) {
         setConvert(err_nodata);
         setState();
