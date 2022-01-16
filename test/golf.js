@@ -79,3 +79,16 @@ let s = SymPath({
 });
 let p = Plot(s);
 return Frame(p, {padding: [0.06, 0.1]});
+
+// goofy plot
+let a = 0.027;
+let s = SymPath({
+  fx: t => exp(-a*t)*cos(t),
+  fy: t => exp(-a*t)*sin(t),
+  xlim: [-1, 1], ylim: [-1, 1],
+  tlim: [0, 150], N: 100,
+});
+let xt = linspace(-1, 1, 10).map(t => [t, '🍩']);
+let yt = linspace(-1, 1, 10).map(t => [t, '🐋']);
+let p = Plot(s, {xticks: xt, yticks: yt});
+return Frame(p, {margin: 0.1});
