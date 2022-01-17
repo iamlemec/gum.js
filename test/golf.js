@@ -1,5 +1,4 @@
 // copy icon
-
 let x = 0.35;
 let r = Rect();
 let s = Scatter([
@@ -10,7 +9,6 @@ let f = Frame(s, {margin: 0.05});
 return SVG(f).svg({size: [20, 25]});
 
 // scatter squares
-
 let n = 13;
 let r0 = Rect();
 let p1 = Scatter(
@@ -25,7 +23,6 @@ let gg = Group([p1, p2]);
 return Frame(gg, {margin: 0.05});
 
 // starburst pattern
-
 let n = 12;
 let r = Rect();
 let s = Group(
@@ -50,7 +47,7 @@ return Frame(t, {padding: 0.05});
 
 // rect node
 let n = Node('hello');
-let f = Frame(n, {margin: [0.05, 0.1]});
+let f = Frame(n, {margin: 0.1});
 return f;
 
 // letter stack
@@ -78,7 +75,7 @@ let s = SymPath({
   tlim: [0, 150], N: 100,
 });
 let p = Plot(s);
-return Frame(p, {padding: [0.06, 0.1]});
+return Frame(p, {padding: 0.13});
 
 // goofy plot
 let a = 0.027;
