@@ -1,21 +1,21 @@
 // copy icon
 let x = 0.35;
 let r = Rect();
-let s = Scatter([
+let s = Points([
   [r, [x, x, x]],
   [r, [1-x, 1-x, x]],
 ]);
 let f = Frame(s, {margin: 0.05});
 return SVG(f).svg({size: [20, 25]});
 
-// scatter squares
+// square arrangement
 let n = 13;
 let r0 = Rect();
-let p1 = Scatter(
+let p1 = Points(
     linspace(0.1, 0.9, n).map(x => [r0, [x, x]]),
     {r: 0.1, stroke: 'red', opacity: 0.75}
 );
-let p2 = Scatter(
+let p2 = Points(
     linspace(0.1, 0.9, n).map(x => [r0, [1 - x, x]]),
     {r: 0.1, stroke: 'blue', opacity: 0.75}
 );
@@ -74,7 +74,7 @@ let s = SymPath({
   xlim: [-2, 2], ylim: [-1.1, 1.1],
   tlim: [0, 150], N: 100,
 });
-let p = Plot(s);
+let p = Plot(s, {yticks: 7});
 return Frame(p, {padding: 0.13});
 
 // goofy plot
@@ -89,3 +89,21 @@ let xt = linspace(-1, 1, 10).map(t => [t, '🍩']);
 let yt = linspace(-1, 1, 10).map(t => [t, '🐋']);
 let p = Plot(s, {xticks: xt, yticks: yt});
 return Frame(p, {margin: 0.1});
+
+// annotated plot
+let a = 0.027;
+let s1 = SymPath({fy: t => t, xlim: [-2, 2]});
+let s2 = SymPath({fy: t => -t, xlim: [-2, 2]});
+let s3 = SymPath({fx: t => 0, ylim: [-2, 0], stroke_dasharray: 3, stroke: 'blue'});
+let s4 = SymPath({fy: t => 0, xlim: [-2, 0], stroke_dasharray: 3, stroke: 'red'});
+let sc = Scatter([
+  [0, 0], [2, 2], [-2, -2], [2, -2], [-2, 2], [0, -2], [-2, 0]
+]);
+let p = Plot([s1, s2, s3, s4, sc], {
+  xlim: [-2.5, 2.5], ylim: [-2.5, 2.5],
+  xticks: [-2, -1, [0, '🍩'], 1, 2],
+  yticks: [-2, -1, [0, '🐋'], 1, 2],
+  ticksize: 0.04
+});
+let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
+return f;
