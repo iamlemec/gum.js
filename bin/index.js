@@ -134,6 +134,10 @@ let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
 let copy = document.querySelector('#copy');
+let mid = document.querySelector('#mid');
+let left = document.querySelector('#left');
+let right = document.querySelector('#right');
+
 
 // init convert
 let conv_text = new EditorView({
@@ -185,3 +189,20 @@ copy.addEventListener('click', function() {
 // trigger input
 let text = getText(edit_text.state);
 updateView(text);
+
+//resize panels
+
+function resizePane(e){
+  let vw = window.innerWidth;
+  let x = e.clientX
+  left.style.width =  `${x-2}px`
+  right.style.width =  `${vw-x-2}px`
+}
+
+mid.addEventListener("mousedown", function(e){
+    document.addEventListener("mousemove", resizePane, false);
+}, false);
+
+document.addEventListener("mouseup", function(){
+    document.removeEventListener("mousemove", resizePane, false);
+}, false);

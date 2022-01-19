@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+.ipynb_checkpoints
+*.py[cod]
+
+# Git local config
+.gitattributes
+
+# Mac bullshit
+.DS_Store
+
+# Databases
+*.db
+backup/
+
+# External logs
+screenlog.*
+
+# Config / Auth
+auth.toml
+mail.toml
+
+
+#node and snowpack shit
+node_modules/
+build/

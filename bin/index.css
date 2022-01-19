@@ -27,7 +27,12 @@ svg text {
 #left {
     flex-direction: column;
     width: 50%;
-    border-right: 1px solid gray;
+}
+
+#mid{
+    width: 4px;
+    background-color: lightgray;
+    cursor:  col-resize;
 }
 
 #right {
