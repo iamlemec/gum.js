@@ -108,6 +108,7 @@ let p = Plot([s1, s2, s3, s4, sc], {
 let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
 
+
 //interactive opacity
 
 let i = new InterActive(
@@ -117,3 +118,22 @@ let i = new InterActive(
   }
 )
 return i
+
+
+// tex plot
+let a = 0.027;
+let s1 = SymPath({fy: t => t, xlim: [-2, 2]});
+let s2 = SymPath({fy: t => -t, xlim: [-2, 2]});
+let s3 = SymPath({fx: t => 0, ylim: [-2, 0], stroke_dasharray: 3, stroke: 'blue'});
+let s4 = SymPath({fy: t => 0, xlim: [-2, 0], stroke_dasharray: 3, stroke: 'red'});
+let sc = Scatter([
+  [0, 0], [2, 2], [-2, -2], [2, -2], [-2, 2], [0, -2], [-2, 0]
+]);
+let p = Plot([s1, s2, s3, s4, sc], {
+  xlim: [-2.5, 2.5], ylim: [-2.5, 2.5],
+  xticks: [-2, -1, [0, Tex('\\alpha')], 1, 2],
+  yticks: [-2, -1, [0, Tex('\\beta')], 1, 2],
+  ticksize: 0.04
+});
+let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
+return f;

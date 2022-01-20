@@ -32,7 +32,7 @@ function parseGum(src) {
 }
 
 // wrap in SVG if needed
-function renderGum(elem, size) {
+function renderGum(elem) {
     let iac = document.querySelector('#interActiveControl');
     iac.innerHTML = "";
 
@@ -41,8 +41,9 @@ function renderGum(elem, size) {
         elem = elem.create(disp)
     };
     if (elem instanceof Element) {
-        elem = (elem instanceof SVG) ? elem : new SVG([elem]);
-        return elem.svg({size: size, prec: prec});
+        let args = {size: size, prec: prec};
+        elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
+        return elem.svg();
     }else{
         return String(elem);
     }
@@ -123,7 +124,7 @@ function updateView(src) {
     } else {
         let svg;
         try {
-            svg = renderGum(elem, size);
+            svg = renderGum(elem);
         } catch (e) {
             setConvert(`error, line ${e.lineNumber}: ${e.message}`);
             setState(false);
@@ -197,19 +198,19 @@ copy.addEventListener('click', function() {
 let text = getText(edit_text.state);
 updateView(text);
 
-//resize panels
+// resize panels
 
-function resizePane(e){
-  let vw = window.innerWidth;
-  let x = e.clientX
-  left.style.width =  `${x-2}px`
-  right.style.width =  `${vw-x-2}px`
+function resizePane(e) {
+    let vw = window.innerWidth;
+    let x = e.clientX;
+    left.style.width = `${x-2}px`;
+    right.style.width = `${vw-x-2}px`;
 }
 
-mid.addEventListener("mousedown", function(e){
-    document.addEventListener("mousemove", resizePane, false);
+mid.addEventListener('mousedown', function(e) {
+    document.addEventListener('mousemove', resizePane, false);
 }, false);
 
-document.addEventListener("mouseup", function(){
-    document.removeEventListener("mousemove", resizePane, false);
+document.addEventListener('mouseup', function(e) {
+    document.removeEventListener('mousemove', resizePane, false);
 }, false);
