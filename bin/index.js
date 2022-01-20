@@ -34,8 +34,8 @@ function parseGum(src) {
 // wrap in SVG if needed
 function renderGum(elem, size) {
     if (elem instanceof Element) {
-        elem = (elem instanceof SVG) ? elem : new SVG([elem]);
-        return elem.svg({size: size, prec: prec});
+        elem = (elem instanceof SVG) ? elem : new SVG(elem, {size: size, prec: prec});
+        return elem.svg();
     } else {
         return String(elem);
     }
