@@ -112,8 +112,13 @@ return f;
 //interactive opacity
 
 let i = new InterActive(
-  {x: new Slider(60)}, (vars) => {
-  let r = new Rect({fill: 'red', opacity: vars.x / 100}) 
+  {x: new Slider(50, {max: 100, title: 'Opacity'}),
+   y: new Slider(150, {max: 250, title: 'Width'})
+},
+  (vars) => {
+  let r = new Rect({fill: 'red',
+                    opacity: vars.x / 100,
+                    width: vars.y}) 
   return r
   }
 )

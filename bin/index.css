@@ -75,14 +75,6 @@ svg text {
     background-color: white;
 }
 
-#interActiveControl {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 80%;
-    height: 20%;
-}
-
 #stat {
     position: absolute;
     top: 0;
@@ -124,4 +116,124 @@ svg text {
 
 #copy:hover svg {
     stroke-width: 1.3px;
+}
+
+/* IINTERACTIVE */
+
+#interActiveControl {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 20%;
+}
+
+.slider_cont {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 90%;
+    margin: 20px;
+    background-color: lavender;
+    border-radius: 10px;
+}
+
+.slider{
+    width: 90%;
+    margin-bottom: 15px;
+}
+
+.var_title{
+    position: relative;
+    font-family: monospace;
+    margin-bottom: 25px;
+    line-height: 20px;
+    background-color: rgba(0,0,0,.1);
+    width: 100%;
+    text-indent: 30px;
+    border-radius: 10px 10px 0 0;
+}
+
+input[type=range] {
+  position: relative;
+  -webkit-appearance: none; /* Hides the slider so that custom slider can be made */
+  width: 100%; /* Specific width is required for Firefox. */
+  background: transparent; /* Otherwise white in Chrome */
+}
+
+input[type=range]::-moz-range-track {
+  width: 100%;
+  height: 2px;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+input[type=range]::-moz-range-thumb {
+  visibility: hidden;
+  height: 30px;
+  width: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.phantom_track{
+    width: 100%;
+    height: 1.5px;
+    background-color: #3071a9;
+    margin-bottom: -41px;
+}
+
+.min_lim, .max_lim{
+    text-align: center;
+    color: #3071a9;
+    font-size: 10px;
+    line-height: 24px;
+}
+
+.min_lim{
+    position: absolute;
+    padding: 0px 5px 0 6px;
+    right: 90%;
+    margin: -10px 0 0 0;
+}
+
+.max_lim{
+    position: absolute;
+    padding: 0px 5px 0 5px;
+    left: 90%;
+    margin: -10px 0px 0 0;
+}
+
+
+.slider_label {
+    position: relative;
+    transform-origin: center center;
+    display: block;
+    width: 30px;
+    height: 30px;
+    background: white;
+    border-radius: 50%;
+    line-height: 25px;
+    text-align: center;
+    padding-top: 2px;
+    box-sizing: border-box;
+    border: 1px solid #3071a9;
+    left: 50%;
+    top: 26px;
+    color: #3071a9;
+    font-size: 15px;
+}
+
+.box-minmax{
+  margin-top: 30px;
+  width: 608px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 20px;
+  color: #FFFFFF;
+  span:first-child{
+    margin-left: 10px;
+  }
 }
