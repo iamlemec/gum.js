@@ -107,3 +107,13 @@ let p = Plot([s1, s2, s3, s4, sc], {
 });
 let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
+
+//interactive opacity
+
+let i = new InterActive(
+  {x: new Slider(60)}, (vars) => {
+  let r = new Rect({fill: 'red', opacity: vars.x / 100}) 
+  return r
+  }
+)
+return i

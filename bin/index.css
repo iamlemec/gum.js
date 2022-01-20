@@ -36,6 +36,8 @@ svg text {
 }
 
 #right {
+    display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 50%;
@@ -65,12 +67,20 @@ svg text {
     justify-content: center;
     align-items: center;
     width: 80%;
-    height: 100%;
+    height: 60%;
 }
 
 #disp svg {
     max-height: 80%;
     background-color: white;
+}
+
+#interActiveControl {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+    height: 20%;
 }
 
 #stat {

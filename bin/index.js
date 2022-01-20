@@ -10,7 +10,7 @@ import { commentKeymap } from '@codemirror/comment'
 import { defaultHighlightStyle } from '@codemirror/highlight'
 import { bracketMatching } from '@codemirror/matchbrackets'
 
-import { Gum, SVG, Element } from './lib/gum.js'
+import { Gum, SVG, Element, InterActive } from './lib/gum.js'
 
 // svg presets
 let prec = 2;
@@ -33,10 +33,17 @@ function parseGum(src) {
 
 // wrap in SVG if needed
 function renderGum(elem, size) {
+    let iac = document.querySelector('#interActiveControl');
+    iac.innerHTML = "";
+
+    if (elem instanceof InterActive){
+        let anchors = elem.createAnchors(iac, disp)
+        elem = elem.create(disp)
+    };
     if (elem instanceof Element) {
         elem = (elem instanceof SVG) ? elem : new SVG([elem]);
         return elem.svg({size: size, prec: prec});
-    } else {
+    }else{
         return String(elem);
     }
 }
