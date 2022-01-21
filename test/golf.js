@@ -142,3 +142,45 @@ let p = Plot([s1, s2, s3, s4, sc], {
 });
 let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
+
+
+/// Expected Utility indiff curves
+
+function guu(vars){
+let a = vars.a / 100;
+let slope = (1-a)/a
+let s1 = SymPath({fy: t => 1-t, xlim: [0, 1]});
+let s2 = SymPath({fy: t => slope*t, xlim: [0, a], stroke: 'red', stroke_width: 3});
+
+t = 1
+c = []
+while (t > -1/a) {
+  c.push(t)
+  t -= .1;
+}
+
+indiff_curves =  c.map(x => SymPath({fy: t => (slope*t) + x, xlim: [Math.max(0,-x/slope), (1-x)*a], stroke_dasharray: 3}))
+tx = a + "x + (1-"+a+")z"
+let scl = Scatter([
+  [a + .05, 1-(a) + .02], [5,5]
+], {radius: .015, stroke: 'red', fill: 'red', shape: new Text(tx, {font_size: 10})} );
+
+let sc = Scatter([
+  [a, 1-(a)], [5,5]
+], {radius: .015, stroke: 'red', fill: 'red', });
+
+plots = indiff_curves.concat([s1, s2, sc, scl])
+
+let p = Plot(plots, {
+  xlim: [0, 1], ylim: [0, 1],
+  ticksize: 0.03
+});
+let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
+return f;
+  }
+
+let i = new InterActive(
+  {a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})}, guu)
+
+
+return i
