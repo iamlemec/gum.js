@@ -36,10 +36,10 @@ function renderGum(elem) {
     let iac = document.querySelector('#interActiveControl');
     iac.innerHTML = "";
 
-    if (elem instanceof InterActive){
-        let anchors = elem.createAnchors(iac, disp)
-        elem = elem.create(disp)
-    };
+    if (elem instanceof InterActive) {
+        let anchors = elem.createAnchors(iac, disp);
+        elem = elem.create(disp);
+    }
     if (elem instanceof Element) {
         let args = {size: size, prec: prec};
         elem = (elem instanceof SVG) ? elem : new SVG(elem, args);

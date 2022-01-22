@@ -112,18 +112,18 @@ return f;
 //interactive opacity
 
 let i = new InterActive(
-  {x: new Slider(50, {max: 100, title: 'Opacity'}),
-   y: new Slider(150, {max: 250, title: 'Width'})
-},
-  (vars) => {
-  let r = new Rect({fill: 'red',
-                    opacity: vars.x / 100,
-                    width: vars.y}) 
-  return r
-  }
-)
-return i
-
+    {
+        x: new Slider(50, {max: 100, title: 'Opacity'}),
+        y: new Slider(150, {max: 250, title: 'Width'})
+    },
+    (vars) => {
+        let r = Rect({fill: 'red', opacity: vars.x / 100});
+        let pos = [0.1, 0.1, 0.1 + 0.8*(vars.y / 100), 0.9];
+        let p = Place(r, pos);
+        return p;
+    }
+);
+return i;
 
 // tex plot
 let a = 0.027;
@@ -141,4 +141,17 @@ let p = Plot([s1, s2, s3, s4, sc], {
   ticksize: 0.04
 });
 let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
+return f;
+
+// multi plot
+let s = [0.5, 0.7, 1.0, 1.4].map(a =>
+  SymPath({fy: x => sin(a*x), xlim: [-1, 1]})
+);
+let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
+let e = Ellipse({cx: 0, cy: 0, rx: 0.5, ry: 0.5});
+let r = Points([
+  [Rect(), [0.5, 0.5]]
+], 0.1);
+let p = Plot([...s, e, r, t], {xlim: [-1, 1], ylim: [-1, 1]});
+let f = Frame(p, {margin: 0.1});
 return f;
