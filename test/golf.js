@@ -6,18 +6,18 @@ let s = Points([
   [r, [1-x, 1-x, x]],
 ]);
 let f = Frame(s, {margin: 0.05});
-return SVG(f).svg({size: [20, 25]});
+return SVG(f, {size: [20, 25]});
 
 // square arrangement
 let n = 13;
 let r0 = Rect();
 let p1 = Points(
     linspace(0.1, 0.9, n).map(x => [r0, [x, x]]),
-    {r: 0.1, stroke: 'red', opacity: 0.75}
+    {radius: 0.1, stroke: 'red', opacity: 0.75}
 );
 let p2 = Points(
     linspace(0.1, 0.9, n).map(x => [r0, [1 - x, x]]),
-    {r: 0.1, stroke: 'blue', opacity: 0.75}
+    {radius: 0.1, stroke: 'blue', opacity: 0.75}
 );
 let gg = Group([p1, p2]);
 return Frame(gg, {margin: 0.05});
@@ -61,10 +61,11 @@ return f;
 let s = SymPath({
   fx: t => exp(-0.1*t)*cos(t),
   fy: t => exp(-0.1*t)*sin(t),
-  xlim: [-1, 1], ylim: [-1, 1],
   tlim: [0, 100], N: 1000,
 });
-return s;
+let p = Plot(s, {xlim: [-1, 1], ylim: [-1, 1]});
+let f = Frame(p, {margin: 0.1});
+return f;
 
 // basic plot
 let a = 0.027;
@@ -87,15 +88,15 @@ let s = SymPath({
 });
 let xt = linspace(-1, 1, 10).map(t => [t, '🍩']);
 let yt = linspace(-1, 1, 10).map(t => [t, '🐋']);
-let p = Plot(s, {xticks: xt, yticks: yt});
+let p = Plot(s, {xticks: xt, yticks: yt, ticksize: 0.03});
 return Frame(p, {margin: 0.1});
 
 // annotated plot
 let a = 0.027;
-let s1 = SymPath({fy: t => t, xlim: [-2, 2]});
-let s2 = SymPath({fy: t => -t, xlim: [-2, 2]});
-let s3 = SymPath({fx: t => 0, ylim: [-2, 0], stroke_dasharray: 3, stroke: 'blue'});
-let s4 = SymPath({fy: t => 0, xlim: [-2, 0], stroke_dasharray: 3, stroke: 'red'});
+let s1 = Line({x1: -2, y1: 2, x2: 2, y2: -2});
+let s2 = SymPath({fy: t => 2*(sqrt(2+t)-1), xlim: [-2, 2], N: 500});
+let s3 = VLine(0, {y1: -2, y2: 0, stroke_dasharray: 3, stroke: 'blue'});
+let s4 = HLine(0, {x1: -2, x2: 0, stroke_dasharray: 3, stroke: 'red'});
 let sc = Scatter([
   [0, 0], [2, 2], [-2, -2], [2, -2], [-2, 2], [0, -2], [-2, 0]
 ]);
@@ -108,19 +109,17 @@ let p = Plot([s1, s2, s3, s4, sc], {
 let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
 
-
-//interactive opacity
-
+// interactive opacity
 let i = new InterActive(
     {
         x: new Slider(50, {max: 100, title: 'Opacity'}),
-        y: new Slider(150, {max: 250, title: 'Width'})
+        y: new Slider(50, {max: 100, title: 'Width'})
     },
     (vars) => {
-        let r = Rect({fill: 'red', opacity: vars.x / 100});
-        let pos = [0.1, 0.1, 0.1 + 0.8*(vars.y / 100), 0.9];
-        let p = Place(r, pos);
-        return p;
+        let [a, w] = [vars.x / 100, vars.y / 100];
+        let r = Rect({x2: w, fill: 'red', opacity: a});
+        let f = Frame(r, {margin: 0.1});
+        return f;
     }
 );
 return i;
@@ -153,6 +152,20 @@ let r = Points([
   [Rect(), [0.5, 0.5]]
 ], 0.1);
 let p = Plot([...s, e, r, t], {xlim: [-1, 1], ylim: [-1, 1]});
+let f = Frame(p, {margin: 0.1});
+return f;
+
+// complex scatter
+let r0 = Rect({stroke: 'red', opacity: 0.5});
+let ex = Group([Ray(45), Ray(-45)]);
+let hi = Text('hello', {font_family: 'Montserrat', font_weight: 300});
+let exhi = HStack([Frame(ex, {margin: 0.3}), hi]);
+let s0 = Scatter([
+  [-0.3, 0.3], [0.4, 0.6], [-0.5, 0.8]
+], {
+  shape: exhi, radius: 0.1
+});
+let p = Plot(s0, {xlim: [-1, 1], ylim: [0, 1]});
 let f = Frame(p, {margin: 0.1});
 return f;
 
