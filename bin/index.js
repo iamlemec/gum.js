@@ -18,11 +18,13 @@ let size = 500;
 
 // gum.js interface mapper
 let gums = Gum.map(g => g.name);
-let mako = Gum.map(g => function(...args) {
-    if ('prototype' in g) {
-        return new g(...args);
+let mako = Gum.map(g => {
+    if (g.hasOwnProperty('prototype')) {
+        return function(...args) {
+            return new g(...args);
+        };
     } else {
-        return g(...args);
+        return g;
     }
 });
 
