@@ -28,15 +28,33 @@ let mako = Gum.map(g => {
     }
 });
 
-function parseGum(src) {
+async function callWithTimeout(fun, timeout) {
+    let prom0 = new Promise((resolve, reject) => {
+        setTimeout(() => {
+            reject('timeout');
+        }, timeout);
+    });
+    let prom1 = new Promise((resolve, reject) => {
+        try {
+            let ret = fun();
+            resolve(ret);
+        } catch (err) {
+            reject(err);
+        }
+    });
+    return await Promise.race([prom0, prom1]);
+}
+
+async function parseGum(src) {
     let expr = new Function(gums, src);
-    return expr(...mako);
+    let fun = () => expr(...mako);
+    return await callWithTimeout(fun, 1000);
 }
 
 // wrap in SVG if needed
 function renderGum(elem) {
     let iac = document.querySelector('#interActiveControl');
-    iac.innerHTML = "";
+    iac.innerHTML = '';
 
     if (elem instanceof InterActive) {
         let anchors = elem.createAnchors(iac, disp);
@@ -46,7 +64,7 @@ function renderGum(elem) {
         let args = {size: size, prec: prec};
         elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
         return elem.svg();
-    }else{
+    } else {
         return String(elem);
     }
 }
@@ -63,7 +81,12 @@ let vs = VStack([hs, hs]);
 let gg = Group([vs, r]);
 return Frame(gg, {border: 1, margin: 0.05});
 `.trim();
-let example = getCookie() ?? example0;
+
+// initial value
+let urlParams = new URLSearchParams(window.location.search);
+let source = urlParams.get('source');
+let cook = getCookie();
+let example = source ?? cook ?? example0;
 
 // canned error messages
 let err_nodata = 'No data. Does your final line return an element?';
@@ -106,15 +129,19 @@ function setCookie(src) {
     document.cookie = `gum=${vgum}; SameSite=Lax`;
 }
 
-function updateView(src) {
+async function updateView(src) {
     setCookie(src);
 
     // parse gum into tree
     let elem;
     try {
-        elem = parseGum(src);
-    } catch (e) {
-        setConvert(`error, line ${e.lineNumber}: ${e.message}`);
+        elem = await parseGum(src);
+    } catch (err) {
+        if (err == 'timeout') {
+            setConvert('function timeout');
+        } else {
+            setConvert(`error, line ${err.lineNumber}: ${err.message}`);
+        }
         setState(false);
         return;
     }

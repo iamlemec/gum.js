@@ -150,7 +150,7 @@ let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
 let e = Ellipse({cx: 0, cy: 0, rx: 0.5, ry: 0.5});
 let r = Points([
   [Rect(), [0.5, 0.5]]
-], 0.1);
+], {radius: 0.1});
 let p = Plot([...s, e, r, t], {xlim: [-1, 1], ylim: [-1, 1]});
 let f = Frame(p, {margin: 0.1});
 return f;
