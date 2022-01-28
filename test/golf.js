@@ -216,24 +216,19 @@ return InterActive({
 
 /// CHECKE MARK
 
-function guu(vars){
+function guu(vars) {
+    let letter = 'U';
+    if (vars.a) {
+        letter = 'C';
+    }
 
-let letter = 'U'
-if (vars.a){
-  letter = 'C'
+    let a = Node(letter);
+    let n1 = VStack([a, a]);
+    let n2 = HStack([n1, a]);
+    return Frame(n2, {margin: vars.b/1000});
 }
 
-let a = Node(letter);
-let n1 = VStack([a, a]);
-let n2 = HStack([n1, a]);
-let f = Frame(n2, {margin: vars.b/1000});
-return f;
-
-}
-
-let i = new InterActive(
-  {a: new Toggle(true, {title: 'Toggle checked/unchecked'}),
-   b: new Slider(50, {min:30, max: 60, title: 'a: y = ax + (1-a)z'})}, guu)
-
-
-return i
+return InterActive({
+    a: new Toggle(true, {title: 'Toggle checked/unchecked'}),
+    b: new Slider(50, {min: 30, max: 60, title: 'margin'})
+}, guu);
