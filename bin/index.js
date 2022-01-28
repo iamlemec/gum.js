@@ -140,7 +140,7 @@ async function updateView(src) {
         if (err == 'timeout') {
             setConvert('function timeout');
         } else {
-            setConvert(`error, line ${err.lineNumber}: ${err.message}`);
+            setConvert(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
         }
         setState(false);
         return;
@@ -154,8 +154,8 @@ async function updateView(src) {
         let svg;
         try {
             svg = renderGum(elem);
-        } catch (e) {
-            setConvert(`error, line ${e.lineNumber}: ${e.message}`);
+        } catch (err) {
+            setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
             setState(false);
             return;
         }
@@ -175,11 +175,10 @@ let mid = document.querySelector('#mid');
 let left = document.querySelector('#left');
 let right = document.querySelector('#right');
 
-
 // init convert
 let conv_text = new EditorView({
     state: EditorState.create({
-        doc: `<html>`,
+        doc: '',
         extensions: [
             xml(),
             drawSelection(),
@@ -208,9 +207,12 @@ let edit_text = new EditorView({
                 ...commentKeymap,
             ]),
             defaultHighlightStyle.fallback,
-            EditorView.updateListener.of(function(upd) {
-                let text = getText(upd.state);
-                updateView(text);
+            EditorView.updateListener.of(upd => {
+                if (upd.docChanged) {
+                    console.log('updating');
+                    let text = getText(upd.state);
+                    updateView(text);
+                }
             }),
         ],
     }),
@@ -218,7 +220,7 @@ let edit_text = new EditorView({
 });
 
 // connect handlers
-copy.addEventListener('click', function() {
+copy.addEventListener('click', evt => {
     let text = conv_text.state.doc.toString();
     navigator.clipboard.writeText(text);
 });
@@ -228,7 +230,6 @@ let text = getText(edit_text.state);
 updateView(text);
 
 // resize panels
-
 function resizePane(e) {
     let vw = window.innerWidth;
     let x = e.clientX;
@@ -236,10 +237,10 @@ function resizePane(e) {
     right.style.width = `${vw-x-2}px`;
 }
 
-mid.addEventListener('mousedown', function(e) {
+mid.addEventListener('mousedown', evt => {
     document.addEventListener('mousemove', resizePane, false);
 }, false);
 
-document.addEventListener('mouseup', function(e) {
+document.addEventListener('mouseup', evt => {
     document.removeEventListener('mousemove', resizePane, false);
 }, false);

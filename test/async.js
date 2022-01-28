@@ -22,7 +22,7 @@ async function task() {
         setTimeout(() => {
             console.log('completed task');
             resolve(5);
-        }, 2000);
+        }, 3000);
     });
     return await prom;
 }
