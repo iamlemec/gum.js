@@ -323,3 +323,47 @@ input[type=range]::-moz-range-thumb {
     fill: var(--font-col-int);
     stroke: : var(--delimit-col);
 }
+
+/* radio */
+
+.radio__input{
+    opacity: 0;
+    position: absolute;
+}
+
+/* .radio_circle{
+  position: absolute;
+  height: 10px;
+  width: 10px;
+  display: block;
+  background-color: transparent;
+  border-radius: 50%;
+  border: 2px solid var(--hl-col);  
+  margin-left: -20px;
+}
+ */
+.radio_label{
+    display:  block;
+    margin: 5px;
+    line-height: 15px;
+    cursor: pointer;
+    font-family: Montserrat;
+    border: 2px solid var(--font-col);
+    background-color: var(--bg-hl2-col);
+    padding: 5px;
+    border-radius: 10px;
+    text-align: center;
+    color: var(--font-col)
+}
+
+.radio_label:hover{
+    background-color: var(--bg-hl-col);
+}
+
+
+input[type="radio"]:checked+label{ 
+    font-weight: bold; 
+    border-color: var(--font-col-int);
+    background-color: var(--bg-hl-col);
+} 
+
