@@ -229,8 +229,8 @@ function guu(vars) {
 }
 
 return InterActive({
-    a: new Toggle(true, {title: 'Toggle checked/unchecked'}),
-    b: new Slider(50, {min: 30, max: 60, title: 'margin'})
+    a: Toggle(true, {title: 'Toggle checked/unchecked'}),
+    b: Slider(50, {min: 30, max: 60, title: 'margin'})
 }, guu);
 
 // custom axes
@@ -250,4 +250,22 @@ let ax = Axes({
     xlim: [0, 3], ylim: [0, 3]
 })
 let f = Frame(ax, {margin: 0.2});
+return f;
+
+// vector field
+let grid0 = linspace(-1, 1, 11);
+let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
+let fshape = ([x, y]) => Group([
+  Circle({cx: 0.5+x, cy: 0.5-y, r: 0.1, fill: 'black'}),
+  Line({x1: 0.5, y1: 0.5, x2: 0.5+x, y2: 0.5-y})
+]);
+let field = Points(
+  grid.map(p => [fshape(p), p]),
+  {radius: 0.04}
+);
+let p = Plot(field, {
+  xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
+  xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)
+});
+let f = Frame(p, {margin: 0.13});
 return f;
