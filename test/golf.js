@@ -269,3 +269,12 @@ let p = Plot(field, {
 });
 let f = Frame(p, {margin: 0.13});
 return f;
+
+// custom axis anchors
+let ln = SymPath({fy: sin xlim: [0, 2*pi]});
+let ax = Plot(ln, {
+  xticks: range(1, 7), yticks: range(-1, 2),
+  xlim: [0, 2*pi], xanchor: 0, aspect: 1.5
+})
+let f = Frame(ax, {margin: 0.1});
+return f;
