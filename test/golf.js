@@ -214,7 +214,7 @@ return InterActive({
     a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
 }, guu);
 
-/// CHECKE MARK
+/// CHECK MARK
 
 function guu(vars) {
     let letter = 'U';
@@ -232,3 +232,22 @@ return InterActive({
     a: new Toggle(true, {title: 'Toggle checked/unchecked'}),
     b: new Slider(50, {min: 30, max: 60, title: 'margin'})
 }, guu);
+
+// custom axes
+let ax = XAxis([[1, 'hi'], [2.1, 'lo']], {lim: [0, 3.2], aspect: 3});
+let out = Frame(ax, {margin: [0, 0, 0, 0.5]});
+let f = Frame(out, {margin: 0.2});
+return f;
+
+let ax = YAxis([[1, 'hi'], [2.1, 'lo']], {lim: [0, 3.2], aspect: 0.3});
+let out = Frame(ax, {margin: [0.5, 0, 0, 0]});
+let f = Frame(out, {margin: 0.2});
+return f;
+
+let ax = Axes({
+    xticks: [[1, 'hi'], [2.1, 'lo']],
+    yticks: [[1, 'hi'], [2.1, 'lo']],
+    xlim: [0, 3], ylim: [0, 3]
+})
+let f = Frame(ax, {margin: 0.2});
+return f;
