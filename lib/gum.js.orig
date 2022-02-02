@@ -1650,7 +1650,16 @@ class Radio extends Variable {
 
         let radioInner = '';
         Object.entries(Object.entries(v.attr.choices)).forEach(([index, [label, value]]) => {
+<<<<<<< HEAD
+            radioInner += `<input type="radio" class=radio__input id="Radio_${name}_${index}" name="Radio_${name}" value="${value}">
+            <label class="radio_label" for="Radio_${name}_${index}">
+            <span class="radio_circle"></span>
+            ${label}</label>`
+        })
 
+
+        radioInner.trim();
+=======
             radioInner += `
 <input type="radio" class=radio__input id="Radio_${name}_${index}" name="Radio_${name}" value="${value}">
 <label class="radio_label" for="Radio_${name}_${index}">
@@ -1658,6 +1667,7 @@ class Radio extends Variable {
 ${label}</label>
 `.trim();
         });
+>>>>>>> 6f2ff468aa1b534d1187c22c74be943e21434380
 
         let cont = document.createElement('div');
         cont.className = 'var_cont radio_cont';

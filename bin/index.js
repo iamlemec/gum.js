@@ -16,13 +16,28 @@ import { Gum, SVG, Element, InterActive } from './lib/gum.js'
 let prec = 2;
 let size = 500;
 
+// detect object types
+function detect(g) {
+    if ('prototype' in g) {
+        let [t, ...x] = g.toString().split(' ');
+        return t;
+    } else {
+        return 'value';
+    }
+}
+
 // gum.js interface mapper
 let gums = Gum.map(g => g.name);
 let mako = Gum.map(g => {
-    if (g.hasOwnProperty('prototype')) {
+    let t = detect(g);
+    if (t == 'class') {
         return function(...args) {
             return new g(...args);
         };
+    } else if (t == 'function') {
+        return function(...args) {
+            return g(...args);
+        }
     } else {
         return g;
     }

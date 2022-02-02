@@ -148,7 +148,7 @@ let s = [0.5, 0.7, 1.0, 1.4].map(a =>
 );
 let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
 let e = Ellipse({cx: 0, cy: 0, rx: 0.5, ry: 0.5});
-let r = Points([
+let r = Scatter([
   [Rect(), [0.5, 0.5]]
 ], {radius: 0.1});
 let p = Plot([...s, e, r, t], {xlim: [-1, 1], ylim: [-1, 1]});
@@ -214,7 +214,7 @@ return InterActive({
     a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
 }, guu);
 
-/// CHECKE MARK
+/// CHECK MARK
 
 function guu(vars) {
     let letter = 'U';
@@ -229,6 +229,69 @@ function guu(vars) {
 }
 
 return InterActive({
-    a: new Toggle(true, {title: 'Toggle checked/unchecked'}),
-    b: new Slider(50, {min: 30, max: 60, title: 'margin'})
+    a: Toggle(true, {title: 'Toggle checked/unchecked'}),
+    b: Slider(50, {min: 30, max: 60, title: 'margin'})
 }, guu);
+
+// custom axes
+let ax = XAxis([[1, 'lo'], [2.1, 'hi']], {lim: [0, 3.2], aspect: 3});
+let out = Frame(ax, {margin: [0, 0, 0, 0.5]});
+let f = Frame(out, {margin: 0.2});
+return f;
+
+let ax = YAxis([[1, 'lo'], [2.1, 'hi']], {lim: [0, 3.2], aspect: 0.3});
+let out = Frame(ax, {margin: [0.5, 0, 0, 0]});
+let f = Frame(out, {margin: 0.2});
+return f;
+
+let ax = Axes({
+    xticks: [[1, 'lo'], [2.1, 'hi']],
+    yticks: [[1, 'lo'], [2.1, 'hi']],
+    xlim: [0, 3], ylim: [0, 3]
+})
+let f = Frame(ax, {margin: 0.2});
+return f;
+
+// vector field
+let grid0 = linspace(-1, 1, 11);
+let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
+let fshape = ([x, y]) => Group([
+  Circle({cx: 0.5+x, cy: 0.5-y, r: 0.1, fill: 'black'}),
+  Line({x1: 0.5, y1: 0.5, x2: 0.5+x, y2: 0.5-y})
+]);
+let field = Points(
+  grid.map(p => [fshape(p), p]),
+  {radius: 0.04}
+);
+let p = Plot(field, {
+  xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
+  xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)
+});
+let f = Frame(p, {margin: 0.13});
+return f;
+
+// custom axis anchors
+let ln = SymPath({fy: sin xlim: [0, 2*pi]});
+let ax = Plot(ln, {
+  xticks: range(1, 7), yticks: range(-1, 2),
+  xlim: [0, 2*pi], xanchor: 0, aspect: 1.5
+})
+let f = Frame(ax, {margin: 0.1});
+return f;
+
+// background linegrids
+let f = SymPath({fy: x => sin(-x), xlim: [0, 2*pi]});
+let l = linspace(-1, 1, 5).map(
+  y => HLine(y, {x1: 0, x2: 2*pi, stroke: '#CCC'})
+);
+let t = linspace(0, 2, 6).slice(1).map(x => {
+  let x1 = rounder(x, 1);
+  return [x*pi, `${x1} π`]
+});
+let p = Plot([...l, f], {
+  xlim: [0, 2*pi], ylim: [-1, 1],
+  xticks: t, yticks: linspace(-1, 1, 5),
+  xanchor: 0, aspect: 1.5
+});
+let b = Frame(p, {margin: 0.13});
+return b;
