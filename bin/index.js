@@ -10,61 +10,11 @@ import { commentKeymap } from '@codemirror/comment'
 import { defaultHighlightStyle } from '@codemirror/highlight'
 import { bracketMatching } from '@codemirror/matchbrackets'
 
-import { Gum, SVG, Element, InterActive } from './lib/gum.js'
+import { SVG, Element, InterActive, parseGum } from './lib/gum.js'
 
 // svg presets
 let prec = 2;
 let size = 500;
-
-// detect object types
-function detect(g) {
-    if ('prototype' in g) {
-        let [t, ...x] = g.toString().split(' ');
-        return t;
-    } else {
-        return 'value';
-    }
-}
-
-// gum.js interface mapper
-let gums = Gum.map(g => g.name);
-let mako = Gum.map(g => {
-    let t = detect(g);
-    if (t == 'class') {
-        return function(...args) {
-            return new g(...args);
-        };
-    } else if (t == 'function') {
-        return function(...args) {
-            return g(...args);
-        }
-    } else {
-        return g;
-    }
-});
-
-async function callWithTimeout(fun, timeout) {
-    let prom0 = new Promise((resolve, reject) => {
-        setTimeout(() => {
-            reject('timeout');
-        }, timeout);
-    });
-    let prom1 = new Promise((resolve, reject) => {
-        try {
-            let ret = fun();
-            resolve(ret);
-        } catch (err) {
-            reject(err);
-        }
-    });
-    return await Promise.race([prom0, prom1]);
-}
-
-async function parseGum(src) {
-    let expr = new Function(gums, src);
-    let fun = () => expr(...mako);
-    return await callWithTimeout(fun, 1000);
-}
 
 // wrap in SVG if needed
 function renderGum(elem) {
