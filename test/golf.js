@@ -1,26 +1,25 @@
 // copy icon
 let x = 0.35;
-let r = Rect();
-let s = Points([
-  [r, [x, x, x]],
-  [r, [1-x, 1-x, x]],
-]);
+let s = Scatter(
+  [[x, x], [1-x, 1-x]],
+  {shape: Rect(), radius: x}
+);
 let f = Frame(s, {margin: 0.05});
 return SVG(f, {size: [20, 25]});
 
 // square arrangement
-let n = 13;
-let r0 = Rect();
-let p1 = Points(
-    linspace(0.1, 0.9, n).map(x => [r0, [x, x]]),
-    {radius: 0.1, stroke: 'red', opacity: 0.75}
+let n = 16;
+let r = Rect();
+let p1 = Scatter(
+    linspace(0, 1, n).map(x => [x, x]),
+    {shape: r, radius: 0.1, stroke: 'red'}
 );
-let p2 = Points(
-    linspace(0.1, 0.9, n).map(x => [r0, [1 - x, x]]),
-    {radius: 0.1, stroke: 'blue', opacity: 0.75}
+let p2 = Scatter(
+    linspace(0, 1, n).map(x => [1 - x, x]),
+    {shape: r, radius: 0.1, stroke: 'blue'}
 );
-let gg = Group([p1, p2]);
-return Frame(gg, {margin: 0.05});
+let gg = Group([p1, p2], {opacity: 0.75});
+return Frame(gg, {margin: 0.15});
 
 // starburst pattern
 let n = 12;
@@ -259,7 +258,7 @@ let fshape = ([x, y]) => Group([
   Circle({cx: 0.5+x, cy: 0.5-y, r: 0.1, fill: 'black'}),
   Line({x1: 0.5, y1: 0.5, x2: 0.5+x, y2: 0.5-y})
 ]);
-let field = Points(
+let field = Scatter(
   grid.map(p => [fshape(p), p]),
   {radius: 0.04}
 );
@@ -280,18 +279,21 @@ let f = Frame(ax, {margin: 0.1});
 return f;
 
 // background linegrids
-let f = SymPath({fy: x => sin(-x), xlim: [0, 2*pi]});
-let l = linspace(-1, 1, 5).map(
+let xt = linspace(0, 2, 6).slice(1).map(
+  x => [x*pi, `${rounder(x, 1)} π`]
+);
+let yt = linspace(-1, 1, 5);
+
+let f = SymPath({fy: x => -sin(x), xlim: [0, 2*pi]});
+let l = yt.map(
   y => HLine(y, {x1: 0, x2: 2*pi, stroke: '#CCC'})
 );
-let t = linspace(0, 2, 6).slice(1).map(x => {
-  let x1 = rounder(x, 1);
-  return [x*pi, `${x1} π`]
-});
+
 let p = Plot([...l, f], {
   xlim: [0, 2*pi], ylim: [-1, 1],
-  xticks: t, yticks: linspace(-1, 1, 5),
-  xanchor: 0, aspect: 1.5
+  xticks: xt, yticks: yt,
+  xlabel: 'hello world', ylabel: 'all your base',
+  xanchor: -1, aspect: 1.5
 });
-let b = Frame(p, {margin: 0.13});
-return b;
+
+return Frame(p, {margin: 0.2});
