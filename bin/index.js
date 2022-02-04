@@ -16,14 +16,25 @@ import { SVG, Element, InterActive, parseGum } from './lib/gum.js'
 let prec = 2;
 let size = 500;
 
+// global elements
+let code = document.querySelector('#code');
+let conv = document.querySelector('#conv');
+let disp = document.querySelector('#disp');
+let stat = document.querySelector('#stat');
+let copy = document.querySelector('#copy');
+let mid = document.querySelector('#mid');
+let left = document.querySelector('#left');
+let right = document.querySelector('#right');
+let iac = document.querySelector('#interActiveControl');
+
 // wrap in SVG if needed
 function renderGum(elem) {
-    let iac = document.querySelector('#interActiveControl');
     iac.innerHTML = '';
 
     if (elem instanceof InterActive) {
-        let anchors = elem.createAnchors(iac, disp);
-        elem = elem.create(disp);
+        let anchors = elem.createAnchors(disp);
+        iac.append(...anchors);
+        elem = elem.create();
     }
     if (elem instanceof Element) {
         let args = {size: size, prec: prec};
@@ -129,16 +140,6 @@ async function updateView(src) {
         disp.innerHTML = svg;
     }
 }
-
-// global elements
-let code = document.querySelector('#code');
-let conv = document.querySelector('#conv');
-let disp = document.querySelector('#disp');
-let stat = document.querySelector('#stat');
-let copy = document.querySelector('#copy');
-let mid = document.querySelector('#mid');
-let left = document.querySelector('#left');
-let right = document.querySelector('#right');
 
 // init convert
 let conv_text = new EditorView({

@@ -293,42 +293,38 @@ let p = Plot([...l, f], {
   xlim: [0, 2*pi], ylim: [-1, 1],
   xticks: xt, yticks: yt,
   xlabel: 'hello world', ylabel: 'all your base',
-  xanchor: -1, aspect: 1.5
+  xanchor: 0, aspect: 1.5
 });
 
 return Frame(p, {margin: 0.2});
 
-
-
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {
-let a = vars.a / 50
-let b = vars.b / 50
-let c = vars.c
-let grid0 = linspace(-1, 1, Math.round(vars.d));
-let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
-let fshape = ([x, y]) => Group([
-  Circle({cx: 0.5+(a*x), cy: 0.5-(b*y), r: 0.1, stroke: c, fill: c, opacity: ((a*x)**2 + (b*y)**2)**(1.5)}),
-  Line({x1: 0.5, y1: 0.5, x2: 0.5+(a*x), y2: 0.5-(b*y), stroke: c, opacity: ((a*x)**2 + (b*y)**2)})
-]);
-let field = Scatter(
-  grid.map(p => [fshape(p), p]),
-  {radius: 0.04}
-);
-let p = Plot(field, {
-  xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
-  xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)
-});
-let f = Frame(p, {margin: 0.13});
-return f;
+  let a = vars.a / 50;
+  let b = vars.b / 50;
+  let c = vars.c;
+  let grid0 = linspace(-1, 1, Math.round(vars.d));
+  let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
+  let fshape = ([x, y]) => Group([
+    Circle({cx: 0.5+(a*x), cy: 0.5-(b*y), r: 0.1, stroke: c, fill: c, opacity: ((a*x)**2 + (b*y)**2)**(1.5)}),
+    Line({x1: 0.5, y1: 0.5, x2: 0.5+(a*x), y2: 0.5-(b*y), stroke: c, opacity: ((a*x)**2 + (b*y)**2)})
+  ]);
+  let field = Scatter(
+    grid.map(p => [fshape(p), p]),
+    {radius: 0.04}
+  );
+  let p = Plot(field, {
+    xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
+    xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)
+  });
+  let f = Frame(p, {margin: 0.13});
+  return f;
 }
 
 return InterActive({
-a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
-    b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
-c: List('red', {choices: ['red','blue','green']}),
- d: Slider(5, {min: 5, max: 20, title: 'density'})
+  a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
+  b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
+  c: List('red', {choices: ['red','blue','green']}),
+  d: Slider(5, {min: 5, max: 20, title: 'density'})
 }, guu);
-
-
