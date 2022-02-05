@@ -23,4 +23,3 @@ mail.toml
 
 #node and snowpack shit
 node_modules/
-build/
