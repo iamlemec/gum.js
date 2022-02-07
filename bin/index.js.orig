@@ -28,6 +28,7 @@ let right = document.querySelector('#right');
 let iac = document.querySelector('#interActiveControl');
 
 // wrap in SVG if needed
+<<<<<<< HEAD
 function renderGum(out) {
     let svg;
     let anchors = null;
@@ -39,6 +40,15 @@ function renderGum(out) {
         anchors = out.createAnchors(redraw);
         out = out.create(redraw);
         iac.append(...anchors)
+=======
+function renderGum(elem) {
+    iac.innerHTML = '';
+
+    if (elem instanceof InterActive) {
+        let anchors = elem.createAnchors(disp);
+        iac.append(...anchors);
+        elem = elem.create();
+>>>>>>> 61a92f4753d48c4d93b81bc4f65a979d96ef7093
     }
     if (out instanceof Element) {
         out = (out instanceof SVG) ? out : new SVG([out]);

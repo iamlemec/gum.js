@@ -1,14 +1,14 @@
-import { EditorView, drawSelection, keymap } from '@codemirror/view'
-import { EditorState } from '@codemirror/state'
-import { lineNumbers, highlightActiveLineGutter } from '@codemirror/gutter'
-import { history, historyKeymap } from '@codemirror/history'
-import { indentOnInput } from '@codemirror/language'
-import { javascript } from '@codemirror/lang-javascript'
-import { xml } from '@codemirror/lang-xml'
-import { defaultKeymap, indentWithTab, insertTab } from '@codemirror/commands'
-import { commentKeymap } from '@codemirror/comment'
-import { defaultHighlightStyle } from '@codemirror/highlight'
-import { bracketMatching } from '@codemirror/matchbrackets'
+import { EditorView, drawSelection, keymap } from './_snowpack/pkg/@codemirror/view.js'
+import { EditorState } from './_snowpack/pkg/@codemirror/state.js'
+import { lineNumbers, highlightActiveLineGutter } from './_snowpack/pkg/@codemirror/gutter.js'
+import { history, historyKeymap } from './_snowpack/pkg/@codemirror/history.js'
+import { indentOnInput } from './_snowpack/pkg/@codemirror/language.js'
+import { javascript } from './_snowpack/pkg/@codemirror/lang-javascript.js'
+import { xml } from './_snowpack/pkg/@codemirror/lang-xml.js'
+import { defaultKeymap, indentWithTab, insertTab } from './_snowpack/pkg/@codemirror/commands.js'
+import { commentKeymap } from './_snowpack/pkg/@codemirror/comment.js'
+import { defaultHighlightStyle } from './_snowpack/pkg/@codemirror/highlight.js'
+import { bracketMatching } from './_snowpack/pkg/@codemirror/matchbrackets.js'
 
 import { SVG, Element, InterActive, parseGum } from './lib/gum.js'
 
@@ -28,24 +28,20 @@ let right = document.querySelector('#right');
 let iac = document.querySelector('#interActiveControl');
 
 // wrap in SVG if needed
-function renderGum(out) {
-    let svg;
-    let anchors = null;
-    let redraw = document.querySelector('#disp');
-    let iac = document.querySelector('#interActiveControl');
+function renderGum(elem) {
     iac.innerHTML = '';
 
-    if (out instanceof InterActive) {
-        anchors = out.createAnchors(redraw);
-        out = out.create(redraw);
-        iac.append(...anchors)
+    if (elem instanceof InterActive) {
+        let anchors = elem.createAnchors(disp);
+        iac.append(...anchors);
+        elem = elem.create();
     }
-    if (out instanceof Element) {
-        out = (out instanceof SVG) ? out : new SVG([out]);
-        svg = out.svg({size: size, prec: prec});
-        return svg
+    if (elem instanceof Element) {
+        let args = {size: size, prec: prec};
+        elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
+        return elem.svg();
     } else {
-        return String(out);
+        return String(elem);
     }
 }
 

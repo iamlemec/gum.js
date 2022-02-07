@@ -1,6 +1,6 @@
 // gum.js
 
-import render from 'katex'
+import render from '../_snowpack/pkg/katex.js'
 
 /**
  ** defaults
@@ -331,65 +331,6 @@ function props_repr(d, prec) {
         .map(([k, v]) => `${demangle(k)}="${rounder(v, prec)}"`)
         .join(' ');
 }
-
-/**
- ** color handling
- **/
-
-
-// Converts a #ffffff hex string into an [r,g,b] array
-function hex2rgb(hex) {
-    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16)
-    ] : null;
-};
-
-
-function rgb2hsl(color) {
-  let r = color[0]/255;
-  let g = color[1]/255;
-  let b = color[2]/255;
-
-  let max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
-
-  if (max == min) {
-    h = s = 0; // achromatic
-  } else {
-    let d = max - min;
-    s = (l > 0.5 ? d / (2 - max - min) : d / (max + min));
-    switch(max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-
-  return [h, s, l];
-};
-
-
-function interpolateVectors(c1, c2, alpha) {
-    let len = min(c1.length,c2.length);
-    let out = [...Array(len).keys()].map((i) => {
-            let x = (c1[i] + alpha*(c2[i]-c1[i]))
-            return x.toFixed(3)
-        });
-  return out;
-};
-
-function interpolateVectorsPallet(c1, c2, n) {
-    let ls = linspace(0,1,n)
-    let out = ls.map((alpha) => {
-        return interpolateVectors(c1,c2,alpha)
-    });
-  return out;
-};
-
 
 /**
  ** core classes
@@ -1855,8 +1796,7 @@ let Gum = [
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, Scatter, XScale, YScale, XAxis, YAxis,
     Axes, Graph, Plot, InterActive, Variable, Slider, Toggle, List, XTicks, YTicks,
-    range, linspace, interpolateVectors, interpolateVectorsPallet,
-    zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, rounder,
+    range, linspace, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, rounder,
     make_ticklabel
 ];
 
@@ -1946,8 +1886,7 @@ export {
     Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node, MoveTo,
     LineTo, Bezier2, Bezier3, Arc, Close, SymPath, Scatter, XScale, YScale, XAxis, YAxis, Axes,
     Graph, Plot, InterActive, Variable, Slider, Toggle, List, XTicks, YTicks,
-    gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, 
-    interpolateVectors, interpolateVectorsPallet, exp,
+    gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, exp,
     log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, rounder, make_ticklabel,
     parseGum, renderGum, gums, mako, injectImage, injectImages
 };
