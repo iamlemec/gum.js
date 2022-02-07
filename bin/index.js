@@ -17,20 +17,24 @@ let prec = 2;
 let size = 500;
 
 // wrap in SVG if needed
-function renderGum(elem) {
+function renderGum(out) {
+    let svg;
+    let anchors = null;
+    let redraw = document.querySelector('#disp');
     let iac = document.querySelector('#interActiveControl');
     iac.innerHTML = '';
 
-    if (elem instanceof InterActive) {
-        let anchors = elem.createAnchors(iac, disp);
-        elem = elem.create(disp);
+    if (out instanceof InterActive) {
+        anchors = out.createAnchors(redraw);
+        out = out.create(redraw);
+        iac.append(...anchors)
     }
-    if (elem instanceof Element) {
-        let args = {size: size, prec: prec};
-        elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
-        return elem.svg();
+    if (out instanceof Element) {
+        out = (out instanceof SVG) ? out : new SVG([out]);
+        svg = out.svg({size: size, prec: prec});
+        return svg
     } else {
-        return String(elem);
+        return String(out);
     }
 }
 

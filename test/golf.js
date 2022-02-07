@@ -232,6 +232,18 @@ return InterActive({
     b: Slider(50, {min: 30, max: 60, title: 'margin'})
 }, guu);
 
+/// colors
+
+
+function guu(vars){
+  let x = interpolateVectors([0, 100],[100, 0], vars.x/100)
+  return Rect({stroke:'none', fill:`hsl(180, ${x[0]}%, ${x[1]}%)`})
+}
+
+return InterActive({
+    x: Slider(50, {min: 0, max: 100, title: 'margin'})
+}, guu);
+
 // custom axes
 let ax = XAxis([[1, 'lo'], [2.1, 'hi']], {lim: [0, 3.2], aspect: 3});
 let out = Frame(ax, {margin: [0, 0, 0, 0.5]});
