@@ -9,6 +9,11 @@ let α = 0.35;
 let ρ = 0.05;
 let δ = 0.1;
 
+// colors
+let red = '#ff0d57';
+let blue = '#1e88e5';
+let green = '#13b755';
+
 // functions
 let f = k => k**α;
 let fp = k => α*(k**(α-1));
@@ -60,7 +65,7 @@ let lines = starts.map(([k0, c0, dir]) =>
   Polyline(simpath(k0, c0, km, cm, dir), {stroke: 'gray'})
 );
 let arms = backs.map(([k0, c0, dir]) =>
-  Polyline(simpath(k0, c0, km, cm, dir), {stroke: 'red', stroke_width: 1.5})
+  Polyline(simpath(k0, c0, km, cm, dir), {stroke: red, stroke_width: 1.5})
 );
 
 // points
@@ -68,13 +73,17 @@ let point = Scatter(
   starts.map(([k0, c0, N]) => [k0, c0]),
   {shape: Circle({stroke: 'gray', fill: 'gray'})}
 );
-let state = Scatter([[kss, css]], {radius: 0.05, shape: Circle({stroke: 'black', fill: 'black'})});
+let state = Scatter([[kss, css]], {radius: 0.05});
 
 // lines
-vline = VLine(kss, {y1: 0, y2: cm, stroke: '#BBB', stroke_dasharray: 4});
-hline = HLine(css, {x1: 0, x2: km, stroke: '#BBB', stroke_dasharray: 4});
-dk0line = SymPath({fy: kdot0, xlim: [0, km], N: 500, stroke: 'blue', stroke_width: 1});
-dc0line = SymPath({fx: y => kss, ylim: [0, cm], stroke: 'green', stroke_width: 1});
+vline = VLine(kss, {
+  y1: 0, y2: cm, stroke: '#777', stroke_dasharray: [5, 2], stroke_width: 0.5
+});
+hline = HLine(css, {
+  x1: 0, x2: km, stroke: '#777', stroke_dasharray: [5, 2], stroke_width: 0.5
+});
+dk0line = SymPath({fy: kdot0, xlim: [0, km], N: 500, stroke: blue, stroke_width: 1});
+dc0line = SymPath({fx: y => kss, ylim: [0, cm], stroke: green, stroke_width: 1});
 
 // labels
 let texstack = lines => VStack(lines.map(
@@ -92,7 +101,7 @@ let zones = Scatter(
 
 // plot
 let plot = Plot(
-  [vline, hline, dk0line, dc0line, ...lines, ...arms, state, point, zones],
+  [vline, hline, ...lines, dk0line, dc0line, ...arms, state, point, zones],
   {
     aspect: 1.3, xlim: [0, km], ylim: [0, cm],
     xticks: [[kss, Tex('k^{\\ast}')]],
@@ -103,4 +112,5 @@ let plot = Plot(
 
 // display
 let frame = Frame(plot, {margin: 0.1});
-return frame;
+let svg = SVG(frame, {size: 250});
+return svg;
