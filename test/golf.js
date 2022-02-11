@@ -294,19 +294,28 @@ let ax = Plot(ln, {
 let f = Frame(ax, {margin: 0.1});
 return f;
 
-// background linegrids
+// fancy plot
+let red = '#ff0d57';
+let blue = '#1e88e5';
+let pal = x => interpolateHex(blue, red, x);
+
 let xt = linspace(0, 2, 6).slice(1).map(
   x => [x*pi, `${rounder(x, 1)} π`]
 );
 let yt = linspace(-1, 1, 5);
 
 let f = SymPath({fy: x => -sin(x), xlim: [0, 2*pi]});
-let p = Plot(f, {
-  aspect: 1.5, xanchor: 0, xticks: xt, yticks: yt,
-  ygrid: true, xlabel: 'time', ylabel: 'amplitude',
-  title: 'Inverted Sine Wave'
+let s = SymPoints({
+  fy: x => -sin(x), xlim: [0, 2*pi], N: 21,
+  fr: (x, y) => 0.03+abs(y)/20,
+  fs: (x, y) => Circle({fill: pal((1+y)/2)})
 });
 
+let p = Plot([f, s], {
+  aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1],
+  xanchor: 0, xticks: xt, yticks: yt, ygrid: true,
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave'
+});
 return Frame(p, {margin: 0.2});
 
 ////// INTERACTIBFG VECTOR FIELD
