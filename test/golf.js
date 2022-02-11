@@ -297,15 +297,10 @@ let xt = linspace(0, 2, 6).slice(1).map(
 let yt = linspace(-1, 1, 5);
 
 let f = SymPath({fy: x => -sin(x), xlim: [0, 2*pi]});
-let l = yt.map(
-  y => HLine(y, {x1: 0, x2: 2*pi, stroke: '#CCC'})
-);
-
-let p = Plot([...l, f], {
-  xlim: [0, 2*pi], ylim: [-1, 1],
-  xticks: xt, yticks: yt,
-  xlabel: 'hello world', ylabel: 'all your base',
-  xanchor: 0, aspect: 1.5
+let p = Plot(f, {
+  aspect: 1.5, xanchor: 0, xticks: xt, yticks: yt,
+  ygrid: true, xlabel: 'time', ylabel: 'amplitude',
+  title: 'Inverted Sine Wave'
 });
 
 return Frame(p, {margin: 0.2});
