@@ -148,10 +148,14 @@ let s = [0.5, 0.7, 1.0, 1.4].map(a =>
 let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
 let e = Ellipse({cx: 0, cy: 0, rx: 0.5, ry: 0.5});
 let r = Scatter([
-  [Rect(), [0.5, 0.5]]
+  [Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]
 ], {radius: 0.1});
-let p = Plot([...s, e, r, t], {xlim: [-1, 1], ylim: [-1, 1]});
-let f = Frame(p, {margin: 0.1});
+let p = Plot([...s, e, r, t], {
+  xlim: [-1, 1], ylim: [-1, 1], ygrid: true, xgrid: true,
+  xlabel: 'time (seconds)', ylabel: 'space (meters)',
+  title: 'Spacetime Vibes'
+});
+let f = Frame(p, {margin: 0.2});
 return f;
 
 // complex scatter
