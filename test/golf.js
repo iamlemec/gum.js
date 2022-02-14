@@ -307,8 +307,8 @@ let yt = linspace(-1, 1, 5);
 let f = SymPath({fy: x => -sin(x), xlim: [0, 2*pi]});
 let s = SymPoints({
   fy: x => -sin(x), xlim: [0, 2*pi], N: 21,
-  fr: (x, y) => 0.03+abs(y)/20,
-  fs: (x, y) => Circle({fill: pal((1+y)/2)})
+  fr: (t, x, y) => 0.03+abs(y)/20,
+  fs: (t, x, y) => Circle({fill: pal((1+y)/2)})
 });
 
 let p = Plot([f, s], {
