@@ -1163,11 +1163,10 @@ class Text extends Element {
         let width = abs(cos(theta))*width0 + abs(sin(theta))*height0;
         let height = abs(sin(theta))*width0 + abs(cos(theta))*height0;
         let [wfact, hfact] = [width0/width, height0/height];
-        let rattr = (rotate != 0) ? {transform: `rotate(${rotate})`} : {};
 
         // pass to element
         let aspect = width/height;
-        let attr1 = {aspect: aspect, font_family: font_disp, ...rattr, ...attr};
+        let attr1 = {aspect: aspect, font_family: font_disp, ...attr};
         super('text', false, attr1);
 
         // store metrics
@@ -1177,6 +1176,7 @@ class Text extends Element {
         this.text = text;
         this.wfact = wfact;
         this.hfact = hfact;
+        this.rotate = rotate;
     }
 
     props(ctx) {
@@ -1196,7 +1196,7 @@ class Text extends Element {
 
         let base = {
             x: x, y: y, font_size: `${h1}px`,
-            transform_origin: `${cx} ${cy}`
+            transform: `rotate(${this.rotate} ${cx} ${cy})`
         };
         return {...base, ...this.attr};
     }
