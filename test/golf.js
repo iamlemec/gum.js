@@ -148,10 +148,14 @@ let s = [0.5, 0.7, 1.0, 1.4].map(a =>
 let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
 let e = Ellipse({cx: 0, cy: 0, rx: 0.5, ry: 0.5});
 let r = Scatter([
-  [Rect(), [0.5, 0.5]]
+  [Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]
 ], {radius: 0.1});
-let p = Plot([...s, e, r, t], {xlim: [-1, 1], ylim: [-1, 1]});
-let f = Frame(p, {margin: 0.1});
+let p = Plot([...s, e, r, t], {
+  xlim: [-1, 1], ylim: [-1, 1], ygrid: true, xgrid: true,
+  xlabel: 'time (seconds)', ylabel: 'space (meters)',
+  title: 'Spacetime Vibes'
+});
+let f = Frame(p, {margin: 0.2});
 return f;
 
 // complex scatter
@@ -290,24 +294,28 @@ let ax = Plot(ln, {
 let f = Frame(ax, {margin: 0.1});
 return f;
 
-// background linegrids
+// fancy plot
+let red = '#ff0d57';
+let blue = '#1e88e5';
+let pal = x => interpolateHex(blue, red, x);
+
 let xt = linspace(0, 2, 6).slice(1).map(
   x => [x*pi, `${rounder(x, 1)} π`]
 );
 let yt = linspace(-1, 1, 5);
 
 let f = SymPath({fy: x => -sin(x), xlim: [0, 2*pi]});
-let l = yt.map(
-  y => HLine(y, {x1: 0, x2: 2*pi, stroke: '#CCC'})
-);
-
-let p = Plot([...l, f], {
-  xlim: [0, 2*pi], ylim: [-1, 1],
-  xticks: xt, yticks: yt,
-  xlabel: 'hello world', ylabel: 'all your base',
-  xanchor: 0, aspect: 1.5
+let s = SymPoints({
+  fy: x => -sin(x), xlim: [0, 2*pi], N: 21,
+  fr: (t, x, y) => 0.03+abs(y)/20,
+  fs: (t, x, y) => Circle({fill: pal((1+y)/2)})
 });
 
+let p = Plot([f, s], {
+  aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1],
+  xanchor: 0, xticks: xt, yticks: yt, ygrid: true,
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave'
+});
 return Frame(p, {margin: 0.2});
 
 ////// INTERACTIBFG VECTOR FIELD
