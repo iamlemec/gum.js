@@ -41,8 +41,9 @@ function renderGum(out) {
         iac.append(...anchors)
     }
     if (out instanceof Element) {
-        out = (out instanceof SVG) ? out : new SVG([out]);
-        svg = out.svg({size: size, prec: prec});
+        let args = {size: size, prec: prec};
+        out = (out instanceof SVG) ? out : new SVG(out, args);
+        svg = out.svg();
         return svg
     } else {
         return String(out);

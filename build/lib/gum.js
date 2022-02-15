@@ -1194,7 +1194,10 @@ class Text extends Element {
         let x = cx - 0.5*w0 - this.xoff*h1;
         let y = cy + 0.5*h0 + this.yoff*h1;
 
-        let base = {x: x, y: y, font_size: `${h1}px`, transform_origin: `${cx} ${cy}`};
+        let base = {
+            x: x, y: y, font_size: `${h1}px`,
+            transform_origin: `${cx} ${cy}`
+        };
         return {...base, ...this.attr};
     }
 
@@ -1205,8 +1208,9 @@ class Text extends Element {
 
 class Tex extends Element {
     constructor(text, args) {
-        let {family, size, actual, calc_family, vshift, xover, yover, ...attr} = args ?? {};
+        let {family, size, actual, calc_family, vshift, xover, yover, rotate, ...attr} = args ?? {};
         size = size ?? font_size_base;
+        rotate = rotate ?? 0;
         actual = actual ?? true;
         vshift = vshift ?? 0;
         yover = yover ?? 1.0;
@@ -1221,8 +1225,16 @@ class Tex extends Element {
         [xoff, yoff, size] = [xoff/width0, yoff/height0, size/height0];
         let aspect0 = width0/height0;
 
+        // account for rotation
+        let theta = (pi/180)*rotate;
+        let width = abs(cos(theta))*width0 + abs(sin(theta))*height0;
+        let height = abs(sin(theta))*width0 + abs(cos(theta))*height0;
+        let [wfact, hfact] = [width0/width, height0/height];
+        let rattr = (rotate != 0) ? {transform: `rotate(${rotate})`} : {};
+
         // pass to element
-        let attr1 = {aspect: aspect0, ...attr};
+        let aspect = width/height;
+        let attr1 = {aspect: aspect, ...rattr, ...attr};
         super('foreignObject', false, attr1);
 
         // store metrics
@@ -1231,25 +1243,36 @@ class Tex extends Element {
         this.size = size;
         this.xover = xover;
         this.yover = yover;
-        this.fontsize = size
+        this.wfact = wfact;
+        this.hfact = hfact;
         this.katex = katex;
+
     }
 
     props(ctx) {
         let [x1, y1, x2, y2] = ctx.rect;
         let [w, h] = [x2 - x1, y2 - y1];
 
-        let w1 = w;
-        let h1 = this.size*h;
-        let fs = this.size*h;
+        let w0 = this.wfact*w;
+        let h0 = this.hfact*h;
+
+        let w1 = w0;
+        let h1 = this.size*h0;
+        let fs = this.size*h0;
 
         let w2 = (1+this.xover)*w1;
         let h2 = (1+this.yover)*h1;
 
-        let x = x1 - this.xoff*w1;
-        let y = y1 + this.yoff*h1;
+        // get unrotated origin
+        let cx = x1 + 0.5*w;
+        let cy = y1 + 0.5*h;
+        let x = cx - 0.5*w0 - this.xoff*w1;
+        let y = cy - 0.5*h0 + this.yoff*h1;
 
-        let base = {x: x, y: y, width: w2, height: h2, font_size: `${fs}px`};
+        let base = {
+            x: x, y: y, width: w2, height: h2, font_size: `${fs}px`,
+            transform_origin: `${cx} ${cy}`
+        };
         return {...base, ...this.attr};
     }
 
@@ -1404,7 +1427,7 @@ function make_axislabel(s, attr) {
 }
 
 function ensure_tick(t, prec) {
-    prec = prec ?? 2;
+    prec = prec ?? 3;
     if (is_scalar(t)) {
         return [t, make_ticklabel(t, prec)];
     } else {
@@ -2048,7 +2071,6 @@ function parseGum(src) {
 function renderGum(src, args) {
     let elem = parseGum(src);
     if (is_element(elem)) {
-        let args = {size: size, prec: prec};
         elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
         return elem.svg();
     } else {
