@@ -1,3 +1,11 @@
+// gum logo
+let gum = 'gum'.split('').map(Text).map(t => Frame(t, {
+  border: 1, padding: [0, -0.35, 0, 0], border_stroke: 'red'
+}));
+return Frame(HStack(gum), {
+  border: 1, margin: 0.15, border_stroke: 'blue', border_stroke_dasharray: [10, 6]
+});
+
 // copy icon
 let x = 0.35;
 let s = Scatter(
@@ -169,7 +177,7 @@ let s0 = Scatter([
   shape: exhi, radius: 0.1
 });
 let p = Plot(s0, {xlim: [-1, 1], ylim: [0, 1]});
-let f = Frame(p, {margin: 0.1});
+let f = Frame(p, {margin: 0.13});
 return f;
 
 /// Expected Utility indiff curves
@@ -286,7 +294,7 @@ let f = Frame(p, {margin: 0.13});
 return f;
 
 // custom axis anchors
-let ln = SymPath({fy: sin xlim: [0, 2*pi]});
+let ln = SymPath({fy: sin, xlim: [0, 2*pi]});
 let ax = Plot(ln, {
   xticks: range(1, 7), yticks: range(-1, 2),
   xlim: [0, 2*pi], xanchor: 0, aspect: 1.5
