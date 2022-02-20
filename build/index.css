@@ -28,10 +28,6 @@ svg {
     stroke: black;
 }
 
-svg text {
-    fill: black;
-}
-
 #main {
     position: fixed;
     display: flex;
