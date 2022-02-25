@@ -10,7 +10,7 @@ import { commentKeymap } from '@codemirror/comment'
 import { defaultHighlightStyle } from '@codemirror/highlight'
 import { bracketMatching } from '@codemirror/matchbrackets'
 
-import { SVG, Element, InterActive, parseGum } from './lib/gum.js'
+import { SVG, Element, InterActive, Animation, parseGum } from './lib/gum.js'
 
 // svg presets
 let prec = 2;
@@ -35,7 +35,7 @@ function renderGum(out) {
     let iac = document.querySelector('#interActiveControl');
     iac.innerHTML = '';
 
-    if (out instanceof InterActive) {
+    if (out instanceof InterActive || out instanceof Animation) {
         anchors = out.createAnchors(redraw);
         out = out.create(redraw);
         iac.append(...anchors)

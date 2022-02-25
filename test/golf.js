@@ -385,3 +385,26 @@ return InterActive({
   a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
   b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
 }, guu);
+
+
+///ANIMATIONS
+
+function guu(vars){
+        let [a, w] = [vars.x / 100, vars.y / 100];
+        let r = Rect({x2: w, fill: 'red', opacity: a});
+        let f = Frame(r, {margin: 0.1});
+        return f;
+}
+
+
+  let i = new Animation(
+    {
+        x: 0,
+        y: 50,
+    }, [
+      [{x: [0,100]}, 1000],
+      [{y: [50,100]}, 1000]
+    ],
+    guu);
+
+return i;
