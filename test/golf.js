@@ -1,6 +1,6 @@
 // gum logo
 let gum = 'gum'.split('').map(Text).map(t => Frame(t, {
-  border: 1, padding: [0, -0.35, 0, 0], border_stroke: 'red'
+  border: 1, padding: [0, -0.35, 0, 0], border_stroke: 'red', adjust: false
 }));
 return Frame(HStack(gum), {
   border: 1, margin: 0.15, border_stroke: 'blue', border_stroke_dasharray: [10, 6]
