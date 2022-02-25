@@ -2003,6 +2003,7 @@ class Animation {
     constructor(vars, steps, func) {
         this.gumify = func;
         this.steps = steps;
+        this.init = {...vars};//copy object
         this.vals = vars;
         this.frameList = this.createFrameList();
         this.pos = 0; //current frame
@@ -2077,6 +2078,7 @@ class Animation {
                 clearInterval(this.metronome);
                 this.playing = false;
                 this.pos = 0;
+                this.vals = {...this.init}; //copy to not connect init
                 input.textContent = 'RePlay';
             }
         }, 100);
