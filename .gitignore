@@ -20,6 +20,5 @@ screenlog.*
 auth.toml
 mail.toml
 
-
-#node and snowpack shit
-node_modules/
+# base node
+/node_modules
