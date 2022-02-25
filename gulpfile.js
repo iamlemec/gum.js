@@ -24,7 +24,7 @@ gulp.task('js-core', () => {
         cache.esm = bundle.cache;
         return bundle.write({
             dir: './dist',
-            preserveModules: true,
+            // preserveModules: true,
             format: 'es',
         });
     });
