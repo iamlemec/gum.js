@@ -8,7 +8,7 @@ import { indentWithTab, defaultKeymap } from '../node_modules/@codemirror/comman
 import { commentKeymap } from '../node_modules/@codemirror/comment/dist/index.js';
 import { defaultHighlightStyle } from '../node_modules/@codemirror/highlight/dist/index.js';
 import { bracketMatching } from '../node_modules/@codemirror/matchbrackets/dist/index.js';
-import { parseGum, InterActive, Element, SVG } from './gum.js';
+import { parseGum, InterActive, Animation, Element, SVG } from './gum.js';
 
 // svg presets
 let prec = 2;
@@ -33,7 +33,7 @@ function renderGum(out) {
     let iac = document.querySelector('#interActiveControl');
     iac.innerHTML = '';
 
-    if (out instanceof InterActive) {
+    if (out instanceof InterActive || out instanceof Animation) {
         anchors = out.createAnchors(redraw);
         out = out.create(redraw);
         iac.append(...anchors);

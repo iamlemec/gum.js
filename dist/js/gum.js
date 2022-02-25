@@ -1858,6 +1858,7 @@ class Slider extends Variable {
 
         return cont;
     }
+
 }
 
 
@@ -1995,6 +1996,105 @@ function updateSliderValue(slider) {
     lab.style.left = `${lef}%`; //in prec for window resize events
 }
 
+//// Animation
+
+class Animation {   
+    //vars must be numeric
+    constructor(vars, steps, func) {
+        this.gumify = func;
+        this.steps = steps;
+        this.vals = vars;
+        this.frameList = this.createFrameList();
+        this.pos = 0; //current frame
+        this.playing = false;
+    }
+
+    create(redraw) {
+        if (redraw != null) {
+            let elem = this.gumify(this.vals);
+            if (elem instanceof Element) {
+                elem = (elem instanceof SVG) ? elem : new SVG(elem);
+                elem = elem.svg();
+            }
+            redraw.innerHTML = elem;
+        }
+        return this.gumify(this.vals);
+    }
+
+    createAnchors(redraw) { // tag is where to append anc, redraw is where to redraw
+        let i = this;
+
+        let cont = document.createElement('div');
+        cont.className = 'var_cont animate_cont';
+
+        let input = document.createElement('button');
+        input.textContent = 'Play';
+        input.className = 'animateplay__input';
+
+        cont.append(input);
+        input.addEventListener('click', function() {
+            i.playpause(redraw, input);
+        }, false);
+
+        return [cont]
+    }
+
+
+    createFrameList(){
+        //list of lists, inner list [dict of vars and ranges, time]
+
+        let frameList=[];
+        this.steps.forEach((step) =>{
+            let vars = step[0];
+            let time = step[1];
+            let n = time / 50; // 2fps can change
+
+            let stepFrames = [...Array(n+1).keys()].map((k) => {
+                let frame = {};
+                Object.entries(vars).forEach(([v,r]) => {
+                    frame[v] = r[0] + k*((r[1] - r[0])/n);
+                });
+                return frame;
+            });
+            frameList.push(...stepFrames);
+
+        });
+        return frameList;
+
+    }
+
+    animate(redraw, input){
+        let frameList = this.frameList;
+        let stop = frameList.length;
+        this.metronome = setInterval(()=>{
+            if(this.pos < stop){
+            Object.entries(frameList[this.pos]).forEach(([k, v]) => {
+                this.vals[k] = v;
+                this.create(redraw);
+            });
+            this.pos += 1;
+            }else {
+                clearInterval(this.metronome);
+                this.playing = false;
+                this.pos = 0;
+                input.textContent = 'RePlay';
+            }
+        }, 100);
+    }
+
+    playpause(redraw, input){
+        if(this.playing){
+            clearInterval(this.metronome);
+            input.textContent = 'Play';
+            this.playing = false;
+        } else {
+            this.animate(redraw, input);
+            input.textContent = 'Pause';
+            this.playing = true;
+        }
+    }
+}
+
 /**
  ** expose
  **/
@@ -2003,7 +2103,7 @@ let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, XScale, YScale,
-    XAxis, YAxis, Axes, Graph, Plot, InterActive, Variable, Slider, Toggle, List, XTicks, YTicks,
+    XAxis, YAxis, Axes, Graph, Plot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
     range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet,
     zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder,
     make_ticklabel
@@ -2085,4 +2185,4 @@ function injectImages(elem) {
     });
 }
 
-export { Arc, Axes, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Axes, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };

@@ -2047,7 +2047,7 @@ function updateSliderValue(slider) {
 
 //// Animation
 
-class Animation {
+class Animation {   
     //vars must be numeric
     constructor(vars, steps, func) {
         this.gumify = func;
