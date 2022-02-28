@@ -2000,14 +2000,16 @@ function updateSliderValue(slider) {
 
 class Animation {   
     //vars must be numeric
-    constructor(vars, steps, func) {
+    constructor(vars, steps, func, fps=20) {
         this.gumify = func;
         this.steps = steps;
         this.init = {...vars};//copy object
         this.vals = vars;
-        this.frameList = this.createFrameList();
+        this.fps = fps;
         this.pos = 0; //current frame
         this.playing = false;
+        this.frameList = this.createFrameList();
+
     }
 
     create(redraw) {
@@ -2048,7 +2050,7 @@ class Animation {
         this.steps.forEach((step) =>{
             let vars = step[0];
             let time = step[1];
-            let n = time / 50; // 2fps can change
+            let n = ceil(time * (this.fps / 1000));
 
             let stepFrames = [...Array(n+1).keys()].map((k) => {
                 let frame = {};
@@ -2081,7 +2083,7 @@ class Animation {
                 this.vals = {...this.init}; //copy to not connect init
                 input.textContent = 'RePlay';
             }
-        }, 100);
+        }, 1000/this.fps);
     }
 
     playpause(redraw, input){
