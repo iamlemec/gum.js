@@ -112,7 +112,7 @@ try {
         return canvasTextSizer(ctx, text, args);
     }
 } catch (error) {
-    console.log(error);
+    // console.log(error);
 }
 
 /**
@@ -2047,7 +2047,7 @@ function updateSliderValue(slider) {
 
 //// Animation
 
-class Animation {   
+class Animation {
     //vars must be numeric
     constructor(vars, steps, func, fps=20) {
         this.gumify = func;

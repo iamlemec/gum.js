@@ -5,6 +5,9 @@
   "type": "module",
   "author": "Doug Hanley and Evan Piermont",
   "license": "MIT",
+  "exports": {
+      ".": "./js/gum.js"
+  },
   "scripts": {
     "build": "npx gulp build",
     "dev": "npx gulp dev"
