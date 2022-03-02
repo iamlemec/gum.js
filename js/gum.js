@@ -1792,6 +1792,72 @@ class Plot extends Container {
     }
 }
 
+class BarPlot extends Plot {
+    constructor(data, args) {
+
+    args = args ?? {};
+    let vals, labels;
+
+    if(data instanceof Array){
+        vals = data;
+    }
+
+    //create lists from objects
+    if(data instanceof Object){
+        labels = [];
+        vals = Object.entries(data).map(([k,v]) => {
+            labels.push(k)
+            if(v instanceof Object){
+                return v.value;
+            };
+            return v;
+        })
+    }
+
+    let n=vals.length
+    let max = Math.max(...vals)
+    let width = 1/(4*n)
+    let b = linspace(0,1,n+1)
+
+    let bars = vals.map((d,i) => {
+        //set colors
+        let color = 'gray';
+        if(args.color){
+            let prec = d/max;
+            let x = interpolateVectors(args.color[0],args.color[1], prec)
+            color = `hsl(${x[0]}, ${x[1]}%, ${x[2]}%)`
+        }
+        if(data instanceof Object){
+            color = data[labels[i]].color || color;
+        }
+        return new Rect({
+            x1: (b[i] + b[i+1])/2 - width,
+            x2: (b[i] + b[i+1])/2 + width,
+            y1: 0,
+            y2: d,
+            fill:color});
+    })
+
+    //handle ticks
+    if(labels){
+        labels = labels.map((l,i) => [(b[i] + b[i+1])/2, l]);
+    }
+
+    //set args
+    args.xlim = [0,1];
+    args.ylim = args.ylim || [0,max];
+    args.xticks = labels || 0;
+    args.aspect = args.aspect || 1
+
+    let p  = super(bars, args);
+
+    }
+
+    inner(ctx) {
+        return super.inner(ctx);
+    }
+}
+
 //// INTERACTIVE
 
 class InterActive {
@@ -2156,7 +2222,7 @@ let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, XScale, YScale,
-    XAxis, YAxis, Axes, Graph, Plot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
+    XAxis, YAxis, Axes, Graph, Plot, BarPlot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
     range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet,
     zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder,
     make_ticklabel
@@ -2246,7 +2312,7 @@ export {
     Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer,
     Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node, MoveTo,
     LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, XScale, YScale, XAxis,
-    YAxis, Axes, Graph, Plot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
+    YAxis, Axes, Graph, Plot, BarPlot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
     gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace,
     hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp,
     log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel,

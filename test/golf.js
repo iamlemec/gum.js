@@ -386,6 +386,18 @@ return InterActive({
   b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
 }, guu);
 
+///BAR PLOT
+
+function guu(vars){
+d = {'a': 2, 'b': vars.x, 'c':20, 'd': 13}
+b = BarPlot(d, {color:[[17, 100, 45],[78,  80, 45]]})
+return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
+}
+
+return InterActive({
+    x: Slider(10, {min: 0, max: 20, title: 'b'})
+}, guu);
+
 
 ///ANIMATIONS
 
