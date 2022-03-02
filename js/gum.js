@@ -1796,46 +1796,74 @@ class BarPlot extends Plot {
     constructor(data, args) {
 
     args = args ?? {};
-    let vals, labels;
+    let vals, labels, barsHights;
+
+    let df_col = args.color || 'gray';
 
     if(data instanceof Array){
         vals = data;
+        barsHights = data;
     }
 
     //create lists from objects
     if(data instanceof Object){
         labels = [];
-        vals = Object.entries(data).map(([k,v]) => {
+        barsHights = [];
+        vals = [];
+        Object.entries(data).forEach(([k,v]) => {
             labels.push(k)
             if(v instanceof Object){
-                return v.value;
-            };
-            return v;
+                if(v.stacked){ //stacked bar must be {int: 'color'} format
+                    vals.push(v.stacked);
+                } else {
+                vals.push(v.value);
+            }
+            } else {
+                vals.push(v);
+            }
         })
+
+        barsHights = vals.map((val) => {
+            if(val instanceof Array){
+                let x = 0;
+                val.forEach((d) => {
+                    x+=d[0]
+                });
+                return x;
+            } return val;
+        });
     }
 
     let n=vals.length
-    let max = Math.max(...vals)
+    let max = Math.max(...barsHights)
     let width = 1/(4*n)
     let b = linspace(0,1,n+1)
 
-    let bars = vals.map((d,i) => {
-        //set colors
-        let color = 'gray';
-        if(args.color){
-            let prec = d/max;
-            let x = interpolateVectors(args.color[0],args.color[1], prec)
-            color = `hsl(${x[0]}, ${x[1]}%, ${x[2]}%)`
-        }
-        if(data instanceof Object){
-            color = data[labels[i]].color || color;
-        }
-        return new Rect({
-            x1: (b[i] + b[i+1])/2 - width,
-            x2: (b[i] + b[i+1])/2 + width,
-            y1: 0,
-            y2: d,
-            fill:color});
+    let bars = [];
+    
+    vals.forEach((d,i) => {
+        let color;
+        let center = (b[i] + b[i+1])/2; 
+        let color_by;
+
+        if(d instanceof Array){
+            let start = 0;
+            d.forEach((dp) => {
+                let h = dp[0]
+                color = dp[1] || df_col
+                color_by = dp[1] ? false : args.color_by;
+                let perc = h/max;
+                bars.push(makeBar(start, h, center, width, color, color_by, perc));
+                start = start + dp[0];
+            });
+        }else{
+            let perc = d/max;
+            if(data instanceof Object){
+                color = data[labels[i]].color || color || df_col;
+                color_by = data[labels[i]].color ? false : args.color_by;
+            }
+        bars.push(makeBar(0, d, center, width, color, color_by, perc))
+        };
     })
 
     //handle ticks
@@ -1858,6 +1886,21 @@ class BarPlot extends Plot {
     }
 }
 
+function makeBar(bot, height, center, width, color, color_by=false, perc=0){
+
+    if(color_by){
+        let x = interpolateVectors(...color_by, perc)
+        color = `hsl(${x[0]}, ${x[1]}%, ${x[2]}%)`
+    }
+
+    return new Rect({
+            x1: center - width,
+            x2: center + width,
+            y1: bot,
+            y2: bot + height,
+            fill:color});
+}
+ 
 //// INTERACTIVE
 
 class InterActive {

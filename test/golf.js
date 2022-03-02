@@ -398,6 +398,18 @@ return InterActive({
     x: Slider(10, {min: 0, max: 20, title: 'b'})
 }, guu);
 
+///stacked bar
+
+function guu(vars){
+d = {'a': {stacked: [[vars.x/4], [2, 'blue'],[2, 'purple']]}, 'b': 8, 'c': 4}
+b = BarPlot(d, {color_by:[[17, 100, 45],[78,  80, 45]]})
+return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
+}
+
+return InterActive({
+    x: Slider(10, {min: 0, max: 20, title: 'b'})
+}, guu);
+
 
 ///ANIMATIONS
 
