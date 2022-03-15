@@ -1239,7 +1239,7 @@ class Tex extends Element {
         xover = xover ?? 0.5;
 
         // render with katex
-        let katex = render.renderToString(text, {output: 'html'});
+        let katex = render.renderToString(text, {output: 'html', trust: true});
 
         // compute text box
         let fargs = {size: size, actual: actual};
