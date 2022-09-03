@@ -169,7 +169,13 @@ function ensure_vector(x, n) {
 }
 
 function is_scalar(x) {
-    return typeof(x) == 'number';
+    return (
+        (typeof(x) == 'number') ||
+        (typeof(x) == 'object' && (
+            (x.constructor.name == 'Number') ||
+            (x.constructor.name == 'NamedNumber')
+        ))
+    );
 }
 
 function is_string(x) {
@@ -1239,7 +1245,7 @@ class Tex extends Element {
         xover = xover ?? 0.5;
 
         // render with katex
-        let katex = render.renderToString(text, {output: 'html'});
+        let katex = render.renderToString(text, {output: 'html', trust: true});
 
         // compute text box
         let fargs = {size: size, actual: actual};
@@ -1452,13 +1458,15 @@ function ensure_tick(t, prec) {
     prec = prec ?? 3;
     if (is_scalar(t)) {
         return [t, make_ticklabel(t, prec)];
-    } else {
+    } else if (is_array(t) && t.length == 2) {
         let [p, x] = t;
         if (x instanceof Element) {
             return t;
         } else {
             return [p, make_ticklabel(x, prec)];
         }
+    } else {
+        throw new Error(`Error: tick must be value or [value,label] but got "${t}"`);
     }
 }
 
