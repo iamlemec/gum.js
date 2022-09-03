@@ -35,6 +35,7 @@ let axis_label_offset_base = 0.15;
 let title_size_base = 0.1;
 let grid_color_base = '#CCC';
 let limit_base = [0, 1];
+let N_base = 100;
 
 // text sizer
 let textSizer = null;
@@ -533,8 +534,9 @@ class Container extends Element {
         let xlim, ylim;
         if (children.length > 0) {
             let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r));
-            xlim = [min(...xmins), max(...xmaxs)];
-            ylim = [min(...ymins), max(...ymaxs)];
+            let [xall, yall] = [[...xmins, ...xmaxs], [...ymins, ...ymaxs]];
+            xlim = [min(...xall), max(...xall)];
+            ylim = [min(...yall), max(...yall)];
         }
 
         // inherit aspect of clipped contents
@@ -1299,37 +1301,39 @@ class Node extends Container {
  ** parametric paths
  **/
 
+// determines actual values given combinations of limits, values, and functions
 function sympath(args) {
-    let {fx, fy, xlim, ylim, tlim, N, ...attr} = args ?? {};
-    N = N ?? 100;
-    tlim = tlim ?? limit_base;
+    let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
 
-    // make index path
-    let tvals = linspace(...tlim, N);
-
-    // compute path points
-    let xvals, yvals;
-    if (fx != null && fy != null) {
-        xvals = tvals.map(fx);
-        yvals = tvals.map(fy);
-    } else if (fy != null) {
-        xvals = linspace(...xlim, N);
-        yvals = xvals.map(fy);
-    } else if (fx != null) {
-        yvals = linspace(...ylim, N);
-        xvals = yvals.map(fx);
+    // determine data size
+    let Ns = new Set([tvals, xvals, yvals].filter(v => v != null).map(v => v.length));
+    if (Ns.size > 1) {
+        throw new Error(`Error: data sizes must be in aggreement but got ${Ns}`);
+    } else if (Ns.size == 1) {
+        [N,] = Ns;
+    } else {
+        N = N_base;
     }
+
+    // determine limits
+    tlim = tlim ?? limit_base;
+    xlim = xlim ?? [0, N-1];
+
+    // compute data values
+    tvals = tvals ?? linspace(...tlim, N);
+    xvals = xvals ?? ((fx != null) ? tvals.map(fx) : linspace(...xlim, N));
+    yvals = yvals ?? ((fy != null) ? tvals.map(fy) : linspace(...ylim, N));
 
     return [tvals, xvals, yvals];
 }
 
 class SymPath extends Element {
     constructor(args) {
-        let {fx, fy, xlim, ylim, tlim, N, ...attr} = args ?? {};
+        let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
 
         // compute point values
-        let [tvals, xvals, yvals] = sympath({
-            fx: fx, fy: fy, xlim: xlim, ylim: ylim, tlim: tlim, N: N
+        [tvals, xvals, yvals] = sympath({
+            fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
 
         // pass to element
@@ -1351,15 +1355,15 @@ class SymPath extends Element {
 
 class SymPoints extends Container {
     constructor(args) {
-        let {fx, fy, fs, fr, radius, shape, xlim, ylim, tlim, N, ...attr} = args ?? {};
+        let {fx, fy, fs, fr, radius, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
         shape = shape ?? black_dot();
         radius = radius ?? 0.05;
         fr = fr ?? (() => radius);
         fs = fs ?? (() => shape);
 
         // compute point values
-        let [tvals, xvals, yvals] = sympath({
-            fx: fx, fy: fy, xlim: xlim, ylim: ylim, tlim: tlim, N: N
+        [tvals, xvals, yvals] = sympath({
+            fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N: N
         });
 
         // make points
@@ -1386,6 +1390,38 @@ class Scatter extends Container {
 
         // pass to container
         let children = points.map(([s, p]) => [s, rad_rect(p, radius)]);
+        let attr1 = {clip: false, ...attr};
+        super(children, attr1);
+    }
+}
+
+// non-unary | variable-aspect | graphable
+class Bars extends Container {
+    constructor(data, args) {
+        let {xlim, yzero, width, ...attr} = args ?? {};
+        xlim = xlim ?? limit_base;
+        yzero = yzero ?? 0;
+
+        // check input sizes
+        let scals = new Set(data.map(is_scalar));
+        if (scals.size > 1) {
+            throw new Error('Error: data elements must all be same length');
+        }
+
+        // get data parameters
+        let n = data.length;
+        let [xmin, xmax] = xlim;
+        let xrange = xmax - xmin;
+        let del = (n > 1) ? xrange/(n-1) : 0;
+        width = width ?? ((n > 1) ? xrange/(n-1) : 1);
+
+        // compute boxes
+        let r = new Rect();
+        let children = data.map((d, i) => {
+            let [x, y] = (is_scalar(d)) ? [xmin + i*del, d] : d;
+            return [r, [x-width/2, yzero, x+width/2, y]];
+        });
+
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
     }
@@ -1757,90 +1793,90 @@ class Plot extends Container {
 
 class BarPlot extends Plot {
     constructor(data, args) {
+        args = args ?? {};
+        let vals, labels, barsHights;
 
-    args = args ?? {};
-    let vals, labels, barsHights;
+        let df_col = args.color ?? 'gray';
 
-    let df_col = args.color || 'gray';
+        if (data instanceof Array) {
+            vals = data;
+            barsHights = data;
+        }
 
-    if(data instanceof Array){
-        vals = data;
-        barsHights = data;
-    }
-
-    //create lists from objects
-    if(data instanceof Object){
-        labels = [];
-        barsHights = [];
-        vals = [];
-        Object.entries(data).forEach(([k,v]) => {
-            labels.push(k);
-            if(v instanceof Object){
-                if(v.stacked){ //stacked bar must be {int: 'color'} format
-                    vals.push(v.stacked);
+        // create lists from objects
+        if (data instanceof Object) {
+            labels = [];
+            barsHights = [];
+            vals = [];
+            Object.entries(data).forEach(([k, v]) => {
+                labels.push(k);
+                if (v instanceof Object) {
+                    if (v.stacked) { // stacked bar must be {int: 'color'} format
+                        vals.push(v.stacked);
+                    } else {
+                        vals.push(v.value);
+                    }
                 } else {
-                vals.push(v.value);
-            }
-            } else {
-                vals.push(v);
-            }
-        });
-
-        barsHights = vals.map((val) => {
-            if(val instanceof Array){
-                let x = 0;
-                val.forEach((d) => {
-                    x+=d[0];
-                });
-                return x;
-            } return val;
-        });
-    }
-
-    let n=vals.length;
-    let max = Math.max(...barsHights);
-    let width = 1/(4*n);
-    let b = linspace(0,1,n+1);
-
-    let bars = [];
-
-    vals.forEach((d,i) => {
-        let color;
-        let center = (b[i] + b[i+1])/2;
-        let color_by;
-
-        if(d instanceof Array){
-            let start = 0;
-            d.forEach((dp) => {
-                let h = dp[0];
-                color = dp[1] || df_col;
-                color_by = dp[1] ? false : args.color_by;
-                let perc = h/max;
-                bars.push(makeBar(start, h, center, width, color, color_by, perc));
-                start = start + dp[0];
+                    vals.push(v);
+                }
             });
-        }else {
-            let perc = d/max;
-            if(data instanceof Object){
-                color = data[labels[i]].color || color || df_col;
-                color_by = data[labels[i]].color ? false : args.color_by;
+
+            barsHights = vals.map((val) => {
+                if (val instanceof Array) {
+                    let x = 0;
+                    val.forEach((d) => {
+                        x += d[0];
+                    });
+                    return x;
+                }
+                return val;
+            });
+        }
+
+        let n = vals.length;
+        let max = Math.max(...barsHights);
+        let width = 1/(4*n);
+        let b = linspace(0, 1, n+1);
+
+        let bars = [];
+
+        vals.forEach((d, i) => {
+            let color;
+            let center = (b[i] + b[i+1])/2;
+            let color_by;
+
+            if (d instanceof Array) {
+                let start = 0;
+                d.forEach((dp) => {
+                    let h = dp[0];
+                    color = dp[1] || df_col;
+                    color_by = dp[1] ? false : args.color_by;
+                    let perc = h/max;
+                    bars.push(make_bar(start, h, center, width, color, color_by, perc));
+                    start = start + dp[0];
+                });
+            } else {
+                let perc = d/max;
+                if (data instanceof Object) {
+                    color = data[labels[i]].color || color || df_col;
+                    color_by = data[labels[i]].color ? false : args.color_by;
+                }
+                bars.push(make_bar(0, d, center, width, color, color_by, perc));
             }
-        bars.push(makeBar(0, d, center, width, color, color_by, perc));
-        }    });
+        });
 
-    //handle ticks
-    if(labels){
-        labels = labels.map((l,i) => [(b[i] + b[i+1])/2, l]);
-    }
+        // handle ticks
+        if (labels) {
+            labels = labels.map((l, i) => [(b[i] + b[i+1])/2, l]);
+        }
 
-    //set args
-    args.xlim = [0,1];
-    args.ylim = args.ylim || [0,max];
-    args.xticks = labels || 0;
-    args.aspect = args.aspect || 1;
+        // set args
+        args.xlim = [0, 1];
+        args.ylim = args.ylim ?? [0, max];
+        args.xticks = labels ?? 0;
+        args.aspect = args.aspect ?? 1;
 
-    super(bars, args);
-
+        super(bars, args);
     }
 
     inner(ctx) {
@@ -1848,19 +1884,19 @@ class BarPlot extends Plot {
     }
 }
 
-function makeBar(bot, height, center, width, color, color_by=false, perc=0){
-
-    if(color_by){
+function make_bar(bot, height, center, width, color, color_by=false, perc=0) {
+    if (color_by) {
         let x = interpolateVectors(...color_by, perc);
         color = `hsl(${x[0]}, ${x[1]}%, ${x[2]}%)`;
     }
 
     return new Rect({
-            x1: center - width,
-            x2: center + width,
-            y1: bot,
-            y2: bot + height,
-            fill:color});
+        x1: center - width,
+        x2: center + width,
+        y1: bot,
+        y2: bot + height,
+        fill: color
+    });
 }
 
 //// INTERACTIVE
@@ -2228,7 +2264,7 @@ class Animation {
 let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
-    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, XScale, YScale,
+    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bars, XScale, YScale,
     XAxis, YAxis, Axes, Graph, Plot, BarPlot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
     range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet,
     zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder,
@@ -2311,4 +2347,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Axes, BarPlot, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Axes, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
