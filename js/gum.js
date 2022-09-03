@@ -1840,10 +1840,10 @@ class BarPlot extends Plot {
     let b = linspace(0,1,n+1)
 
     let bars = [];
-    
+
     vals.forEach((d,i) => {
         let color;
-        let center = (b[i] + b[i+1])/2; 
+        let center = (b[i] + b[i+1])/2;
         let color_by;
 
         if(d instanceof Array){
@@ -1900,7 +1900,7 @@ function makeBar(bot, height, center, width, color, color_by=false, perc=0){
             y2: bot + height,
             fill:color});
 }
- 
+
 //// INTERACTIVE
 
 class InterActive {
@@ -1955,17 +1955,19 @@ class Variable {
 
 class Slider extends Variable {
     constructor(init, args) {
-        args = args ?? {};
-        args.min = args.min ?? 0;
-        args.max = args.max ?? 100;
+        let {min, max, step, ...attr} = args ?? {};
+        min = min ?? 0;
+        max = max ?? 100;
+        step = step ?? 1;
 
-        super(init, args);
+        let attr1 = {min, max, step, ...attr};
+        super(init, attr1);
     }
 
     // ctx is an interactive context
     anchor(name, ctx, redraw) {
         let v = this;
-        let [min, max] = [v.attr.min, v.attr.max];
+        let {min, max, step} = v.attr;
 
         let cont = document.createElement('div');
         cont.className = 'var_cont slider_cont';
@@ -1995,12 +1997,13 @@ class Slider extends Variable {
         max_lim.innerHTML = max;
         max_lim.className = 'max_lim';
 
-        trackWrap.append(min_lim, phantomTrack, max_lim)
+        trackWrap.append(min_lim, phantomTrack, max_lim);
 
         let input = document.createElement('input');
         input.type = 'range';
         input.min = min;
         input.max = max;
+        input.step = step;
         input.value = this.value;
         input.className = 'slider_input'; // set the CSS class
         input.id = `InterActive_${name}`;
@@ -2016,7 +2019,6 @@ class Slider extends Variable {
 
         return cont;
     }
-
 }
 
 

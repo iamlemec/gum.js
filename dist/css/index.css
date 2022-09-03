@@ -47,10 +47,10 @@ body {
     width: 50%;
 }
 
-#mid{
+#mid {
     width: 4px;
     background-color: lightgray;
-    cursor:  col-resize;
+    cursor: col-resize;
 }
 
 #right {
