@@ -152,11 +152,21 @@ function linspace(x0, x1, n) {
 }
 
 function is_scalar(x) {
-    return typeof(x) == 'number';
+    return (
+        (typeof(x) == 'number') ||
+        (typeof(x) == 'object' && (
+            (x.constructor.name == 'Number') ||
+            (x.constructor.name == 'NamedNumber')
+        ))
+    );
 }
 
 function is_string(x) {
     return typeof(x) == 'string';
+}
+
+function is_array(x) {
+    return Array.isArray(x);
 }
 
 function is_element(x) {
@@ -1191,7 +1201,7 @@ class Tex extends Element {
         xover = xover ?? 0.5;
 
         // render with katex
-        let katex$1 = katex.renderToString(text, {output: 'html'});
+        let katex$1 = katex.renderToString(text, {output: 'html', trust: true});
 
         // compute text box
         let fargs = {size: size, actual: actual};
@@ -1403,13 +1413,15 @@ function ensure_tick(t, prec) {
     prec = prec ?? 3;
     if (is_scalar(t)) {
         return [t, make_ticklabel(t, prec)];
-    } else {
+    } else if (is_array(t) && t.length == 2) {
         let [p, x] = t;
         if (x instanceof Element) {
             return t;
         } else {
             return [p, make_ticklabel(x, prec)];
         }
+    } else {
+        throw new Error(`Error: tick must be value or [value,label] but got "${t}"`);
     }
 }
 
@@ -1791,10 +1803,10 @@ class BarPlot extends Plot {
     let b = linspace(0,1,n+1);
 
     let bars = [];
-    
+
     vals.forEach((d,i) => {
         let color;
-        let center = (b[i] + b[i+1])/2; 
+        let center = (b[i] + b[i+1])/2;
         let color_by;
 
         if(d instanceof Array){
@@ -1850,7 +1862,7 @@ function makeBar(bot, height, center, width, color, color_by=false, perc=0){
             y2: bot + height,
             fill:color});
 }
- 
+
 //// INTERACTIVE
 
 class InterActive {
