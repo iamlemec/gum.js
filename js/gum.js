@@ -577,8 +577,9 @@ class Container extends Element {
         let xlim, ylim;
         if (children.length > 0) {
             let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r));
-            xlim = [min(...xmins), max(...xmaxs)];
-            ylim = [min(...ymins), max(...ymaxs)];
+            let [xall, yall] = [[...xmins, ...xmaxs], [...ymins, ...ymaxs]];
+            xlim = [min(...xall), max(...xall)];
+            ylim = [min(...yall), max(...yall)];
         }
 
         // inherit aspect of clipped contents
@@ -1438,12 +1439,30 @@ class Scatter extends Container {
 
 // non-unary | variable-aspect | graphable
 class Bars extends Container {
-    constructor(data, args) {
-        let {...attr} = args ?? {};
-        let n = data.length;
+    constructor(bars, args) {
+        let {xlim, yzero, width, ...attr} = args ?? {};
+        xlim = xlim ?? limit_base;
+        yzero = yzero ?? 0;
 
+        // check input sizes
+        let scals = new Set(bars.map(is_scalar));
+        if (scals.size > 1) {
+            throw new Error('Error: bar specs must all be same type');
+        }
+
+        // get data parameters
+        let n = bars.length;
+        let [xmin, xmax] = xlim;
+        let xrange = xmax - xmin;
+        let del = (n > 1) ? xrange/(n-1) : 0;
+        width = width ?? ((n > 1) ? xrange/(n-1) : 1);
+
+        // compute boxes
         let r = new Rect();
-        let children = data.map((d, i) => [r, [i/n, 0, (i+1)/n, d]]);
+        let children = bars.map((d, i) => {
+            let [x, y] = (is_scalar(d)) ? [xmin + i*del, d] : d;
+            return [r, [x-width/2, yzero, x+width/2, y]];
+        });
 
         let attr1 = {clip: false, ...attr};
         super(children, attr1);

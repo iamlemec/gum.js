@@ -1304,6 +1304,7 @@ class Node extends Container {
 // determines actual values given combinations of limits, values, and functions
 function sympath(args) {
     let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+    tlim = tlim ?? limit_base;
 
     // determine data size
     let Ns = new Set([tvals, xvals, yvals].filter(v => v != null).map(v => v.length));
@@ -1314,10 +1315,6 @@ function sympath(args) {
     } else {
         N = N_base;
     }
-
-    // determine limits
-    tlim = tlim ?? limit_base;
-    xlim = xlim ?? [0, N-1];
 
     // compute data values
     tvals = tvals ?? linspace(...tlim, N);
@@ -1397,19 +1394,19 @@ class Scatter extends Container {
 
 // non-unary | variable-aspect | graphable
 class Bars extends Container {
-    constructor(data, args) {
+    constructor(bars, args) {
         let {xlim, yzero, width, ...attr} = args ?? {};
         xlim = xlim ?? limit_base;
         yzero = yzero ?? 0;
 
         // check input sizes
-        let scals = new Set(data.map(is_scalar));
+        let scals = new Set(bars.map(is_scalar));
         if (scals.size > 1) {
-            throw new Error('Error: data elements must all be same length');
+            throw new Error('Error: bar specs must all be same type');
         }
 
         // get data parameters
-        let n = data.length;
+        let n = bars.length;
         let [xmin, xmax] = xlim;
         let xrange = xmax - xmin;
         let del = (n > 1) ? xrange/(n-1) : 0;
@@ -1417,7 +1414,7 @@ class Bars extends Container {
 
         // compute boxes
         let r = new Rect();
-        let children = data.map((d, i) => {
+        let children = bars.map((d, i) => {
             let [x, y] = (is_scalar(d)) ? [xmin + i*del, d] : d;
             return [r, [x-width/2, yzero, x+width/2, y]];
         });
