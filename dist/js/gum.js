@@ -675,6 +675,7 @@ class Frame extends Container {
     }
 }
 
+// expects list of Element or [Element, height]
 class VStack extends Container {
     constructor(children, args) {
         let {expand, aspect, attr} = args ?? {};
@@ -1392,15 +1393,29 @@ class Scatter extends Container {
     }
 }
 
+class VBar extends VStack {
+    constructor(heights, args) {
+        let {...attr} = args ?? {};
+
+        heights = heights.map(hc => (is_scalar(hc)) ? [hc, null] : hc);
+        let children = heights.map(([h, c]) => [new Rect({fill: c}), h]);
+
+        let attr1 = {...attr};
+        super(children, attr1);
+        this.height = sum(heights.map(([h, c]) => h));
+    }
+}
+
 // non-unary | variable-aspect | graphable
-class Bars extends Container {
+// custom bars must have a height
+class VBars extends Container {
     constructor(bars, args) {
-        let {xlim, yzero, width, ...attr} = args ?? {};
+        let {xlim, yzero, width, color, ...attr} = args ?? {};
         xlim = xlim ?? limit_base;
         yzero = yzero ?? 0;
 
         // check input sizes
-        let scals = new Set(bars.map(is_scalar));
+        let scals = new Set(bars.map(is_array));
         if (scals.size > 1) {
             throw new Error('Error: bar specs must all be same type');
         }
@@ -1413,10 +1428,10 @@ class Bars extends Container {
         width = width ?? ((n > 1) ? xrange/(n-1) : 1);
 
         // compute boxes
-        let r = new Rect();
         let children = bars.map((d, i) => {
-            let [x, y] = (is_scalar(d)) ? [xmin + i*del, d] : d;
-            return [r, [x-width/2, yzero, x+width/2, y]];
+            let [x, y] = (is_array(d)) ? d : [xmin + i*del, d];
+            let b = (is_scalar(y)) ? new VBar([[y, color]]) : y;
+            return [b, [x-width/2, yzero, x+width/2, b.height]];
         });
 
         let attr1 = {clip: false, ...attr};
@@ -2261,7 +2276,7 @@ class Animation {
 let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
-    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bars, XScale, YScale,
+    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale, YScale,
     XAxis, YAxis, Axes, Graph, Plot, BarPlot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
     range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet,
     zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder,
@@ -2344,4 +2359,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Axes, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Axes, BarPlot, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
