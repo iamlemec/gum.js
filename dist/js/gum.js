@@ -1393,15 +1393,15 @@ class Scatter extends Container {
     }
 }
 
+// no aspect, but has a height that used by VBars
 class VBar extends VStack {
     constructor(heights, args) {
-        let {...attr} = args ?? {};
+        let attr = args ?? {};
 
         heights = heights.map(hc => (is_scalar(hc)) ? [hc, null] : hc);
         let children = heights.map(([h, c]) => [new Rect({fill: c}), h]);
 
-        let attr1 = {...attr};
-        super(children, attr1);
+        super(children, attr);
         this.height = sum(heights.map(([h, c]) => h));
     }
 }
