@@ -1314,13 +1314,21 @@ function sympath(args) {
     } else if (Ns.size == 1) {
         [N,] = Ns;
     } else {
-        N = N_base;
+        N = N ?? N_base;
     }
 
     // compute data values
     tvals = tvals ?? linspace(...tlim, N);
-    xvals = xvals ?? ((fx != null) ? tvals.map(fx) : linspace(...xlim, N));
-    yvals = yvals ?? ((fy != null) ? tvals.map(fy) : linspace(...ylim, N));
+    if (fx != null && fy != null) {
+        xvals = tvals.map(fx);
+        yvals = tvals.map(fy);
+    } else if (fy != null) {
+        xvals = linspace(...xlim, N);
+        yvals = xvals.map(fy);
+    } else if (fx != null) {
+        yvals = linspace(...ylim, N);
+        xvals = yvals.map(fx);
+    }
 
     return [tvals, xvals, yvals];
 }
