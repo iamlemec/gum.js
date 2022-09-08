@@ -1446,49 +1446,69 @@ class Scatter extends Container {
     }
 }
 
-// no aspect, but has a height that used by VBars
+// no aspect, but has a ylim and optional width that is used by VBars
 class VBar extends VStack {
     constructor(heights, args) {
-        let attr = args ?? {};
+        let {yzero, width, ...attr} = args ?? {};
+        yzero = yzero ?? 0;
 
         heights = heights.map(hc => (is_scalar(hc)) ? [hc, null] : hc);
         let children = heights.map(([h, c]) => [new Rect({fill: c}), h]);
+        let height = sum(heights.map(([h, c]) => h));
 
         super(children, attr);
-        this.height = sum(heights.map(([h, c]) => h));
+        this.ylim = [yzero, yzero + height];
+        this.width = width;
     }
 }
 
 // non-unary | variable-aspect | graphable
-// custom bars must have a height
+// custom bars must have a ylim and optionally a width
 class VBars extends Container {
     constructor(bars, args) {
-        let {xlim, yzero, width, color, ...attr} = args ?? {};
-        xlim = xlim ?? limit_base;
+        let {xlim, yzero, shrink, width, color, integer, ...attr} = args ?? {};
         yzero = yzero ?? 0;
+        integer = integer ?? false;
+        shrink = shrink ?? 0;
+        let n = bars.length;
 
         // check input sizes
-        let scals = new Set(bars.map(is_array));
-        if (scals.size > 1) {
+        let arrs = new Set(bars.map(is_array));
+        if (arrs.size > 1) {
             throw new Error('Error: bar specs must all be same type');
+        }
+        let [arr,] = arrs;
+
+        // expand scalar list case
+        let xvals;
+        if (arr) {
+            [xvals, bars] = zip(...bars);
+        } else {
+            xlim = (xlim == null) ? [0, n-1] : xlim;
+            let xlim1 = xlim ?? limit_base;
+            xvals = linspace(...xlim1, n);
         }
 
         // get data parameters
-        let n = bars.length;
-        let [xmin, xmax] = xlim;
-        let xrange = xmax - xmin;
-        let del = (n > 1) ? xrange/(n-1) : 0;
-        width = width ?? ((n > 1) ? xrange/(n-1) : 1);
+        let [xmin, xmax] = [min(...xvals), max(...xvals)];
+        width = width ?? (1-shrink)*((n > 1) ? (xmax-xmin)/(n-1) : 1);
+
+        // handle scalar and custom bars
+        bars = bars.map(b =>
+            is_scalar(b) ? new VBar([[b, color]], {yzero, width}) : b
+        );
 
         // compute boxes
-        let children = bars.map((d, i) => {
-            let [x, y] = (is_array(d)) ? d : [xmin + i*del, d];
-            let b = (is_scalar(y)) ? new VBar([[y, color]]) : y;
-            return [b, [x-width/2, yzero, x+width/2, b.height]];
+        let children = zip(xvals, bars).map(([x, b]) => {
+            let [ymin, ymax, w] = [...b.ylim, b.width ?? width];
+            let box = [x-w/2, ymin, x+w/2, ymax];
+            return [b, box];
         });
 
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
+        this.xlim = xlim ?? [xmin, xmax];
+        this.xvals = xvals;
     }
 }
 
@@ -1850,9 +1870,31 @@ class Plot extends Container {
         let attr1 = {aspect: graph.aspect, ...attr};
         super(children, attr1);
     }
+}
 
-    inner(ctx) {
-        return super.inner(ctx);
+class BarPlot1 extends Plot {
+    constructor(data, args) {
+        let {orient, aspect, width, shrink, padding, color, ...attr} = args ?? {};
+        orient = orient ?? 'v';
+        aspect = aspect ?? phi;
+        shrink = shrink ?? 0.2;
+        padding = padding ?? 1/phi;
+        color = color ?? 'lightgray';
+        let n = data.length;
+
+        // generate actual bars
+        let [xlabs, bars] = zip(...data);
+        let Bars = (orient == 'v') ? VBars : null;
+        let bars1 = new Bars(bars, {width, shrink, color});
+
+        // set up plot viewport
+        let [xlo, xhi] = bars1.xlim;
+        let xexp = padding*((xhi-xlo)/(n-1));
+        let xlim = [xlo - xexp, xhi + xexp];
+        let xticks = zip(bars1.xvals, xlabs);
+
+        let attr1 = {xlim, xticks, aspect, ...attr};
+        super(bars1, attr1);
     }
 }
 
@@ -2329,11 +2371,11 @@ class Animation {
 let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
-    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale, YScale,
-    XAxis, YAxis, Axes, Graph, Plot, BarPlot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
-    range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet,
-    zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder,
-    make_ticklabel
+    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale,
+    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, BarPlot1, InterActive, Variable, Slider,
+    Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors,
+    interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor,
+    ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2419,10 +2461,10 @@ function injectImages(elem) {
 export {
     Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer,
     Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node, MoveTo,
-    LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale, YScale, XAxis,
-    YAxis, Axes, Graph, Plot, BarPlot, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks,
-    gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace,
-    hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp,
+    LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale, YScale,
+    XAxis, YAxis, Axes, Graph, Plot, BarPlot, BarPlot1, InterActive, Variable, Slider, Toggle, List,
+    Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range,
+    linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp,
     log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel,
     parseGum, renderGum, gums, mako, injectImage, injectImages
 };

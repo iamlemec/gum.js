@@ -180,6 +180,15 @@ let p = Plot(s0, {xlim: [-1, 1], ylim: [0, 1]});
 let f = Frame(p, {margin: 0.13});
 return f;
 
+// simple bars
+let b = BarPlot1([['A', 5], ['B', 8], ['C', 10], ['D', 6], ['E', 3]]);
+return Frame(b, {margin: [0.15, 0.1]});
+
+// multibars
+let vb = VBar([[3, 'yellow'], [5, 'lightblue'], [2, 'lightgreen']]);
+let b = BarPlot1([['A', 5], ['B', vb], ['C', 6]]);
+return Frame(b, {margin: [0.15, 0.1]});
+
 /// Expected Utility indiff curves
 
 function guu(vars) {
