@@ -33,6 +33,7 @@ let tick_label_size_base = 1.5;
 let axis_label_size_base = 0.06;
 let axis_label_offset_base = 0.15;
 let title_size_base = 0.1;
+let title_offset_base = 0.1;
 let grid_color_base = '#CCC';
 let limit_base = [0, 1];
 let N_base = 100;
@@ -148,7 +149,7 @@ function range(i0, i1, step) {
 }
 
 function linspace(x0, x1, n) {
-    let step = (x1-x0)/(n-1);
+    if (n == 1) { return [0.5*(x0+x1)]; }    let step = (x1-x0)/(n-1);
     return [...Array(n).keys()].map(i => x0 + step*i);
 }
 
@@ -1439,14 +1440,14 @@ class VBars extends Container {
         if (arr) {
             [xvals, bars] = zip(...bars);
         } else {
-            xlim = (xlim == null) ? [0, n-1] : xlim;
+            xlim = xlim ?? ((n > 1) ? [0, n-1] : [-0.5, 0.5]);
             let xlim1 = xlim ?? limit_base;
             xvals = linspace(...xlim1, n);
         }
 
         // get data parameters
         let [xmin, xmax] = [min(...xvals), max(...xvals)];
-        width = width ?? (1-shrink)*((n > 1) ? (xmax-xmin)/(n-1) : 1);
+        width = width ?? ((n > 1) ? (1-shrink)*(xmax-xmin)/(n-1) : 1);
 
         // handle scalar and custom bars
         bars = bars.map(b =>
@@ -1605,6 +1606,14 @@ class YAxis extends Container {
     }
 }
 
+function maybe_two(x) {
+    if (is_scalar(x)) {
+        return [x, x];
+    } else {
+        return x;
+    }
+}
+
 class Axes extends Container {
     constructor(args) {
         let {
@@ -1620,6 +1629,7 @@ class Axes extends Container {
 
         // handle ticksize cases
         let [xticksize, yticksize] = aspect_invariant(ticksize, aspect);
+        let [xlabelsize, ylabelsize] = maybe_two(labelsize);
 
         // collect limits
         let [xmin, xmax] = xlim;
@@ -1645,7 +1655,7 @@ class Axes extends Container {
 
         // make xaxis scale
         if (xticks != null) {
-            let xaxis = new XAxis(xticks, {lim: xlim, labelsize: labelsize});
+            let xaxis = new XAxis(xticks, {lim: xlim, labelsize: xlabelsize});
             children.push([
                 xaxis, [0, xanchor-xticksize/2, 1, xanchor+xticksize/2]
             ]);
@@ -1653,7 +1663,7 @@ class Axes extends Container {
 
         // make yaxis scale
         if (yticks != null) {
-            let yaxis = new YAxis(yticks, {lim: ylim, labelsize: labelsize});
+            let yaxis = new YAxis(yticks, {lim: ylim, labelsize: ylabelsize});
             children.push([
                 yaxis, [yanchor-yticksize/2, 0, yanchor+yticksize/2, 1]
             ]);
@@ -1721,10 +1731,17 @@ class Grid extends Container {
     }
 }
 
+function expand_limits(lim, fact) {
+    let [lo, hi] = lim;
+    let ex = fact*(hi-lo);
+    return [lo-ex, hi+ex];
+}
+
 class Graph extends Container {
     constructor(lines, args) {
-        let {xlim, ylim, xgrid, ygrid, aspect, ...attr} = args ?? {};
+        let {xlim, ylim, xgrid, ygrid, aspect, padding, ...attr} = args ?? {};
         aspect = aspect ?? 'auto';
+        padding = padding ?? 0;
 
         // handle singleton line
         if (lines instanceof Element) {
@@ -1740,8 +1757,9 @@ class Graph extends Container {
         );
 
         // determine coordinate limits
-        xlim = xlim ?? [min(...xmins), max(...xmaxs)];
-        ylim = ylim ?? [min(...ymins), max(...ymaxs)];
+        let [xpad, ypad] = maybe_two(padding);
+        xlim = xlim ?? expand_limits([min(...xmins), max(...xmaxs)], xpad);
+        ylim = ylim ?? expand_limits([min(...ymins), max(...ymaxs)], ypad);
         let [xmin, xmax] = xlim;
         let [ymin, ymax] = ylim;
 
@@ -1753,7 +1771,7 @@ class Graph extends Container {
 
         // pass to container
         let scale = [xmin, ymax, xmax, ymin];
-        let attr1 = {aspect: aspect, scale: scale, ...attr};
+        let attr1 = {aspect, scale, ...attr};
         super(lines, attr1);
         this.xlim = xlim;
         this.ylim = ylim;
@@ -1763,24 +1781,22 @@ class Graph extends Container {
 class Plot extends Container {
     constructor(lines, args) {
         let {
-            xlim, ylim, xticks, yticks, xanchor, yanchor, xgrid, ygrid, gridcolor, xlabel, ylabel,
-            title, ticksize, labelsize, labeloffset, ticklabelsize, titlesize, prec, aspect,
-            margin, ...attr
+            xlim, ylim, xticks, yticks, xanchor, yanchor, xgrid, ygrid, gridcolor,
+            xlabel, ylabel, title, ticksize, labelsize, labeloffset, ticklabelsize,
+            titlesize, titleoffset, prec, aspect, padding, margin, ...attr
         } = args ?? {};
         labelsize = labelsize ?? axis_label_size_base;
         labeloffset = labeloffset ?? axis_label_offset_base;
         titlesize = titlesize ?? title_size_base;
+        titleoffset = titleoffset ?? title_offset_base;
 
         // create graph from lines
-        let graph = new Graph(lines, {
-            xlim: xlim, ylim: ylim, xgrid: xgrid, ygrid: ygrid, aspect: aspect
-        });
+        let graph = new Graph(lines, {xlim, ylim, xgrid, ygrid, aspect, padding});
 
         // create axes to match
         let axes = new Axes({
-            xticks: xticks, yticks: yticks, ticksize: ticksize, labelsize: ticklabelsize,
-            xanchor: xanchor, yanchor: yanchor, xlim: graph.xlim, ylim: graph.ylim,
-            aspect: graph.aspect, prec: prec
+            xticks, yticks, ticksize, xanchor, yanchor, labelsize: ticklabelsize,
+            xlim: graph.xlim, ylim: graph.ylim, aspect: graph.aspect, prec
         });
 
         // create base layout
@@ -1793,8 +1809,8 @@ class Plot extends Container {
             xgrid = (xgrid == true) ? xticklocs : xgrid;
             ygrid = (ygrid == true) ? yticklocs : ygrid;
             let grid = new Grid({
-                xgrid: xgrid, ygrid: ygrid, xlim: graph.xlim, ylim: graph.ylim,
-                gridcolor: gridcolor, aspect: graph.aspect
+                xgrid, ygrid, gridcolor, xlim: graph.xlim,
+                ylim: graph.ylim, aspect: graph.aspect
             });
             children.unshift(grid);
         }
@@ -1816,7 +1832,6 @@ class Plot extends Container {
         // optional plot title
         if (title != null) {
             title = new Title(title);
-            let titleoffset = 0.1;
             let titlerect = [0, -titleoffset-titlesize, 1, -titleoffset];
             children.push([title, titlerect]);
         }
@@ -1833,22 +1848,17 @@ class BarPlot1 extends Plot {
         orient = orient ?? 'v';
         aspect = aspect ?? phi;
         shrink = shrink ?? 0.2;
-        padding = padding ?? 1/phi;
         color = color ?? 'lightgray';
         let n = data.length;
+        padding = padding ?? [min(0.5, 1/n), 0];
 
         // generate actual bars
         let [xlabs, bars] = zip(...data);
         let Bars = (orient == 'v') ? VBars : null;
         let bars1 = new Bars(bars, {width, shrink, color});
-
-        // set up plot viewport
-        let [xlo, xhi] = bars1.xlim;
-        let xexp = padding*((xhi-xlo)/(n-1));
-        let xlim = [xlo - xexp, xhi + xexp];
         let xticks = zip(bars1.xvals, xlabs);
 
-        let attr1 = {xlim, xticks, aspect, ...attr};
+        let attr1 = {xticks, aspect, padding, ...attr};
         super(bars1, attr1);
     }
 }
