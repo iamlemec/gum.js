@@ -138,6 +138,7 @@ function zip(...iterables) {
 }
 
 function sum(arr) {
+    arr = arr.filter(v => v != null);
     return arr.reduce((a, b) => a + b, 0);
 }
 
@@ -193,13 +194,21 @@ let log = Math.log;
 let sin = Math.sin;
 let cos = Math.cos;
 let tan = Math.tan;
-let min = Math.min;
-let max = Math.max;
 let abs = Math.abs;
 let sqrt = Math.sqrt;
 let floor = Math.floor;
 let ceil = Math.ceil;
 let round = Math.round;
+
+// null on empty
+function min(...vals) {
+    vals = vals.filter(v => v != null);
+    return (vals.length > 0) ? Math.min(...vals) : null;
+}
+function max(...vals) {
+    vals = vals.filter(v => v != null);
+    return (vals.length > 0) ? Math.max(...vals) : null;
+}
 
 // constants
 let pi = new NamedNumber('pi', Math.PI);
@@ -264,8 +273,7 @@ function rad_rect(p, r0) {
 }
 
 function merge_rects(rects) {
-    let [xa, ya, xb, yb] = range(4)
-        .map(i => rects.map(r => r[i]));
+    let [xa, ya, xb, yb] = zip(...rects);
     return [
         min(...xa), min(...ya), max(...xb), max(...yb)
     ];
@@ -677,46 +685,58 @@ class Frame extends Container {
 }
 
 // expects list of Element or [Element, height]
+// maybe have an align option for non-expansion case?
 class VStack extends Container {
     constructor(children, args) {
-        let {expand, aspect, attr} = args ?? {};
+        let {expand, aspect, ...attr} = args ?? {};
         expand = expand ?? true;
 
-        if (children.length == 0) {
+        // short circuit if empty
+        let n = children.length;
+        if (n == 0) {
             return super([], {aspect: aspect, ...attr});
         }
 
         // get children, heights, and aspects
-        let n = children.length;
         let [elements, heights] = zip(...children
             .map(c => (c instanceof Element) ? [c, 1/n] : c)
         );
         let aspects = elements.map(c => c.aspect);
 
+        // get provisional widths from aspect info
+        let widths = zip(heights, aspects).map(([h, a]) => {
+            return (a != null) ? h*a : null;
+        });
+        let wmax = max(...widths) ?? 1;
+
         // adjust for aspects
+        let wlims;
         if (expand) {
-            heights = zip(heights, aspects).map(([h, a]) => h/(a ?? 1));
+            // if as[ect, heights are adjusted so that all elements have full width
+            // if no aspect, they can be stretched to full width anyway
+            heights = zip(heights, aspects).map(([h, a]) => 1/(a ?? 1));
             let total = sum(heights);
             heights = heights.map(h => h/total);
+            wlims = range(n).map(i => [0, 1]);
+            aspect = 1/total;
+        } else {
+            // find widest element and place others horizontally in relation to that
+            // this currently left justifies by default
+            wlims = widths.map(w => [0, (w != null) ? w/wmax : 1]);
+            let total = sum(heights);
+            heights = heights.map(h => h/total);
+            aspect = wmax/total;
         }
 
         // convert to cumulative intervals
         let pos = 0;
-        let inter = heights.map(y =>
+        let hlims = heights.map(y =>
             is_scalar(y) ? [pos, pos += y] : [y[0], pos = y[1]]
         );
 
         // compute child boxes
-        children = zip(elements, inter)
-            .map(([c, [fh0, fh1]]) => [c, [0, fh0, 1, fh1]]);
-
-        // use imputed aspect if null
-        if (aspect == null) {
-            let aspects0 = zip(heights, aspects)
-                .filter(([h, a]) => a != null)
-                .map(([h, a]) => h*a);
-            aspect = (aspects0.length > 0) ? max(...aspects0) : null;
-        }
+        children = zip(elements, wlims, hlims)
+            .map(([c, [fw0, fw1], [fh0, fh1]]) => [c, [fw0, fh0, fw1, fh1]]);
 
         // pass to Container
         let attr1 = {aspect: aspect, ...attr};
@@ -726,7 +746,7 @@ class VStack extends Container {
 
 class HStack extends Container {
     constructor(children, args) {
-        let {expand, aspect, attr} = args ?? {};
+        let {expand, aspect, ...attr} = args ?? {};
         expand = expand ?? true;
 
         if (children.length == 0) {
@@ -735,9 +755,8 @@ class HStack extends Container {
 
         // get children, heights, and aspects
         let n = children.length;
-        let [elements, widths] = zip(...children
-            .map(c => (c instanceof Element) ? [c, 1/n] : c)
-        );
+        children = children.map(c => is_element(c) ? [c, 1/n] : c);
+        let [elements, widths] = zip(...children);
         let aspects = elements.map(c => c.aspect);
 
         // adjust for aspects
@@ -1731,6 +1750,22 @@ class Grid extends Container {
     }
 }
 
+class Legend extends VStack {
+    constructor(data, args) {
+        let {badgeaspect, ...attr} = args ?? {};
+        badgeaspect = badgeaspect ?? phi;
+
+        let [badges, labels] = zip(...data);
+        labels = labels.map(t => is_element(t) ? t : new Text(t));
+        let children = zip(badges, labels).map(([b, t]) =>
+            new HStack([[b, badgeaspect], [t, 1]])
+        );
+
+        let attr1 = {expand: false, ...attr};
+        super(children, attr1);
+    }
+}
+
 function expand_limits(lim, fact) {
     let [lo, hi] = lim;
     let ex = fact*(hi-lo);
@@ -2337,7 +2372,7 @@ let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale,
-    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, BarPlot1, InterActive, Variable, Slider,
+    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, BarPlot1, Legend, InterActive, Variable, Slider,
     Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors,
     interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor,
     ceil, round, pi, phi, rounder, make_ticklabel
@@ -2419,4 +2454,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Axes, BarPlot, BarPlot1, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Axes, BarPlot, BarPlot1, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Point, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
