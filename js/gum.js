@@ -145,10 +145,33 @@ function sum(arr) {
     return arr.reduce((a, b) => a + b, 0);
 }
 
+function all(arr) {
+    return arr.reduce((a, b) => a && b);
+}
+
+function any(arr) {
+    return arr.reduce((a, b) => a || b);
+}
+
 function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
     return (first ?? true) ? [0, ...ret] : ret;
+}
+
+// fill in missing values to ensure: sum(vals) == target
+function distribute_extra(vals, target) {
+    target = target ?? 1;
+    let nmiss = vals.filter(v => v == null).length;
+    let total = sum(vals);
+    let fill = (nmiss > 0) ? (target-total)/nmiss : 0;
+    return vals.map(v => v ?? fill);
+}
+
+function normalize(vals, target) {
+    target = target ?? 1;
+    let norm = target/sum(vals);
+    return vals.map(v => norm*v);
 }
 
 function range(i0, i1, step) {
@@ -732,8 +755,10 @@ class Frame extends Container {
 // maybe have an align option for non-expansion case?
 class VStack extends Container {
     constructor(children, args) {
-        let {expand, aspect, ...attr} = args ?? {};
+        let {expand, aspect, clip, debug, ...attr} = args ?? {};
         expand = expand ?? true;
+        aspect = aspect ?? 'auto';
+        debug = debug ?? false;
 
         // short circuit if empty
         let n = children.length;
@@ -743,37 +768,44 @@ class VStack extends Container {
 
         // get children, heights, and aspects
         let [elements, heights] = zip(...children
-            .map(c => (c instanceof Element) ? [c, 1/n] : c)
+            .map(c => (c instanceof Element) ? [c, null] : c)
         );
-        let aspects = elements.map(c => c.aspect);
+        heights = distribute_extra(heights);
 
         // get provisional widths from aspect info
+        let aspects = elements.map(c => c.aspect);
         let widths = zip(heights, aspects).map(([h, a]) => {
             return (a != null) ? h*a : null;
         });
         let wmax = max(...widths) ?? 1;
 
-        // adjust for aspects
-        let wlims;
+        // expand elements to fit width?
+        let aspect_ideal;
         if (expand) {
-            // if as[ect, heights are adjusted so that all elements have full width
+            // if aspect, heights are adjusted so that all elements have full width
             // if no aspect, they can be stretched to full width anyway
-            heights = zip(heights, aspects).map(([h, a]) => 1/(a ?? 1));
+            // note that in this case, given heights are not realized exactly
+            heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h);
             let total = sum(heights);
             heights = heights.map(h => h/total);
-            wlims = range(n).map(i => [0, 1]);
-            aspect = 1/total;
+            aspect_ideal = 1/total;
         } else {
-            // find widest element and place others horizontally in relation to that
-            // this currently left justifies by default
-            wlims = widths.map(w => [0, (w != null) ? w/wmax : 1]);
-            let total = sum(heights);
-            heights = heights.map(h => h/total);
-            aspect = wmax/total;
+            // ideal aspect determined by widest element
+            aspect_ideal = wmax;
+        }
+
+        // if any element has an aspect, use ideal aspect
+        // otherwise, just go with null aspect unless specified
+        if (aspect == 'auto') {
+            let hasa = any(aspects.map(a => a != null));
+            aspect = hasa ? aspect_ideal : null;
+        } else if (aspect == 'none') {
+            aspect = null;
         }
 
         // convert to cumulative intervals
         let pos = 0;
+        let wlims = widths.map(w => [0, 1]);
         let hlims = heights.map(y =>
             is_scalar(y) ? [pos, pos += y] : [y[0], pos = y[1]]
         );
@@ -782,8 +814,16 @@ class VStack extends Container {
         children = zip(elements, wlims, hlims)
             .map(([c, [fw0, fw1], [fh0, fh1]]) => [c, [fw0, fh0, fw1, fh1]]);
 
+        // add in debug lines
+        if (debug) {
+            let rect = new Rect({stroke: 'blue', stroke_dasharray: [4, 4]});
+            let boxes = zip(elements, wlims, hlims)
+                .map(([c, [fw0, fw1], [fh0, fh1]]) => [rect, [fw0, fh0, fw1, fh1]]);
+            children = [...children, ...boxes];
+        }
+
         // pass to Container
-        let attr1 = {aspect: aspect, ...attr};
+        let attr1 = {aspect: aspect, clip: false, ...attr};
         super(children, attr1);
     }
 }
