@@ -751,14 +751,41 @@ class Frame extends Container {
     }
 }
 
+function get_direction(direc) {
+    if (direc == 'v' || direc == 'vert' || direc == 'vertical') {
+        return 'v';
+    } else if (direc == 'h' || direc == 'horiz' || direc == 'horizontal') {
+        return 'h';
+    } else {
+        throw new Error(`Unrecognized direction specification: ${direc}`);
+    }
+}
+
+function align_frac(align, direc) {
+    if (is_scalar(align)) {
+        return align;
+    } else if ((direc == 'v' && align == 'left') || (direc == 'h' && align == 'top')) {
+        return 0;
+    } else if (align == 'center' || align == 'middle') {
+        return 0.5;
+    } else if ((direc == 'v' && align == 'right') || (direc == 'h' && align == 'bottom')) {
+        return 1;
+    } else{
+        throw new Error(`Unrecognized alignment specification: ${align}`);
+    }
+}
+
 // expects list of Element or [Element, height]
-// maybe have an align option for non-expansion case?
-class VStack extends Container {
-    constructor(children, args) {
-        let {expand, aspect, clip, debug, ...attr} = args ?? {};
+class Stack extends Container {
+    constructor(direc, children, args) {
+        let {expand, align, aspect, debug, ...attr} = args ?? {};
         expand = expand ?? true;
+        align = align ?? 'center';
         aspect = aspect ?? 'auto';
         debug = debug ?? false;
+
+        // get standardized direction
+        direc = get_direction(direc);
 
         // short circuit if empty
         let n = children.length;
@@ -774,13 +801,13 @@ class VStack extends Container {
 
         // get provisional widths from aspect info
         let aspects = elements.map(c => c.aspect);
-        let widths = zip(heights, aspects).map(([h, a]) => {
-            return (a != null) ? h*a : null;
-        });
+        if (direc == 'h') { aspects = aspects.map(a => (a != null) ? 1/a : null); }
+        let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h*a : null);
         let wmax = max(...widths) ?? 1;
+        widths = widths.map(w => (w != null) ? w/wmax : 1);
 
         // expand elements to fit width?
-        let aspect_ideal;
+        let aspect_ideal, wlims;
         if (expand) {
             // if aspect, heights are adjusted so that all elements have full width
             // if no aspect, they can be stretched to full width anyway
@@ -789,9 +816,12 @@ class VStack extends Container {
             let total = sum(heights);
             heights = heights.map(h => h/total);
             aspect_ideal = 1/total;
+            wlims = widths.map(w => [0, 1]);
         } else {
             // ideal aspect determined by widest element
             aspect_ideal = wmax;
+            let afrac = align_frac(align, direc);
+            wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
         }
 
         // if any element has an aspect, use ideal aspect
@@ -803,12 +833,17 @@ class VStack extends Container {
             aspect = null;
         }
 
-        // convert to cumulative intervals
+        // convert heights to cumulative intervals
         let pos = 0;
-        let wlims = widths.map(w => [0, 1]);
         let hlims = heights.map(y =>
             is_scalar(y) ? [pos, pos += y] : [y[0], pos = y[1]]
         );
+
+        // swap dims if horizontal
+        if (direc == 'h') {
+            [wlims, hlims] = [hlims, wlims];
+            aspect = (aspect != null) ? 1/aspect : null;
+        }
 
         // compute child boxes
         children = zip(elements, wlims, hlims)
@@ -817,60 +852,26 @@ class VStack extends Container {
         // add in debug lines
         if (debug) {
             let rect = new Rect({stroke: 'blue', stroke_dasharray: [4, 4]});
-            let boxes = zip(elements, wlims, hlims)
-                .map(([c, [fw0, fw1], [fh0, fh1]]) => [rect, [fw0, fh0, fw1, fh1]]);
+            let boxes = zip(wlims, hlims)
+                .map(([[fw0, fw1], [fh0, fh1]]) => [rect, [fw0, fh0, fw1, fh1]]);
             children = [...children, ...boxes];
-        }
-
-        // pass to Container
-        let attr1 = {aspect: aspect, clip: false, ...attr};
-        super(children, attr1);
-    }
-}
-
-class HStack extends Container {
-    constructor(children, args) {
-        let {expand, aspect, ...attr} = args ?? {};
-        expand = expand ?? true;
-
-        if (children.length == 0) {
-            return super([], {aspect: aspect, ...attr});
-        }
-
-        // get children, heights, and aspects
-        let n = children.length;
-        children = children.map(c => is_element(c) ? [c, 1/n] : c);
-        let [elements, widths] = zip(...children);
-        let aspects = elements.map(c => c.aspect);
-
-        // adjust for aspects
-        if (expand) {
-            widths = zip(widths, aspects).map(([w, a]) => w*(a ?? 1));
-            let total = sum(widths);
-            widths = widths.map(w => w/total);
-        }
-
-        // convert to cumulative intervals
-        let pos = 0;
-        let inter = widths.map(x =>
-            is_scalar(x) ? [pos, pos += x] : [x[0], pos = x[1]]
-        );
-
-        // find child boxes
-        children = zip(elements, inter)
-            .map(([c, [fw0, fw1]]) => [c, [fw0, 0, fw1, 1]]);
-
-        // use imputed aspect if null
-        if (aspect == null) {
-            let aspects0 = zip(widths, aspects)
-                .filter(([w, a]) => a != null)
-                .map(([w, a]) => a/w);
-            aspect = (aspects0.length > 0) ? max(...aspects0) : null;
         }
 
         // pass to Container
         let attr1 = {aspect: aspect, ...attr};
         super(children, attr1);
+    }
+}
+
+class VStack extends Stack {
+    constructor(children, args) {
+        super('v', children, args);
+    }
+}
+
+class HStack extends Stack {
+    constructor(children, args) {
+        super('h', children, args);
     }
 }
 
