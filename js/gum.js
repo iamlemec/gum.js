@@ -1847,18 +1847,25 @@ class Grid extends Container {
     }
 }
 
+function make_legendlabel(s, attr) {
+    attr = attr ?? {};
+    return new Text(s, {
+        calc_family: plot_font_base, font_weight: 100, ...attr
+    });
+}
+
 class Legend extends VStack {
     constructor(data, args) {
         let {badgeaspect, ...attr} = args ?? {};
         badgeaspect = badgeaspect ?? phi;
 
         let [badges, labels] = zip(...data);
-        labels = labels.map(t => is_element(t) ? t : new Text(t));
+        labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
         let children = zip(badges, labels).map(([b, t]) =>
             new HStack([[b, badgeaspect], [t, 1]])
         );
 
-        let attr1 = {expand: false, ...attr};
+        let attr1 = {expand: false, align: 'left', font_family: plot_font_base, ...attr};
         super(children, attr1);
     }
 }
