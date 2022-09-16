@@ -1518,31 +1518,38 @@ class Scatter extends Container {
     }
 }
 
-// no aspect, but has a ylim and optional width that is used by VBars
-class VBar extends VStack {
-    constructor(heights, args) {
-        let {yzero, width, ...attr} = args ?? {};
-        yzero = yzero ?? 0;
+// no aspect, but has a ylim and optional width that is used by Bars
+class Bar extends Stack {
+    constructor(direc, lengths, args) {
+        let {zero, size, ...attr} = args ?? {};
+        zero = zero ?? 0;
 
-        heights = heights.map(hc => (is_scalar(hc)) ? [hc, null] : hc);
-        let children = heights.map(([h, c]) => [new Rect({fill: c}), h]);
-        let height = sum(heights.map(([h, c]) => h));
+        // get standardized direction
+        direc = get_direction(direc);
 
-        super(children, attr);
-        this.ylim = [yzero, yzero + height];
-        this.width = width;
+        // normalize section specs
+        let boxes = lengths.map(lc => (is_scalar(lc)) ? [lc, null] : lc);
+        let length = sum(lengths.map(([l, c]) => l));
+        let children = boxes.map(([l, c]) => [new Rect({fill: c}), l/length]);
+
+        super(direc, children, attr);
+        this.lim = [zero, zero + length];
+        this.size = size;
     }
 }
 
 // non-unary | variable-aspect | graphable
 // custom bars must have a ylim and optionally a width
-class VBars extends Container {
-    constructor(bars, args) {
-        let {xlim, yzero, shrink, width, color, integer, ...attr} = args ?? {};
-        yzero = yzero ?? 0;
+class Bars extends Container {
+    constructor(direc, bars, args) {
+        let {lim, zero, shrink, size, color, integer, ...attr} = args ?? {};
+        zero = zero ?? 0;
         integer = integer ?? false;
         shrink = shrink ?? 0;
         let n = bars.length;
+
+        // get standardized direction
+        direc = get_direction(direc);
 
         // check input sizes
         let arrs = new Set(bars.map(is_array));
@@ -1552,35 +1559,44 @@ class VBars extends Container {
         let [arr,] = arrs;
 
         // expand scalar list case
-        let xvals;
+        let vals;
         if (arr) {
-            [xvals, bars] = zip(...bars);
+            [vals, bars] = zip(...bars);
         } else {
-            xlim = xlim ?? ((n > 1) ? [0, n-1] : [-0.5, 0.5]);
-            let xlim1 = xlim ?? limit_base;
-            xvals = linspace(...xlim1, n);
+            let lim0 = (integer) ? ((n > 1) ? [0, n-1] : [-0.5, 0.5]) : limit_base;
+            lim = lim ?? lim0;
+            vals = linspace(...lim, n);
         }
 
         // get data parameters
-        let [xmin, xmax] = [min(...xvals), max(...xvals)];
-        width = width ?? ((n > 1) ? (1-shrink)*(xmax-xmin)/(n-1) : 1);
+        let [vmin, vmax] = [min(...vals), max(...vals)];
+        size = size ?? ((n > 1) ? (1-shrink)*(vmax-vmin)/(n-1) : 1);
 
         // handle scalar and custom bars
         bars = bars.map(b =>
-            is_scalar(b) ? new VBar([[b, color]], {yzero, width}) : b
+            is_scalar(b) ? new Bar(direc, [[b, color]], {zero, size}) : b
         );
 
+        // aggregate lengths
+        let [zmins, zmaxs] = zip(...bars.map(b => b.lim));
+        let [zmin, zmax] = [min(...zmins), max(...zmaxs)];
+
         // compute boxes
-        let children = zip(xvals, bars).map(([x, b]) => {
-            let [ymin, ymax, w] = [...b.ylim, b.width ?? width];
-            let box = [x-w/2, ymin, x+w/2, ymax];
+        let children = zip(vals, bars).map(([v, b]) => {
+            let [zlo, zhi, s] = [...b.lim, b.size ?? size];
+            let box = (direc == 'v') ? [v-s/2, zlo, v+s/2, zhi] : [zlo, v-s/2, zhi, v+s/2];
             return [b, box];
         });
 
+        // set up container
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
-        this.xlim = xlim ?? [xmin, xmax];
-        this.xvals = xvals;
+        this.vals = vals;
+
+        // set axis limits
+        this.xlim = lim ?? [vmin, vmax];
+        this.ylim = [zmin, zmax];
+        if (direc == 'h') { [this.xlim, this.ylim] = [this.ylim, this.xlim]; }
     }
 }
 
@@ -1981,133 +1997,33 @@ class Plot extends Container {
     }
 }
 
-class BarPlot1 extends Plot {
+class BarPlot extends Plot {
     constructor(data, args) {
-        let {orient, aspect, width, shrink, padding, color, ...attr} = args ?? {};
-        orient = orient ?? 'v';
+        let {direc, aspect, width, shrink, padding, color, ...attr} = args ?? {};
+        direc = direc ?? 'v';
         aspect = aspect ?? phi;
         shrink = shrink ?? 0.2;
         color = color ?? 'lightgray';
         let n = data.length;
-        padding = padding ?? [min(0.5, 1/n), 0];
+
+        // standardize direction
+        direc = get_direction(direc);
+
+        // set up appropriate padding
+        let zpad = min(0.5, 1/n);
+        let padding0 = (direc == 'v') ? [zpad, 0] : [0, zpad];
+        padding = padding ?? padding0;
 
         // generate actual bars
-        let [xlabs, bars] = zip(...data);
-        let Bars = (orient == 'v') ? VBars : null;
-        let bars1 = new Bars(bars, {width, shrink, color});
-        let xticks = zip(bars1.xvals, xlabs);
+        let [labs, bars] = zip(...data);
+        let bars1 = new Bars(direc, bars, {width, shrink, color});
+        let ticks = zip(bars1.vals, labs);
 
-        let attr1 = {xticks, aspect, padding, ...attr};
+        // send to general plot
+        let attr1 = {aspect, padding, ...attr};
+        if (direc == 'v') { attr1.xticks = ticks; } else { attr1.yticks = ticks; }
         super(bars1, attr1);
     }
-}
-
-class BarPlot extends Plot {
-    constructor(data, args) {
-        args = args ?? {};
-        let vals, labels, barsHights;
-
-        let df_col = args.color ?? 'gray';
-
-        if (data instanceof Array) {
-            vals = data;
-            barsHights = data;
-        }
-
-        // create lists from objects
-        if (data instanceof Object) {
-            labels = [];
-            barsHights = [];
-            vals = [];
-            Object.entries(data).forEach(([k, v]) => {
-                labels.push(k);
-                if (v instanceof Object) {
-                    if (v.stacked) { // stacked bar must be {int: 'color'} format
-                        vals.push(v.stacked);
-                    } else {
-                        vals.push(v.value);
-                    }
-                } else {
-                    vals.push(v);
-                }
-            });
-
-            barsHights = vals.map((val) => {
-                if (val instanceof Array) {
-                    let x = 0;
-                    val.forEach((d) => {
-                        x += d[0];
-                    });
-                    return x;
-                }
-                return val;
-            });
-        }
-
-        let n = vals.length;
-        let max = Math.max(...barsHights);
-        let width = 1/(4*n);
-        let b = linspace(0, 1, n+1);
-
-        let bars = [];
-
-        vals.forEach((d, i) => {
-            let color;
-            let center = (b[i] + b[i+1])/2;
-            let color_by;
-
-            if (d instanceof Array) {
-                let start = 0;
-                d.forEach((dp) => {
-                    let h = dp[0];
-                    color = dp[1] || df_col;
-                    color_by = dp[1] ? false : args.color_by;
-                    let perc = h/max;
-                    bars.push(make_bar(start, h, center, width, color, color_by, perc));
-                    start = start + dp[0];
-                });
-            } else {
-                let perc = d/max;
-                if (data instanceof Object) {
-                    color = data[labels[i]].color || color || df_col;
-                    color_by = data[labels[i]].color ? false : args.color_by;
-                }
-                bars.push(make_bar(0, d, center, width, color, color_by, perc));
-            }
-        });
-
-        // handle ticks
-        if (labels) {
-            labels = labels.map((l, i) => [(b[i] + b[i+1])/2, l]);
-        }
-
-        // set args
-        args.xlim = [0, 1];
-        args.ylim = args.ylim ?? [0, max];
-        args.xticks = labels ?? 0;
-        args.aspect = args.aspect ?? 1;
-
-        super(bars, args);
-    }
-
-    inner(ctx) {
-        return super.inner(ctx);
-    }
-}
-
-function make_bar(bot, height, center, width, color, color_by=false, perc=0) {
-    if (color_by) {
-        let x = interpolateVectors(...color_by, perc);
-        color = `hsl(${x[0]}, ${x[1]}%, ${x[2]}%)`;
-    }
-
-    return new Rect({
-        x1: center - width,
-        x2: center + width,
-        y1: bot,
-        y2: bot + height,
-        fill: color
-    });
 }
 
 //// INTERACTIVE
@@ -2475,8 +2391,8 @@ class Animation {
 let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
-    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale,
-    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, BarPlot1, Legend, InterActive, Variable, Slider,
+    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale,
+    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider,
     Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors,
     interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor,
     ceil, round, pi, phi, rounder, make_ticklabel
@@ -2565,8 +2481,8 @@ function injectImages(elem) {
 export {
     Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer,
     Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node, MoveTo,
-    LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, VBar, VBars, XScale, YScale,
-    XAxis, YAxis, Axes, Graph, Plot, BarPlot, BarPlot1, Legend, InterActive, Variable, Slider, Toggle, List,
+    LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale,
+    XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider, Toggle, List,
     Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range,
     linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp,
     log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel,
