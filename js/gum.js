@@ -776,6 +776,7 @@ function align_frac(align, direc) {
 }
 
 // expects list of Element or [Element, height]
+// this is written as vertical, horizonal swaps dimensions and inverts aspects
 class Stack extends Container {
     constructor(direc, children, args) {
         let {expand, align, aspect, debug, ...attr} = args ?? {};
@@ -797,29 +798,40 @@ class Stack extends Container {
         let [elements, heights] = zip(...children
             .map(c => (c instanceof Element) ? [c, null] : c)
         );
-        heights = distribute_extra(heights);
 
-        // get provisional widths from aspect info
+        // get aspects and adjust for direction
         let aspects = elements.map(c => c.aspect);
-        if (direc == 'h') { aspects = aspects.map(a => (a != null) ? 1/a : null); }
-        let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h*a : null);
-        let wmax = max(...widths) ?? 1;
-        widths = widths.map(w => (w != null) ? w/wmax : 1);
+        if (direc == 'h') {
+            aspects = aspects.map(a => (a != null) ? 1/a : null);
+        }
 
         // expand elements to fit width?
         let aspect_ideal, wlims;
         if (expand) {
             // if aspect, heights are adjusted so that all elements have full width
             // if no aspect, they can be stretched to full width anyway
-            // note that in this case, given heights are not realized exactly
             heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h);
-            let total = sum(heights);
-            heights = heights.map(h => h/total);
-            aspect_ideal = 1/total;
-            wlims = widths.map(w => [0, 1]);
+            heights = heights.map(h => h ?? 1/n);
+
+            // renormalize heights and find ideal aspect
+            let atot = sum(zip(heights, aspects).map(([h, a]) => (a != null) ? h : null));
+            let utot = sum(zip(heights, aspects).map(([h, a]) => (a == null) ? h : null));
+            heights = zip(heights, aspects).map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h);
+            aspect_ideal = (1-utot)/atot;
+
+            // width is always full with expand
+            wlims = heights.map(w => [0, 1]);
         } else {
+            // fill in missing heights and find aspect widths
+            heights = distribute_extra(heights);
+            let widths = zip(heights, aspects).map(([h, a]) => (a != null) ? h*a : null);
+
             // ideal aspect determined by widest element
+            let wmax = max(...widths) ?? 1;
+            widths = widths.map(w => (w != null) ? w/wmax : 1);
             aspect_ideal = wmax;
+
+            // set wlims according to alignment
             let afrac = align_frac(align, direc);
             wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
         }
@@ -835,9 +847,7 @@ class Stack extends Container {
 
         // convert heights to cumulative intervals
         let pos = 0;
-        let hlims = heights.map(y =>
-            is_scalar(y) ? [pos, pos += y] : [y[0], pos = y[1]]
-        );
+        let hlims = heights.map(y => [pos, pos += y]);
 
         // swap dims if horizontal
         if (direc == 'h') {
