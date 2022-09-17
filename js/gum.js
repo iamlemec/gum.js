@@ -1870,19 +1870,24 @@ function make_legendlabel(s, attr) {
     });
 }
 
-class Legend extends VStack {
+class Legend extends Frame {
     constructor(data, args) {
-        let {badgeaspect, ...attr} = args ?? {};
-        badgeaspect = badgeaspect ?? phi;
+        let {badgewidth, spacing, ...attr} = args ?? {};
+        badgewidth = badgewidth ?? 0.1;
+        spacing = spacing ?? 0.02;
 
         let [badges, labels] = zip(...data);
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
-        let children = zip(badges, labels).map(([b, t]) =>
-            new HStack([[b, badgeaspect], [t, 1]])
-        );
+        let bs = new VStack(badges);
+        let ls = new VStack(labels, {expand: false, align: 'left'});
+        let vs = new HStack([
+            [bs, badgewidth-spacing/2],
+            [new Spacer(), spacing],
+            [ls, 1-badgewidth-spacing/2],
+        ]);
 
-        let attr1 = {expand: false, align: 'left', font_family: plot_font_base, ...attr};
-        super(children, attr1);
+        let attr1 = {font_family: plot_font_base, ...attr};
+        super(vs, attr1);
     }
 }
 
