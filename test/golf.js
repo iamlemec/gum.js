@@ -163,7 +163,7 @@ let p = Plot([...s, e, r, t], {
   xlabel: 'time (seconds)', ylabel: 'space (meters)',
   title: 'Spacetime Vibes'
 });
-let f = Frame(p, {margin: 0.2});
+let f = Frame(p, {margin: 0.3});
 return f;
 
 // complex scatter
@@ -329,7 +329,7 @@ let s = SymPoints({
 });
 
 let p = Plot([f, s], {
-  aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1],
+  aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1], labeloffset: [0.05, 0.1],
   xanchor: 0, xticks: xt, yticks: yt, ygrid: true,
   xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave'
 });

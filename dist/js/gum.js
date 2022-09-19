@@ -208,6 +208,7 @@ let sin = Math.sin;
 let cos = Math.cos;
 let tan = Math.tan;
 let abs = Math.abs;
+let pow = Math.pow;
 let sqrt = Math.sqrt;
 let floor = Math.floor;
 let ceil = Math.ceil;
@@ -259,12 +260,15 @@ function pad_rect(p) {
 }
 
 // map padding/margin into internal boxes
-function map_rect(p) {
+function map_rect(p, a) {
     let [pxa, pya, pxb, pyb] = p;
+    let [pw, ph] = [1+pxa+pxb, 1+pya+pyb];
     let [ptxa, ptya, ptxb, ptyb] = [
-        pxa/(1+pxa), pya/(1+pya), pxb/(1+pxb), pyb/(1+pyb)
+        pxa/pw, pya/ph, pxb/pw, pyb/ph
     ];
-    return [ptxa, ptya, 1-ptxb, 1-ptyb];
+    let rec = [ptxa, ptya, 1-ptxb, 1-ptyb];
+    let asp = (a != null) ? a*(pw/ph) : null;
+    return [rec, asp];
 }
 
 function rad_rect(p, r0) {
@@ -303,10 +307,13 @@ function rect_aspect(rect) {
     return w/h;
 }
 
-function aspect_invariant(value, aspect) {
+function aspect_invariant(value, aspect, alpha) {
+    aspect = aspect ?? 1;
+    alpha = alpha ?? 0.5;
     if (is_scalar(value)) {
-        let afact = sqrt(aspect ?? 1);
-        return [value*afact, value/afact];
+        let wfact = pow(aspect, alpha);
+        let hfact = pow(aspect, 1-alpha);
+        return [value*wfact, value/hfact];
     } else {
         return value;
     }
@@ -674,8 +681,9 @@ class Frame extends Container {
 
         // get box sizes
         let padmar = zip(padding, margin).map(([p, m]) => p + m);
-        let mrect = map_rect(margin);
-        let trect = map_rect(padmar);
+        let [mrect, maspect] = map_rect(margin, null);
+        let [trect, taspect] = map_rect(padmar, child.aspect);
+        aspect = aspect ?? taspect;
 
         // gather children
         let children = [[child, trect]];
@@ -685,14 +693,8 @@ class Frame extends Container {
             children.push([rect, mrect]);
         }
 
-        // compute eventual aspect
-        if (aspect == null && child.aspect != null) {
-            let [tw, th] = rect_dims(trect);
-            aspect = child.aspect*(th/tw);
-        }
-
         // pass to Container
-        let attr1 = {aspect: aspect, ...attr};
+        let attr1 = {aspect, ...attr};
         super(children, attr1);
     }
 }
@@ -1335,9 +1337,6 @@ class Node extends Container {
         padding = padding ?? 0.1;
         shape = shape ?? Rect;
 
-        // convenience padding
-        padding = pad_rect(padding);
-
         // generate core elements
         if (is_string(text)) {
             text = new Text(text);
@@ -1346,16 +1345,17 @@ class Node extends Container {
 
         // auto-scale padding
         if (aspect == null) {
-            let x = sqrt(text.aspect);
-            let [pl, pt, pr, pb] = padding;
-            padding = [pl/x, pt*x, pr/x, pb*x];
-            aspect = text.aspect*(1+(pl+pr)/x)/(1+(pt+pb)*x);
+            padding = aspect_invariant(padding, 1/text.aspect, 1);
         }
+        padding = pad_rect(padding);
+
+        // determine aspect
+        let [rect, aspect0] = map_rect(padding, text.aspect);
+        aspect = aspect ?? aspect0;
 
         // pass to container
-        let rect = map_rect(padding);
         let children = [[text, rect], outer];
-        let attr1 = {aspect: aspect, ...attr};
+        let attr1 = {aspect, ...attr};
         super(children, attr1);
     }
 }
