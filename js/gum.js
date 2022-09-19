@@ -811,12 +811,13 @@ class Stack extends Container {
             // if aspect, heights are adjusted so that all elements have full width
             // if no aspect, they can be stretched to full width anyway
             heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h);
-            heights = heights.map(h => h ?? 1/n);
+            heights = heights.map(h => h ?? 1/n); // this can backfire
 
             // renormalize heights and find ideal aspect
-            let atot = sum(zip(heights, aspects).map(([h, a]) => (a != null) ? h : null));
-            let utot = sum(zip(heights, aspects).map(([h, a]) => (a == null) ? h : null));
-            heights = zip(heights, aspects).map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h);
+            let has = zip(heights, aspects);
+            let atot = sum(has.map(([h, a]) => (a != null) ? h : null));
+            let utot = sum(has.map(([h, a]) => (a == null) ? h : null));
+            heights = has.map(([h, a]) => (a != null) ? (1-utot)*(h/atot) : h);
             aspect_ideal = (1-utot)/atot;
 
             // width is always full with expand
@@ -1563,9 +1564,11 @@ class Bars extends Container {
         if (arr) {
             [vals, bars] = zip(...bars);
         } else {
-            let lim0 = (integer) ? ((n > 1) ? [0, n-1] : [-0.5, 0.5]) : limit_base;
-            lim = lim ?? lim0;
+            let lim_int = (n > 1) ? [0, n-1] : [-0.5, 0.5];
+            let lim_def = (integer) ? lim_int : limit_base;
+            lim = lim ?? lim_def;
             vals = linspace(...lim, n);
+            if (direc == 'h') { vals = vals.reverse(); }
         }
 
         // get data parameters
