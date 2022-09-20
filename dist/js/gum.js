@@ -181,6 +181,10 @@ function is_string(x) {
     return typeof(x) == 'string';
 }
 
+function is_object(x) {
+    return typeof(x) == 'object';
+}
+
 function is_array(x) {
     return Array.isArray(x);
 }
@@ -260,15 +264,16 @@ function pad_rect(p) {
 }
 
 // map padding/margin into internal boxes
-function map_rect(p, a) {
-    let [pxa, pya, pxb, pyb] = p;
-    let [pw, ph] = [1+pxa+pxb, 1+pya+pyb];
-    let [ptxa, ptya, ptxb, ptyb] = [
-        pxa/pw, pya/ph, pxb/pw, pyb/ph
-    ];
-    let rec = [ptxa, ptya, 1-ptxb, 1-ptyb];
-    let asp = (a != null) ? a*(pw/ph) : null;
-    return [rec, asp];
+function map_padmar(p, m, a) {
+    let [pl, pt, pr, pb] = p;
+    let [ml, mt, mr, mb] = m;
+    let [pw, ph] = [pl+1+pr, pt+1+pb];
+    let [tw, th] = [ml+pw+mr, mt+ph+mb];
+    let crect = [(ml+pl)/tw, (mt+pt)/th, 1-(mr+pr)/tw, 1-(mb+pb)/th];
+    let brect = [ml/tw, mt/th, 1-mr/tw, 1-mb/th];
+    let basp = (a != null) ? a*(pw/ph) : null;
+    let tasp = (a != null) ? a*(tw/th) : null;
+    return [crect, brect, basp, tasp];
 }
 
 function rad_rect(p, r0) {
@@ -310,12 +315,20 @@ function rect_aspect(rect) {
 function aspect_invariant(value, aspect, alpha) {
     aspect = aspect ?? 1;
     alpha = alpha ?? 0.5;
+
+    let wfact = pow(aspect, alpha);
+    let hfact = pow(aspect, 1-alpha);
+
     if (is_scalar(value)) {
-        let wfact = pow(aspect, alpha);
-        let hfact = pow(aspect, 1-alpha);
-        return [value*wfact, value/hfact];
-    } else {
-        return value;
+        value = [value, value];
+    }
+
+    if (value.length == 2) {
+        let [vw, vh] = value;
+        return [vw*wfact, vh/hfact];
+    } else if (value.length == 4) {
+        let [vl, vt, vr, vb] = value;
+        return [vl*wfact, vt/hfact, vr*wfact, vb/hfact];
     }
 }
 
@@ -660,11 +673,12 @@ class Group extends Container {
 
 class Frame extends Container {
     constructor(child, args) {
-        let {padding, margin, border, aspect, adjust, ...attr0} = args ?? {};
+        let {padding, margin, border, aspect, adjust, shape, ...attr0} = args ?? {};
         let [border_attr, attr] = prefix_attr(['border'], attr0);
         padding = padding ?? 0;
         margin = margin ?? 0;
         adjust = adjust ?? true;
+        shape = shape ?? Rect;
 
         // convenience boxing
         padding = pad_rect(padding);
@@ -672,25 +686,20 @@ class Frame extends Container {
 
         // aspect adjusted padding/margin
         if (adjust && child.aspect != null) {
-            let x = sqrt(child.aspect);
-            let [pl, pt, pr, pb] = padding;
-            let [ml, mt, mr, mb] = margin;
-            padding = [pl/x, pt*x, pr/x, pb*x];
-            margin = [ml/x, mt*x, mr/x, mb*x];
+            padding = aspect_invariant(padding, 1/child.aspect);
+            margin = aspect_invariant(margin, 1/child.aspect);
         }
 
         // get box sizes
-        let padmar = zip(padding, margin).map(([p, m]) => p + m);
-        let [mrect, maspect] = map_rect(margin, null);
-        let [trect, taspect] = map_rect(padmar, child.aspect);
-        aspect = aspect ?? taspect;
+        let [crect, brect, basp, tasp] = map_padmar(padding, margin, child.aspect);
+        aspect = aspect ?? tasp;
 
         // gather children
-        let children = [[child, trect]];
+        let children = [[child, crect]];
         if (border != null) {
-            let rargs = {stroke_width: border, aspect: aspect, ...border_attr};
-            let rect = new Rect(rargs);
-            children.push([rect, mrect]);
+            let rargs = {stroke_width: border, ...border_attr};
+            let rect = new shape(rargs);
+            children.push([rect, brect]);
         }
 
         // pass to Container
@@ -732,8 +741,6 @@ class Stack extends Container {
         align = align ?? 'center';
         aspect = aspect ?? 'auto';
         debug = debug ?? false;
-
-        // get standardized direction
         direc = get_direction(direc);
 
         // short circuit if empty
@@ -742,7 +749,7 @@ class Stack extends Container {
             return super([], {aspect: aspect, ...attr});
         }
 
-        // get children, heights, and aspects
+        // fill in missing heights with null
         let [elements, heights] = zip(...children
             .map(c => (c instanceof Element) ? [c, null] : c)
         );
@@ -863,6 +870,8 @@ class Spacer extends Element {
     }
 }
 
+new Spacer();
+
 // unary | aspect
 class Ray extends Element {
     constructor(theta, attr) {
@@ -891,7 +900,7 @@ class Ray extends Element {
         }
 
         // pass to Element
-        super('line', true, {aspect: aspect, ...attr});
+        super('line', true, {aspect, ...attr});
         this.direc = direc;
     }
 
@@ -907,7 +916,7 @@ class Ray extends Element {
             [y1, y2] = [y2, y1];
         }
 
-        let base = {x1: x1, y1: y1, x2: x2, y2: y2};
+        let base = {x1, y1, x2, y2};
         return {...base, ...this.attr};
     }
 }
@@ -934,7 +943,7 @@ class Line extends Element {
         let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel(
             [[this.x1, this.y1], [this.x2, this.y2]]
         );
-        let base = {x1: x1, y1: y1, x2: x2, y2: y2};
+        let base = {x1, y1, x2, y2};
         return {...base, ...this.attr};
     }
 }
@@ -943,7 +952,6 @@ class Line extends Element {
 class VLine extends Line {
     constructor(pos, args) {
         let attr = args ?? {};
-        pos = pos ?? 0.5;
         let attr1 = {x1: pos, x2: pos, ...attr};
         super(attr1);
     }
@@ -953,7 +961,6 @@ class VLine extends Line {
 class HLine extends Line {
     constructor(pos, args) {
         let attr = args ?? {};
-        pos = pos ?? 0.5;
         let attr1 = {y1: pos, y2: pos, ...attr};
         super(attr1);
     }
@@ -986,7 +993,7 @@ class Rect extends Element {
 
         if (w < 0) { x += w; w *= -1; }
         if (h < 0) { y += h; h *= -1; }
-        let base = {x: x, y: y, width: w, height: h};
+        let base = {x, y, width: w, height: h};
         return {...base, ...this.attr};
     }
 }
@@ -1002,7 +1009,7 @@ class Square extends Rect {
         let [x1, y1] = [cx - r, cy - r];
         let [x2, y2] = [cx + r, cy + r];
 
-        let base = {x1: x1, y1: y1, x2: x2, y2: y2, aspect: 1};
+        let base = {x1, y1, x2, y2, aspect: 1};
         super({...base, ...attr});
     }
 }
@@ -1028,7 +1035,7 @@ class Ellipse extends Element {
     props(ctx) {
         let [[cx, cy]] = ctx.coord_to_pixel([[this.cx, this.cy]]);
         let [[rx, ry]] = ctx.size_to_pixel([[this.rx, this.ry]]);
-        let base = {cx: cx, cy: cy, rx: rx, ry: ry};
+        let base = {cx, cy, rx, ry};
         return {...base, ...this.attr};
     }
 }
@@ -1041,7 +1048,7 @@ class Circle extends Ellipse {
         cy = cy ?? 0.5;
         r = r ?? 0.5;
 
-        let base = {cx: cx, cy: cy, rx: r, ry: r, aspect: 1};
+        let base = {cx, cy, rx: r, ry: r, aspect: 1};
         super({...base, ...attr});
     }
 }
@@ -1331,17 +1338,17 @@ class Tex extends Element {
     }
 }
 
-class Node extends Container {
+class Node extends Frame {
     constructor(text, args) {
-        let {padding, shape, aspect, ...attr} = args ?? {};
+        let {padding, border, aspect, ...attr0} = args ?? {};
+        let [text_attr, attr] = prefix_attr(['text'], attr0);
         padding = padding ?? 0.1;
-        shape = shape ?? Rect;
+        border = border ?? 1;
 
         // generate core elements
         if (is_string(text)) {
-            text = new Text(text);
+            text = new Text(text, text_attr);
         }
-        let outer = new shape();
 
         // auto-scale padding
         if (aspect == null) {
@@ -1349,14 +1356,9 @@ class Node extends Container {
         }
         padding = pad_rect(padding);
 
-        // determine aspect
-        let [rect, aspect0] = map_rect(padding, text.aspect);
-        aspect = aspect ?? aspect0;
-
         // pass to container
-        let children = [[text, rect], outer];
-        let attr1 = {aspect, ...attr};
-        super(children, attr1);
+        let attr1 = {padding, border, aspect, ...attr};
+        super(text, attr1);
     }
 }
 
@@ -1810,10 +1812,22 @@ class Grid extends Container {
     }
 }
 
+function make_legendbadge(c) {
+    let attr;
+    if (is_string(c)) {
+        attr = {stroke: c};
+    } else if (is_object(c)) {
+        attr = c;
+    } else {
+        throw new Error(`Unrecognized legend badge specification: ${c}`);
+    }
+    return new HLine(0.5, attr);
+}
+
 function make_legendlabel(s, attr) {
     attr = attr ?? {};
     return new Text(s, {
-        calc_family: plot_font_base, font_weight: 100, ...attr
+        calc_family: plot_font_base, font_weight: 100, vshift: -0.12, ...attr
     });
 }
 
@@ -1824,6 +1838,7 @@ class Legend extends Frame {
         spacing = spacing ?? 0.02;
 
         let [badges, labels] = zip(...data);
+        badges = badges.map(b => is_element(b) ? b : make_legendbadge(b));
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
         let bs = new VStack(badges);
         let ls = new VStack(labels, {expand: false, align: 'left'});
