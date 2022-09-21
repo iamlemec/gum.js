@@ -804,9 +804,11 @@ class Stack extends Container {
         }
 
         // fill in missing heights with null
-        let [elements, heights] = zip(...children
-            .map(c => (c instanceof Element) ? [c, null] : c)
-        );
+        let [elements, heights] = zip(...children.map(c => {
+            if (is_element(c)) { return [c, null]; }
+            else if (is_scalar(c)) { return [new Spacer(), c]; }
+            else { return c; }
+        }));
 
         // get aspects and adjust for direction
         let aspects = elements.map(c => c.aspect);
