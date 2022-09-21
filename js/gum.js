@@ -790,9 +790,10 @@ function align_frac(align, direc) {
 // this is written as vertical, horizonal swaps dimensions and inverts aspects
 class Stack extends Container {
     constructor(direc, children, args) {
-        let {expand, align, aspect, debug, ...attr} = args ?? {};
+        let {expand, align, spacing, aspect, debug, ...attr} = args ?? {};
         expand = expand ?? true;
         align = align ?? 'center';
+        spacing = spacing ?? 0;
         aspect = aspect ?? 'auto';
         debug = debug ?? false;
         direc = get_direction(direc);
@@ -852,6 +853,12 @@ class Stack extends Container {
             wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
         }
 
+        // convert heights to cumulative intervals
+        let pos = -spacing;
+        let hlims = heights.map(y => [pos += spacing, pos += y]);
+        hlims = hlims.map(([h1, h2]) => [h1/pos, h2/pos]);
+        aspect_ideal = (aspect_ideal != null) ? aspect_ideal/pos : null;
+
         // if any element has an aspect, use ideal aspect
         // otherwise, just go with null aspect unless specified
         if (aspect == 'auto') {
@@ -859,10 +866,6 @@ class Stack extends Container {
         } else if (aspect == 'none') {
             aspect = null;
         }
-
-        // convert heights to cumulative intervals
-        let pos = 0;
-        let hlims = heights.map(y => [pos, pos += y]);
 
         // swap dims if horizontal
         if (direc == 'h') {
@@ -1882,7 +1885,8 @@ function make_legendbadge(c) {
     } else {
         throw new Error(`Unrecognized legend badge specification: ${c}`);
     }
-    return new HLine(0.5, attr);
+    let attr1 = {aspect: 1, ...attr};
+    return new HLine(0.5, attr1);
 }
 
 function make_legendlabel(s, attr) {
@@ -1896,18 +1900,14 @@ class Legend extends Frame {
     constructor(data, args) {
         let {badgewidth, spacing, ...attr} = args ?? {};
         badgewidth = badgewidth ?? 0.1;
-        spacing = spacing ?? 0.02;
+        spacing = spacing ?? 0.05;
 
         let [badges, labels] = zip(...data);
         badges = badges.map(b => is_element(b) ? b : make_legendbadge(b));
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
         let bs = new VStack(badges);
         let ls = new VStack(labels, {expand: false, align: 'left'});
-        let vs = new HStack([
-            [bs, badgewidth-spacing/2],
-            [new Spacer(), spacing],
-            [ls, 1-badgewidth-spacing/2],
-        ]);
+        let vs = new HStack([bs, ls], {spacing});
 
         let attr1 = {font_family: plot_font_base, ...attr};
         super(vs, attr1);
