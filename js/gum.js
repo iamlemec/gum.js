@@ -812,17 +812,21 @@ class Stack extends Container {
 
         // get aspects and adjust for direction
         let aspects = elements.map(c => c.aspect);
+        let hasa = any(aspects.map(a => a != null));
         if (direc == 'h') {
             aspects = aspects.map(a => (a != null) ? 1/a : null);
         }
 
         // expand elements to fit width?
-        let aspect_ideal, wlims;
-        if (expand) {
+        let aspect_ideal = null, wlims;
+        if (expand && !hasa) {
+            // aspectless and full width
+            heights = distribute_extra(heights);
+            wlims = heights.map(w => [0, 1]);
+        } else if (expand && hasa) {
             // if aspect, heights are adjusted so that all elements have full width
             // if no aspect, they can be stretched to full width anyway
             heights = zip(heights, aspects).map(([h, a]) => (a != null) ? 1/a : h);
-            heights = heights.map(h => h ?? 1/n); // this can backfire
 
             // renormalize heights and find ideal aspect
             let has = zip(heights, aspects);
@@ -851,8 +855,7 @@ class Stack extends Container {
         // if any element has an aspect, use ideal aspect
         // otherwise, just go with null aspect unless specified
         if (aspect == 'auto') {
-            let hasa = any(aspects.map(a => a != null));
-            aspect = hasa ? aspect_ideal : null;
+            aspect = aspect_ideal;
         } else if (aspect == 'none') {
             aspect = null;
         }
