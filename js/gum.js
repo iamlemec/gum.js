@@ -748,13 +748,12 @@ class Frame extends Container {
         let [crect, brect, basp, tasp] = map_padmar(padding, margin, child.aspect);
         aspect = aspect ?? tasp;
 
+        // make border box
+        let rargs = {stroke_width: border, ...border_attr};
+        let rect = new shape(rargs);
+
         // gather children
-        let children = [[child, crect]];
-        if (border != null) {
-            let rargs = {stroke_width: border, ...border_attr};
-            let rect = new shape(rargs);
-            children.push([rect, brect]);
-        }
+        let children = [[rect, brect], [child, crect]];
 
         // pass to Container
         let attr1 = {aspect, ...attr};
