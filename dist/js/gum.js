@@ -1864,6 +1864,18 @@ class Legend extends Place {
     }
 }
 
+class Note extends Place {
+    constructor(text, pos, size, args) {
+        let {font_family, font_weight, ...attr} = args ?? {};
+        font_family = font_family ?? plot_font_base;
+        font_weight = font_weight ?? 100;
+
+        let attr1 = {font_family, font_weight, ...attr};
+        let label = new Text(text, attr1);
+        super(label, pos, size);
+    }
+}
+
 function expand_limits(lim, fact) {
     let [lo, hi] = lim;
     let ex = fact*(hi-lo);
@@ -2370,7 +2382,7 @@ let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale,
-    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider,
+    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider,
     Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors,
     interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor,
     ceil, round, pi, phi, rounder, make_ticklabel
@@ -2452,4 +2464,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Axes, Bar, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Axes, Bar, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };

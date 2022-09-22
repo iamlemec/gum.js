@@ -1920,6 +1920,18 @@ class Legend extends Place {
     }
 }
 
+class Note extends Place {
+    constructor(text, pos, size, args) {
+        let {font_family, font_weight, ...attr} = args ?? {};
+        font_family = font_family ?? plot_font_base;
+        font_weight = font_weight ?? 100;
+
+        let attr1 = {font_family, font_weight, ...attr};
+        let label = new Text(text, attr1);
+        super(label, pos, size);
+    }
+}
+
 function expand_limits(lim, fact) {
     let [lo, hi] = lim;
     let ex = fact*(hi-lo);
@@ -2426,7 +2438,7 @@ let Gum = [
     Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale,
-    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider,
+    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider,
     Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors,
     interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor,
     ceil, round, pi, phi, rounder, make_ticklabel
@@ -2516,7 +2528,7 @@ export {
     Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer,
     Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node, MoveTo,
     LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale,
-    XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider, Toggle, List,
+    XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List,
     Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range,
     linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp,
     log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel,
