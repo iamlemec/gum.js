@@ -853,7 +853,7 @@ class Stack extends Container {
             wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
         }
 
-        // convert heights to cumulative intervals
+        // convert heights to cumulative intervals (with spacing)
         let pos = -spacing;
         let hlims = heights.map(y => [pos += spacing, pos += y]);
         hlims = hlims.map(([h1, h2]) => [h1/pos, h2/pos]);
@@ -900,20 +900,6 @@ class VStack extends Stack {
 class HStack extends Stack {
     constructor(children, args) {
         super('h', children, args);
-    }
-}
-
-class Point extends Container {
-    constructor(child, rect, attr) {
-        rect = rad_rect(rect);
-        super([[child, rect]], attr);
-    }
-}
-
-class Place extends Container {
-    constructor(child, rect, attr) {
-        rect = pos_rect(rect);
-        super([[child, rect]], attr);
     }
 }
 
@@ -1513,6 +1499,23 @@ class SymPoints extends Container {
 }
 
 // non-unary | variable-aspect | graphable
+class Place extends Container {
+    constructor(child, pos, rad, args) {
+        let {...attr} = args ?? {};
+
+        if (is_scalar(rad)) {
+            rad = aspect_invariant(rad, child.aspect);
+        }
+
+        let [[x, y], [rx, ry]] = [pos, rad];
+        let rect = [x-rx, y-ry, x+rx, y+ry];
+
+        let attr1 = {clip: false, attr};
+        super([[child, rect]], attr1);
+    }
+}
+
+// non-unary | variable-aspect | graphable
 class Scatter extends Container {
     constructor(points, args) {
         let {shape, radius, xlim, ylim, ...attr} = args ?? {};
@@ -1520,7 +1523,7 @@ class Scatter extends Container {
         radius = radius ?? 0.05;
 
         // handle different forms
-        points = points.map(p => (p[0] instanceof Element) ? p : [shape, p]);
+        points = points.map(p => is_element(p[0]) ? p : [shape, p]);
 
         // pass to container
         let children = points.map(([s, p]) => [s, rad_rect(p, radius)]);
@@ -1896,21 +1899,24 @@ function make_legendlabel(s, attr) {
     });
 }
 
-class Legend extends Frame {
-    constructor(data, args) {
-        let {badgewidth, spacing, ...attr} = args ?? {};
+class Legend extends Place {
+    constructor(data, pos, size, args) {
+        let {badgewidth, vspacing, hspacing, ...attr} = args ?? {};
         badgewidth = badgewidth ?? 0.1;
-        spacing = spacing ?? 0.05;
+        hspacing = hspacing ?? 0.025;
+        vspacing = vspacing ?? 0.1;
 
         let [badges, labels] = zip(...data);
         badges = badges.map(b => is_element(b) ? b : make_legendbadge(b));
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
-        let bs = new VStack(badges);
-        let ls = new VStack(labels, {expand: false, align: 'left'});
-        let vs = new HStack([bs, ls], {spacing});
+        let bs = new VStack(badges, {spacing: vspacing});
+        let ls = new VStack(labels, {expand: false, align: 'left', spacing: vspacing});
+        let vs = new HStack([bs, ls], {spacing: hspacing});
 
         let attr1 = {font_family: plot_font_base, ...attr};
-        super(vs, attr1);
+        let fr = new Frame(vs, attr1);
+
+        super(fr, pos, size);
     }
 }
 
@@ -2417,7 +2423,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer, Ray,
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray,
     Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
     MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale,
     YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider,
@@ -2507,7 +2513,7 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Point, Place, Spacer,
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer,
     Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node, MoveTo,
     LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale,
     XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, InterActive, Variable, Slider, Toggle, List,
