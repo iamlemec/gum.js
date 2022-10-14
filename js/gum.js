@@ -2510,6 +2510,29 @@ function injectImage(img) {
     request.send();
 }
 
+function injectScript(scr) {
+    let src = scr.innerText;
+    let width = scr.getAttribute('width');
+    let size = scr.getAttribute('size');
+    let svg = renderGum(src, {size: size});
+    let elem = parseHTML(svg);
+    if (width != null) {
+        elem.style.width = width;
+        elem.style.display = 'block';
+        elem.style.margin = 'auto';
+    }
+    scr.replaceWith(elem);
+}
+
+function injectScripts(elem) {
+    elem = elem ?? document;
+    elem.querySelectorAll('script').forEach(scr => {
+        if (scr.getAttribute('type') == 'text/gum') {
+            injectScript(scr);
+        }
+    })
+}
+
 function injectImages(elem) {
     elem = elem ?? document;
     elem.querySelectorAll('img').forEach(img => {
@@ -2531,5 +2554,5 @@ export {
     Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range,
     linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp,
     log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel,
-    parseGum, renderGum, gums, mako, injectImage, injectImages
+    parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
 };

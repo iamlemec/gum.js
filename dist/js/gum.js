@@ -2454,6 +2454,29 @@ function injectImage(img) {
     request.send();
 }
 
+function injectScript(scr) {
+    let src = scr.innerText;
+    let width = scr.getAttribute('width');
+    let size = scr.getAttribute('size');
+    let svg = renderGum(src, {size: size});
+    let elem = parseHTML(svg);
+    if (width != null) {
+        elem.style.width = width;
+        elem.style.display = 'block';
+        elem.style.margin = 'auto';
+    }
+    scr.replaceWith(elem);
+}
+
+function injectScripts(elem) {
+    elem = elem ?? document;
+    elem.querySelectorAll('script').forEach(scr => {
+        if (scr.getAttribute('type') == 'text/gum') {
+            injectScript(scr);
+        }
+    });
+}
+
 function injectImages(elem) {
     elem = elem ?? document;
     elem.querySelectorAll('img').forEach(img => {
@@ -2463,4 +2486,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Axes, Bar, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Axes, Bar, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
