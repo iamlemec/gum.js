@@ -195,6 +195,10 @@ function ensure_vector(x, n) {
     }
 }
 
+function string_to_int(s) {
+    return (s != null) ? parseInt(s) : null;
+}
+
 function is_scalar(x) {
     return (
         (typeof(x) == 'number') ||
@@ -2513,7 +2517,7 @@ function injectImage(img) {
 function injectScript(scr) {
     let src = scr.innerText;
     let width = scr.getAttribute('width');
-    let size = scr.getAttribute('size');
+    let size = string_to_int(scr.getAttribute('size'));
     let svg = renderGum(src, {size: size});
     let elem = parseHTML(svg);
     if (width != null) {
