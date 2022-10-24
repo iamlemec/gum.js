@@ -733,6 +733,7 @@ class Frame extends Container {
     constructor(child, args) {
         let {padding, margin, border, aspect, adjust, shape, ...attr0} = args ?? {};
         let [border_attr, attr] = prefix_attr(['border'], attr0);
+        border = border ?? 0;
         padding = padding ?? 0;
         margin = margin ?? 0;
         adjust = adjust ?? true;
