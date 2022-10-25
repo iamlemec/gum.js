@@ -1,13 +1,9 @@
-import { EditorView, drawSelection, keymap } from '../node_modules/@codemirror/view/dist/index.js';
+import { EditorView, drawSelection, lineNumbers, keymap } from '../node_modules/@codemirror/view/dist/index.js';
 import { EditorState } from '../node_modules/@codemirror/state/dist/index.js';
-import { lineNumbers } from '../node_modules/@codemirror/gutter/dist/index.js';
-import { history, historyKeymap } from '../node_modules/@codemirror/history/dist/index.js';
+import { history, indentWithTab, defaultKeymap, historyKeymap } from '../node_modules/@codemirror/commands/dist/index.js';
+import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '../node_modules/@codemirror/language/dist/index.js';
 import { javascript } from '../node_modules/@codemirror/lang-javascript/dist/index.js';
 import { xml } from '../node_modules/@codemirror/lang-xml/dist/index.js';
-import { indentWithTab, defaultKeymap } from '../node_modules/@codemirror/commands/dist/index.js';
-import { commentKeymap } from '../node_modules/@codemirror/comment/dist/index.js';
-import { defaultHighlightStyle } from '../node_modules/@codemirror/highlight/dist/index.js';
-import { bracketMatching } from '../node_modules/@codemirror/matchbrackets/dist/index.js';
 import { parseGum, InterActive, Animation, Element, SVG } from './gum.js';
 
 // svg presets
@@ -151,7 +147,7 @@ let conv_text = new EditorView({
         extensions: [
             xml(),
             drawSelection(),
-            defaultHighlightStyle.fallback,
+            syntaxHighlighting(defaultHighlightStyle),
             EditorState.readOnly.of(true),
             EditorView.editable.of(false),
         ],
@@ -173,9 +169,8 @@ let edit_text = new EditorView({
                 indentWithTab,
                 ...defaultKeymap,
                 ...historyKeymap,
-                ...commentKeymap,
             ]),
-            defaultHighlightStyle.fallback,
+            syntaxHighlighting(defaultHighlightStyle),
             EditorView.updateListener.of(upd => {
                 if (upd.docChanged) {
                     console.log('updating');

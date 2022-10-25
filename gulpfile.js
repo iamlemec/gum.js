@@ -1,5 +1,4 @@
 import { rollup } from 'rollup'
-import { terser } from 'rollup-plugin-terser'
 import resolve from '@rollup/plugin-node-resolve'
 import gulp from 'gulp'
 import connect from 'gulp-connect'
@@ -18,7 +17,6 @@ gulp.task('js-core', () => {
         ],
         plugins: [
             resolve(),
-            // terser(),
         ],
     }).then(bundle => {
         cache.esm = bundle.cache;

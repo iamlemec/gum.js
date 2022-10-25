@@ -1,13 +1,9 @@
-import { EditorView, drawSelection, keymap } from '@codemirror/view'
+import { EditorView, drawSelection, keymap, lineNumbers } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
-import { lineNumbers, highlightActiveLineGutter } from '@codemirror/gutter'
-import { history, historyKeymap } from '@codemirror/history'
+import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands'
+import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language'
 import { javascript } from '@codemirror/lang-javascript'
 import { xml } from '@codemirror/lang-xml'
-import { defaultKeymap, indentWithTab } from '@codemirror/commands'
-import { commentKeymap } from '@codemirror/comment'
-import { defaultHighlightStyle } from '@codemirror/highlight'
-import { bracketMatching } from '@codemirror/matchbrackets'
 import { SVG, Element, InterActive, Animation, parseGum } from './gum.js'
 
 // svg presets
@@ -151,7 +147,7 @@ let conv_text = new EditorView({
         extensions: [
             xml(),
             drawSelection(),
-            defaultHighlightStyle.fallback,
+            syntaxHighlighting(defaultHighlightStyle),
             EditorState.readOnly.of(true),
             EditorView.editable.of(false),
         ],
@@ -173,9 +169,8 @@ let edit_text = new EditorView({
                 indentWithTab,
                 ...defaultKeymap,
                 ...historyKeymap,
-                ...commentKeymap,
             ]),
-            defaultHighlightStyle.fallback,
+            syntaxHighlighting(defaultHighlightStyle),
             EditorView.updateListener.of(upd => {
                 if (upd.docChanged) {
                     console.log('updating');
