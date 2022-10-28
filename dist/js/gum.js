@@ -388,6 +388,7 @@ function rounder(x, prec) {
 
 function props_repr(d, prec) {
     return Object.entries(d)
+        .filter(([k, v]) => v != null)
         .map(([k, v]) => `${demangle(k)}="${rounder(v, prec)}"`)
         .join(' ');
 }
@@ -548,7 +549,8 @@ class Element {
     svg(ctx) {
         ctx = ctx ?? new Context();
 
-        let props = props_repr(this.props(ctx), ctx.prec);
+        let pvals = this.props(ctx);
+        let props = props_repr(pvals, ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
 
         if (this.unary) {
@@ -967,7 +969,7 @@ class HLine extends Line {
 // unary | null-aspect | graphable
 class Rect extends Element {
     constructor(args) {
-        let {x1, y1, x2, y2, ...attr} = args ?? {};
+        let {x1, y1, x2, y2, radius, ...attr} = args ?? {};
         x1 = x1 ?? 0;
         y1 = y1 ?? 0;
         x2 = x2 ?? 1;
@@ -978,6 +980,7 @@ class Rect extends Element {
         this.y1 = y1;
         this.x2 = x2;
         this.y2 = y2;
+        this.radius = radius;
         this.xlim = [x1, x2];
         this.ylim = [y1, y2];
     }
@@ -986,12 +989,25 @@ class Rect extends Element {
         let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel(
             [[this.x1, this.y1], [this.x2, this.y2]]
         );
+
         let [x, y] = [x1, y1];
         let [w, h] = [x2 - x1, y2 - y1];
 
         if (w < 0) { x += w; w *= -1; }
         if (h < 0) { y += h; h *= -1; }
-        let base = {x, y, width: w, height: h};
+
+        let rx, ry;
+        if (this.radius != null) {
+            if (is_scalar(this.radius)) {
+                let s = 0.5*(w+h);
+                rx = s*this.radius;
+            } else {
+                let [rx0, ry0] = this.radius;
+                [rx, ry] = [w*rx0, h*ry0];
+            }
+        }
+
+        let base = {x, y, width: w, height: h, rx, ry};
         return {...base, ...this.attr};
     }
 }
@@ -1198,7 +1214,7 @@ class Text extends Element {
         size = size ?? font_size_base;
         actual = actual ?? false;
         rotate = (rotate ?? 0) % 360;
-        vshift = vshift ?? 0;
+        vshift = vshift ?? -0.13;
 
         // select fonts
         let font_disp, font_calc;
@@ -1347,12 +1363,6 @@ class Node extends Frame {
         if (is_string(text)) {
             text = new Text(text, text_attr);
         }
-
-        // auto-scale padding
-        if (aspect == null) {
-            padding = aspect_invariant(padding, 1/text.aspect, 1);
-        }
-        padding = pad_rect(padding);
 
         // pass to container
         let attr1 = {padding, border, aspect, ...attr};
