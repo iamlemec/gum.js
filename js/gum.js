@@ -925,56 +925,6 @@ class Spacer extends Element {
 }
 let spacer = new Spacer();
 
-// unary | aspect | non-graphable
-class Ray extends Element {
-    constructor(args) {
-        let {theta, aspect, ...attr} = args ?? {};
-        theta = theta ?? 45;
-
-        // map into (-90, 90];
-        if (theta < -90 || theta > 90) {
-            theta = ((theta + 90) % 180) - 90;
-        }
-        if (theta == -90) {
-            theta = 90;
-        }
-
-        // map theta into direction and aspect
-        let direc;
-        if (theta == 90) {
-            direc = Infinity;
-            aspect = 1;
-        } else if (theta == 0) {
-            direc = 0;
-            aspect = 1;
-        } else {
-            let direc0 = tan(theta*(pi/180));
-            direc = direc0;
-            aspect = 1/abs(direc0);
-        }
-
-        // pass to Element
-        super('line', true, {aspect, ...attr});
-        this.direc = direc;
-    }
-
-    props(ctx) {
-        let p1, p2;
-        if (!isFinite(this.direc)) {
-            [p1, p2] = [[0.5, 0], [0.5, 1]];
-        } else if (this.direc == 0) {
-            [p1, p2] = [[0, 0.5], [1, 0.5]];
-        } else if (this.direc > 0) {
-            [p1, p2] = [[0, 0], [1, 1]];
-        } else {
-            [p1, p2] = [[0, 1], [1, 0]];
-        }
-        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([p1, p2]);
-        let base = {x1, y1, x2, y2};
-        return {...base, ...this.attr};
-    }
-}
-
 // unary | null-aspect | graphable
 class Line extends Element {
     constructor(args) {
@@ -1026,30 +976,23 @@ class HLine extends Line {
 // unary | null-aspect | graphable
 class Rect extends Element {
     constructor(args) {
-        let {x1, y1, x2, y2, radius, ...attr} = args ?? {};
-        x1 = x1 ?? 0;
-        y1 = y1 ?? 0;
-        x2 = x2 ?? 1;
-        y2 = y2 ?? 1;
+        let {p1, p2, radius, ...attr} = args ?? {};
+        p1 = p1 ?? [0, 0];
+        p2 = p2 ?? [1, 1];
 
         super('rect', true, attr);
-        this.x1 = x1;
-        this.y1 = y1;
-        this.x2 = x2;
-        this.y2 = y2;
+        this.p1 = p1;
+        this.p2 = p2;
         this.radius = radius;
-        this.xlim = [x1, x2];
-        this.ylim = [y1, y2];
+        [this.xlim, this.ylim] = zip(p1, p2);
     }
 
     props(ctx) {
-        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel(
-            [[this.x1, this.y1], [this.x2, this.y2]]
-        );
+        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([this.p1, this.p2]);
 
+        // orient increasing
         let [x, y] = [x1, y1];
         let [w, h] = [x2 - x1, y2 - y1];
-
         if (w < 0) { x += w; w *= -1; }
         if (h < 0) { y += h; h *= -1; }
 
@@ -1072,15 +1015,12 @@ class Rect extends Element {
 // unary | unit-aspect | graphable
 class Square extends Rect {
     constructor(args) {
-        let {cx, cy, r, ...attr} = args ?? {};
-        cx = cx ?? 0.5;
-        cy = cy ?? 0.5;
-        r = r ?? 0.5;
+        let {p, s, ...attr} = args ?? {};
+        p = p ?? [0, 0];
+        s = s ?? 1;
 
-        let [x1, y1] = [cx - r, cy - r];
-        let [x2, y2] = [cx + r, cy + r];
-
-        let base = {x1, y1, x2, y2, aspect: 1};
+        let p2 = p.map(z => z + s);
+        let base = {p1: p, p2, aspect: 1};
         super({...base, ...attr});
     }
 }
@@ -1088,24 +1028,23 @@ class Square extends Rect {
 // unary | null-aspect | graphable
 class Ellipse extends Element {
     constructor(args) {
-        let {cx, cy, rx, ry, ...attr} = args ?? {};
-        cx = cx ?? 0.5;
-        cy = cy ?? 0.5;
-        rx = rx ?? 0.5;
-        ry = ry ?? 0.5;
+        let {c, r, ...attr} = args ?? {};
+        c = c ?? [0.5, 0.5];
+        r = r ?? [0.5, 0.5];
 
         super('ellipse', true, attr);
-        this.cx = cx;
-        this.cy = cy;
-        this.rx = rx;
-        this.ry = ry;
+        this.c = c;
+        this.r = r;
+
+        let [cx, cy] = c;
+        let [rx, ry] = r;
         this.xlim = [cx - rx, cx + rx];
         this.ylim = [cy - ry, cy + ry];
     }
 
     props(ctx) {
-        let [[cx, cy]] = ctx.coord_to_pixel([[this.cx, this.cy]]);
-        let [[rx, ry]] = ctx.size_to_pixel([[this.rx, this.ry]]);
+        let [[cx, cy]] = ctx.coord_to_pixel([this.c]);
+        let [[rx, ry]] = ctx.size_to_pixel([this.r]);
         let base = {cx, cy, rx, ry};
         return {...base, ...this.attr};
     }
@@ -1114,17 +1053,67 @@ class Ellipse extends Element {
 // unary | unit-aspect | graphable
 class Circle extends Ellipse {
     constructor(args) {
-        let {cx, cy, r, ...attr} = args ?? {};
-        cx = cx ?? 0.5;
-        cy = cy ?? 0.5;
+        let {c, r, ...attr} = args ?? {};
+        c = c ?? [0.5, 0.5];
         r = r ?? 0.5;
 
-        let base = {cx, cy, rx: r, ry: r, aspect: 1};
+        let r2 = [r, r];
+        let base = {c, r: r2, aspect: 1};
         super({...base, ...attr});
     }
 }
 
 let black_dot = () => new Circle({fill: 'black'});
+
+// unary | aspect | non-graphable
+class Ray extends Element {
+    constructor(args) {
+        let {theta, aspect, ...attr} = args ?? {};
+        theta = theta ?? 45;
+
+        // map into (-90, 90];
+        if (theta < -90 || theta > 90) {
+            theta = ((theta + 90) % 180) - 90;
+        }
+        if (theta == -90) {
+            theta = 90;
+        }
+
+        // map theta into direction and aspect
+        let direc;
+        if (theta == 90) {
+            direc = Infinity;
+            aspect = 1;
+        } else if (theta == 0) {
+            direc = 0;
+            aspect = 1;
+        } else {
+            let direc0 = tan(theta*(pi/180));
+            direc = direc0;
+            aspect = 1/abs(direc0);
+        }
+
+        // pass to Element
+        super('line', true, {aspect, ...attr});
+        this.direc = direc;
+    }
+
+    props(ctx) {
+        let p1, p2;
+        if (!isFinite(this.direc)) {
+            [p1, p2] = [[0.5, 0], [0.5, 1]];
+        } else if (this.direc == 0) {
+            [p1, p2] = [[0, 0.5], [1, 0.5]];
+        } else if (this.direc > 0) {
+            [p1, p2] = [[0, 0], [1, 1]];
+        } else {
+            [p1, p2] = [[0, 1], [1, 0]];
+        }
+        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([p1, p2]);
+        let base = {x1, y1, x2, y2};
+        return {...base, ...this.attr};
+    }
+}
 
 /**
  ** path builder
