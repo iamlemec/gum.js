@@ -345,6 +345,29 @@ let p = Plot([f, s], {
 });
 return Frame(p, {margin: 0.2});
 
+// bezier paths
+let p0 = [0.2, 0.8];
+let p1 = [0.8, 0.2];
+let px = [0.3, 0.3];
+let path = Path([MoveTo(p0), Bezier2(p1, px)]);
+let dots = Scatter([p0, p1, [Circle({fill: 'white'}), px]], {radius: 0.01});
+let line1 = Line({p1: p0, p2: px, stroke_dasharray: [5, 5]});
+let line2 = Line({p1: p1, p2: px, stroke_dasharray: [5, 5]});
+let plot = Plot([path, line1, line2, dots], {
+  xlim: [0, 1], ylim: [0, 1], xticks: 6, yticks: 6
+});
+let frame = Frame(plot, {margin: 0.15});
+return frame;
+
+// node graphs
+let node = Node('hello world', {border_radius: 0.05});
+let plot = Scatter([
+  [node, [0.35, 0.2]],
+  [node, [0.6, 0.8]]
+], {radius: 0.25});
+let frame = Frame(plot, {border: 1, margin: 0.1});
+return frame;
+
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {

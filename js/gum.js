@@ -923,30 +923,30 @@ class Spacer extends Element {
         return '';
     }
 }
-
 let spacer = new Spacer();
 
-// unary | aspect
+// unary | aspect | non-graphable
 class Ray extends Element {
-    constructor(theta, attr) {
-        theta = theta ?? -45;
+    constructor(args) {
+        let {theta, aspect, ...attr} = args ?? {};
+        theta = theta ?? 45;
 
         // map into (-90, 90];
+        if (theta < -90 || theta > 90) {
+            theta = ((theta + 90) % 180) - 90;
+        }
         if (theta == -90) {
             theta = 90;
-        } else if (theta < -90 || theta > 90) {
-            theta = ((theta + 90) % 180) - 90;
         }
 
         // map theta into direction and aspect
         let direc;
-        let aspect;
         if (theta == 90) {
             direc = Infinity;
-            aspect = null;
+            aspect = 1;
         } else if (theta == 0) {
             direc = 0;
-            aspect = null;
+            aspect = 1;
         } else {
             let direc0 = tan(theta*(pi/180));
             direc = direc0;
@@ -959,17 +959,17 @@ class Ray extends Element {
     }
 
     props(ctx) {
-        let [x1, y1, x2, y2] = ctx.rect;
-        let [w, h] = [x2 - x1, y2 - y1];
-
+        let p1, p2;
         if (!isFinite(this.direc)) {
-            x1 = x2 = x1 + 0.5*w;
+            [p1, p2] = [[0.5, 0], [0.5, 1]];
         } else if (this.direc == 0) {
-            y1 = y2 = y1 + 0.5*h;
+            [p1, p2] = [[0, 0.5], [1, 0.5]];
         } else if (this.direc > 0) {
-            [y1, y2] = [y2, y1];
+            [p1, p2] = [[0, 0], [1, 1]];
+        } else {
+            [p1, p2] = [[0, 1], [1, 0]];
         }
-
+        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([p1, p2]);
         let base = {x1, y1, x2, y2};
         return {...base, ...this.attr};
     }
@@ -978,25 +978,18 @@ class Ray extends Element {
 // unary | null-aspect | graphable
 class Line extends Element {
     constructor(args) {
-        let {x1, y1, x2, y2, ...attr} = args ?? {};
-        x1 = x1 ?? 0;
-        y1 = y1 ?? 0;
-        x2 = x2 ?? 1;
-        y2 = y2 ?? 1;
+        let {p1, p2, ...attr} = args ?? {};
+        p1 = p1 ?? [0, 0];
+        p2 = p2 ?? [1, 1];
 
         super('line', true, attr);
-        this.x1 = x1;
-        this.y1 = y1;
-        this.x2 = x2;
-        this.y2 = y2;
-        this.xlim = [x1, x2];
-        this.ylim = [y1, y2];
+        this.p1 = p1;
+        this.p2 = p2;
+        [this.xlim, this.ylim] = zip(p1, p2);
     }
 
     props(ctx) {
-        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel(
-            [[this.x1, this.y1], [this.x2, this.y2]]
-        );
+        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([this.p1, this.p2]);
         let base = {x1, y1, x2, y2};
         return {...base, ...this.attr};
     }
@@ -1004,18 +997,28 @@ class Line extends Element {
 
 // unary | null-aspect | graphable
 class VLine extends Line {
-    constructor(pos, args) {
-        let attr = args ?? {};
-        let attr1 = {x1: pos, x2: pos, ...attr};
+    constructor(args) {
+        let {pos, ymin, ymax, ...attr} = args ?? {};
+        pos = pos ?? 0.5;
+        ymin = ymin ?? 0;
+        ymax = ymax ?? 1;
+        let p1 = [pos, ymin];
+        let p2 = [pos, ymax];
+        let attr1 = {p1, p2, ...attr};
         super(attr1);
     }
 }
 
 // unary | null-aspect | graphable
 class HLine extends Line {
-    constructor(pos, args) {
-        let attr = args ?? {};
-        let attr1 = {y1: pos, y2: pos, ...attr};
+    constructor(args) {
+        let {pos, xmin, xmax, ...attr} = args ?? {};
+        pos = pos ?? 0.5;
+        xmin = xmin ?? 0;
+        xmax = xmax ?? 1;
+        let p1 = [xmin, pos];
+        let p2 = [xmax, pos];
+        let attr1 = {p1, p2, ...attr};
         super(attr1);
     }
 }
@@ -1661,9 +1664,7 @@ class XScale extends Container {
     constructor(ticks, args) {
         let {ylim, ...attr} = args ?? {};
         let [ymin, ymax] = ylim ?? limit_base;
-        let children = ticks.map(t =>
-            new VLine(t, {y1: ymin, y2: ymax})
-        );
+        let children = ticks.map(t => new VLine({pos: t, ymin, ymax}));
         super(children, attr);
     }
 }
@@ -1672,9 +1673,7 @@ class YScale extends Container {
     constructor(ticks, args) {
         let {xlim, ...attr} = args ?? {};
         let [xmin, xmax] = xlim ?? limit_base;
-        let children = ticks.map(t =>
-            new HLine(t, {x1: xmin, x2: xmax})
-        );
+        let children = ticks.map(t => new HLine({pos: t, xmin, xmax}));
         super(children, attr);
     }
 }
@@ -1725,7 +1724,7 @@ class XAxis extends Container {
         let [xmin, xmax] = lim;
 
         // accumulate children
-        let verti = new HLine(0.5, {x1: xmin, x2: xmax});
+        let verti = new HLine({xmin, xmax});
         let lines = new XScale(locs);
         let label = new XTicks(ticks, {labelsize: labelsize, lim: lim});
 
@@ -1749,7 +1748,7 @@ class YAxis extends Container {
         let [ymin, ymax] = lim;
 
         // accumulate children
-        let horiz = new VLine(0.5, {y1: ymin, y2: ymax});
+        let horiz = new VLine({ymin, ymax});
         let lines = new YScale(locs);
         let label = new YTicks(ticks, {labelsize: labelsize, lim: lim});
 
@@ -1896,7 +1895,7 @@ function make_legendbadge(c) {
         throw new Error(`Unrecognized legend badge specification: ${c}`);
     }
     let attr1 = {aspect: 1, ...attr};
-    return new HLine(0.5, attr1);
+    return new HLine(attr1);
 }
 
 function make_legendlabel(s, attr) {
