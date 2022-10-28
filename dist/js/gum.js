@@ -1105,18 +1105,9 @@ class Polygon extends Pointstring {
 }
 
 function arg(s, d, ctx) {
-    let [x1, y1, x2, y2] = ctx.rect;
-    let [w, h] = [x2 - x1, y2 - y1];
     if (s == 'xy') {
-        let [fx, fy] = d;
-        let [x, y] = [x1 + w*fx, y1 + h*fy];
+        let [[x, y]] = ctx.coord_to_pixel([d]);
         return `${x},${y}`;
-    } else if (s == 'x') {
-        let x = x1 + w*d;
-        return `${x}`;
-    } else if (s == 'y') {
-        let y = y1 + h*d;
-        return `${y}`;
     } else {
         return `${d}`;
     }
@@ -1138,9 +1129,9 @@ class Command {
 }
 
 class MoveTo extends Command {
-    constructor(x, y) {
-        let point = [x, y];
-        super('M', ['xy'], [point]);
+    constructor(p) {
+        super('M', ['xy'], [p]);
+        this.point = p;
     }
 }
 
@@ -1152,14 +1143,13 @@ class LineTo extends Command {
 }
 
 class Bezier2 extends Command {
-    constructor(x, y, x1, y1) {
-        let point = [x, y];
-        if (x1 == null || y1 == null) {
-            super('T', ['xy'], [point]);
+    constructor(p, p1) {
+        if (p1 == null) {
+            super('T', ['xy'], [p]);
         } else {
-            let point1 = [x1, y1];
-            super('Q', ['xy', 'xy'], [point1, point]);
+            super('Q', ['xy', 'xy'], [p1, p]);
         }
+        this.point = p;
     }
 }
 
@@ -1177,12 +1167,12 @@ class Bezier3 extends Command {
 }
 
 class Arc extends Command {
-    constructor(x, y, rx, ry, angle, args) {
-        let {large, sweep} = args ?? {};
+    constructor(p, r, args) {
+        let {angle, large, sweep} = args ?? {};
+        angle = angle ?? 0;
         large = large ?? 1;
         sweep = sweep ?? 1;
-        let point = [x, y];
-        super('A', ['x', 'y', '', '', '', 'xy'], [rx, ry, angle, large, sweep, point]);
+        super('A', ['xy', '', '', '', 'xy'], [r, angle, large, sweep, p]);
     }
 }
 
@@ -1196,6 +1186,11 @@ class Path extends Element {
     constructor(commands, attr) {
         super('path', true, attr);
         this.commands = commands;
+        let [pxs, pys] = zip(
+            ...commands.map(c => c.point).filter(p => p != null)
+        );
+        this.xlim = [min(...pxs), max(...pxs)];
+        this.ylim = [min(...pys), max(...pys)];
     }
 
     props(ctx) {
