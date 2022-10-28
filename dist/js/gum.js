@@ -1070,7 +1070,7 @@ class Circle extends Ellipse {
 let black_dot = () => new Circle({fill: 'black'});
 
 /**
- ** path builder (not graphable)
+ ** path builder
  **/
 
 class Pointstring extends Element {
@@ -1136,9 +1136,9 @@ class MoveTo extends Command {
 }
 
 class LineTo extends Command {
-    constructor(x, y) {
-        let point = [x, y];
-        super('L', ['xy'], [point]);
+    constructor(p) {
+        super('L', ['xy'], [p]);
+        this.point = p;
     }
 }
 
@@ -1154,15 +1154,13 @@ class Bezier2 extends Command {
 }
 
 class Bezier3 extends Command {
-    constructor(x, y, x2, y2, x1, y1) {
-        let point = [x, y];
-        let point2 = [x2, y2];
-        if (x1 == null || y1 == null) {
-            super('S', ['xy', 'xy'], [point2, point]);
+    constructor(p, p2, p1) {
+        if (p1 == null) {
+            super('S', ['xy', 'xy'], [p2, p]);
         } else {
-            let point1 = [x1, y1];
-            super('C', ['xy', 'xy', 'xy'], [point1, point2, point]);
+            super('C', ['xy', 'xy', 'xy'], [p1, p2, p]);
         }
+        this.point = p;
     }
 }
 
