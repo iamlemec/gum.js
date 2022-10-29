@@ -1173,8 +1173,8 @@ class Close extends Command {
 }
 
 class Path extends Element {
-    constructor(commands, attr) {
-        super('path', true, attr);
+    constructor(commands, args) {
+        super('path', true, args);
         this.commands = commands;
         let [pxs, pys] = zip(
             ...commands.map(c => c.point).filter(p => p != null)
@@ -1186,6 +1186,84 @@ class Path extends Element {
     props(ctx) {
         let cmd = this.commands.map(c => c.string(ctx)).join(' ');
         return {d: cmd, ...this.attr};
+    }
+}
+
+function make_bezier2(d) {
+    let [d0, ..._] = d;
+    if (is_scalar(d0)) {
+        return new Bezier2(d);
+    } else if (is_array(d0)) {
+        return new Bezier2(...d);
+    } else {
+        return d;
+    }
+}
+
+class Bezier2Path extends Path {
+    constructor(start, bezs, args) {
+        let [s0, px] = start;
+        if (is_scalar(s0)) {
+            start = new MoveTo(start);
+            bezs = bezs.map(make_bezier2);   
+        } else {
+            // simple bezier input
+            start = new MoveTo(s0);
+            let [b0, ...b1] = bezs;
+            let bez0 = new Bezier2(b0, px);
+            let bez1 = b1.map(b => new Bezier2(b));
+            bezs = [bez0, ...bez1];
+        }
+        super([start, ...bezs], args); 
+    }
+}
+
+class Bezier2Line extends Path {
+    constructor(p0, p1, px, args) {
+        let start = new MoveTo(p0);
+        let bezer = new Bezier2(p1, px);
+        super([start, bezer], args); 
+    }
+}
+
+class Bezier3Line extends Path {
+    constructor(p0, p1, px0, px1, args) {
+        let start = new MoveTo(p0);
+        let bezer = new Bezier3(p1, px0, px1);
+        super([start, bezer], args); 
+    }
+}
+
+/**
+ ** advanced shapes
+ **/
+
+// unary | aspect | graphable
+class Triangle extends Polygon {
+    constructor(args) {
+        let {c, w, h, theta, ...attr} = args ?? {};
+        c = c ?? [0.5, 0.5];
+        w = w ?? 1;
+        h = h ?? 1;
+
+        let [cx, cy] = c;
+        let p1 = [cx, cy - 0.5*h];
+        let p2 = [cx - 0.5*w, cy + 0.5*h];
+        let p3 = [cx + 0.5*w, cy + 0.5*h];
+        super([p1, p2, p3], attr);
+    }
+}
+
+class Arrowhead extends Triangle {
+    constructor(args) {
+        let {p, theta, w, h, ...attr} = args ?? {};
+        w = w ?? 0.018;
+        h = h ?? 0.02;
+
+        let [x, y] = p;
+        let c = [x, y + 0.5*h];
+        let attr1 = {c, w, h, fill: 'black', ...attr};
+        super(attr1);
     }
 }
 
@@ -2374,13 +2452,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray,
-    Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Text, Tex, Node,
-    MoveTo, LineTo, Bezier2, Bezier3, Arc, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale,
-    YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider,
-    Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors,
-    interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor,
-    ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2482,4 +2554,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Axes, Bar, BarPlot, Bars, Bezier2, Bezier3, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, Triangle, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
