@@ -768,7 +768,7 @@ class Frame extends Container {
     }
 }
 
-function get_direction(direc) {
+function get_orient(direc) {
     if (direc == 'v' || direc == 'vert' || direc == 'vertical') {
         return 'v';
     } else if (direc == 'h' || direc == 'horiz' || direc == 'horizontal') {
@@ -802,7 +802,7 @@ class Stack extends Container {
         spacing = spacing ?? 0;
         aspect = aspect ?? 'auto';
         debug = debug ?? false;
-        direc = get_direction(direc);
+        direc = get_orient(direc);
 
         // short circuit if empty
         let n = children.length;
@@ -1067,8 +1067,8 @@ let black_dot = () => new Circle({fill: 'black'});
 
 // unary | aspect | non-graphable
 class Ray extends Element {
-    constructor(args) {
-        let {theta, aspect, ...attr} = args ?? {};
+    constructor(theta, args) {
+        let {aspect, ...attr} = args ?? {};
         theta = theta ?? 45;
 
         // map into (-90, 90];
@@ -1322,7 +1322,7 @@ class Arrowhead extends Triangle {
 }
 
 /**
- ** text elements (not graphable)
+ ** text elements
  **/
 
 class Text extends Element {
@@ -1489,6 +1489,67 @@ class Node extends Frame {
     }
 }
 
+
+/**
+ ** networks
+ **/
+
+ function get_direction(p1, p2) {
+    let [x1, y1] = p1;
+    let [x2, y2] = p2;
+
+    let [dx, dy] = [x2 - x1, y2 - y1];
+    let [ax, ay] = [abs(dx), abs(dy)];
+
+    if (dy >= ax) {
+        return 'north';
+    } else if (dy <= -ax) {
+        return 'south';
+    } else if (dx >= ay) {
+        return 'east';
+    } else if (dx <= -ay) {
+        return 'west';
+    }
+}
+
+function get_anchor(elem, pos) {
+    let [xmin, xmax] = elem.xlim;
+    let [ymin, ymax] = elem.ylim;
+
+    let xmid = 0.5*(xmin+xmax);
+    let ymid = 0.5*(ymin+ymax);
+
+    if (pos == 'north' || pos == 'top') {
+        return [xmid, ymin];
+    } else if (pos == 'south' || pos == 'bottom') {
+        return [xmid, ymax];
+    } else if (pos == 'east' || pos == 'right') {
+        return [xmax, ymid];
+    } else if (pos == 'west' || pos == 'left') {
+        return [xmin, ymid];
+    }
+}
+
+class Network extends Container {
+    constructor(nodes, edges, args) {
+        let {radius, ...attr} = args ?? {};
+
+        let boxes = nodes.map(([n, p]) => [new Node(n), p]);
+        let cont1 = new Scatter(boxes, {radius});
+
+        let nmap = Object.fromEntries(nodes);
+        let lines = edges.map(([n1, n2]) => {
+            let [p1, p2] = [nmap[n1], nmap[n2]];
+            let [d1, d2] = [get_direction(p1, p2), get_direction(p2, p1)];
+            let [a1, a2] = [get_anchor(n1, d1), get_anchor(n2, d2)];
+            return Bezier2Line([a1, a2]);
+        });
+        let cont2 = new Container(lines);
+
+        super([cont1, cont2], attr);
+    }
+}
+
 /**
  ** parametric paths
  **/
@@ -1616,7 +1677,7 @@ class Bar extends Stack {
         zero = zero ?? 0;
 
         // get standardized direction
-        direc = get_direction(direc);
+        direc = get_orient(direc);
 
         // normalize section specs
         let boxes = lengths.map(lc => (is_scalar(lc)) ? [lc, null] : lc);
@@ -1640,7 +1701,7 @@ class Bars extends Container {
         let n = bars.length;
 
         // get standardized direction
-        direc = get_direction(direc);
+        direc = get_orient(direc);
 
         // check input sizes
         let arrs = new Set(bars.map(is_array));
@@ -2126,7 +2187,7 @@ class BarPlot extends Plot {
         let n = data.length;
 
         // standardize direction
-        direc = get_direction(direc);
+        direc = get_orient(direc);
 
         // set up appropriate padding
         let zpad = min(0.5, 1/n);
@@ -2508,7 +2569,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Network, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2615,5 +2676,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Network, Close, SymPath, SymPoints, Scatter, Bar, Bars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
 };
