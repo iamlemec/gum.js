@@ -359,14 +359,16 @@ let plot = Plot([path, line1, line2, dots], {
 let frame = Frame(plot, {margin: 0.15});
 return frame;
 
-// node graphs
-let node = Node('hello world', {border_radius: 0.05});
-let plot = Scatter([
-  [node, [0.35, 0.2]],
-  [node, [0.6, 0.8]]
-], {radius: 0.25});
-let frame = Frame(plot, {border: 1, margin: 0.1});
-return frame;
+// networks
+return Network([
+  [['A', ['hello', 'world']], [0.15, 0.5]],
+  [['B', 'hello'], [0.85, 0.2]],
+  [['C', 'world'], [0.7, 0.8]]
+], [
+  ['A', 'B'], ['A', 'C']
+], {
+  radius: 0.1, aspect: phi
+});
 
 ////// INTERACTIBFG VECTOR FIELD
 

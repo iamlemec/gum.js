@@ -733,12 +733,13 @@ class Group extends Container {
 
 class Frame extends Container {
     constructor(child, args) {
-        let {padding, margin, border, aspect, adjust, shape, ...attr0} = args ?? {};
+        let {padding, margin, border, aspect, adjust, flex, shape, ...attr0} = args ?? {};
         let [border_attr, attr] = prefix_attr(['border'], attr0);
         border = border ?? 0;
         padding = padding ?? 0;
         margin = margin ?? 0;
         adjust = adjust ?? true;
+        flex = flex ?? false;
         shape = shape ?? Rect;
 
         // convenience boxing
@@ -752,8 +753,9 @@ class Frame extends Container {
         }
 
         // get box sizes
-        let [crect, brect, basp, tasp] = map_padmar(padding, margin, child.aspect);
-        aspect = aspect ?? tasp;
+        let iasp = aspect ?? child.aspect;
+        let [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp);
+        aspect = flex ? null : (aspect ?? tasp);
 
         // make border box
         let rargs = {stroke_width: border, ...border_attr};
@@ -763,7 +765,7 @@ class Frame extends Container {
         let children = [[rect, brect], [child, crect]];
 
         // pass to Container
-        let attr1 = {aspect, ...attr};
+        let attr1 = {aspect, clip: false, ...attr};
         super(children, attr1);
     }
 }
@@ -1473,37 +1475,48 @@ class Tex extends Element {
 
 class Node extends Frame {
     constructor(text, args) {
-        let {padding, border, aspect, ...attr0} = args ?? {};
+        let {padding, border, aspect, spacing, align, ...attr0} = args ?? {};
         let [text_attr, attr] = prefix_attr(['text'], attr0);
         padding = padding ?? 0.1;
+        spacing = spacing ?? 0.02;
         border = border ?? 1;
 
         // generate core elements
+        let child;
         if (is_string(text)) {
-            text = new Text(text, text_attr);
+            child = new Text(text, text_attr);
+        } else if (is_array(text)) {
+            let lines = text.map(s => new Text(s, text_attr));
+            child = new VStack(lines, {expand: false, align, spacing});
         }
 
         // pass to container
         let attr1 = {padding, border, aspect, ...attr};
-        super(text, attr1);
+        super(child, attr1);
     }
 }
-
 
 /**
  ** networks
  **/
 
- function get_direction(p1, p2) {
+function get_center(elem) {
+    let [xmin, xmax] = elem.xlim;
+    let [ymin, ymax] = elem.ylim;
+    let [x, y] = [0.5*(xmin+xmax), 0.5*(ymin+ymax)];
+    return [x, y];
+}
+
+function get_direction(p1, p2) {
     let [x1, y1] = p1;
     let [x2, y2] = p2;
 
     let [dx, dy] = [x2 - x1, y2 - y1];
     let [ax, ay] = [abs(dx), abs(dy)];
 
-    if (dy >= ax) {
+    if (dy <= -ax) {
         return 'north';
-    } else if (dy <= -ax) {
+    } else if (dy >= ax) {
         return 'south';
     } else if (dx >= ay) {
         return 'east';
@@ -1530,23 +1543,54 @@ function get_anchor(elem, pos) {
     }
 }
 
+class Edge extends Bezier2Path {
+    constructor(p1, p2, args) {
+        let {squiggle, direc, ...attr} = args ?? {};
+        squiggle = squiggle ?? 0.4;
+        direc = direc ?? get_direction(p1, p2);
+
+        let [[x1, y1], [x2, y2]] = [p1, p2];
+        let [dx, dy] = [x2 - x1, y2 - y1];
+        let [cx, cy] = [0.5*(x1+x2), 0.5*(y1+y2)];
+    
+        let px;
+        if (direc == 'north' || direc == 'south') {
+            px = [x1, y1 + 0.5*squiggle*dy];
+        } else if (direc == 'east' || direc == 'west') {
+            px = [x1 + 0.5*squiggle*dx, y1];
+        }
+
+        super([p1, px], [[cx, cy], p2], attr);
+    }
+}
+
 class Network extends Container {
     constructor(nodes, edges, args) {
         let {radius, ...attr} = args ?? {};
 
-        let boxes = nodes.map(([n, p]) => [new Node(n), p]);
-        let cont1 = new Scatter(boxes, {radius});
+        let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
+            let [s, b] = is_string(n) ? [n, n] : n;
+            b = (is_string(b) || is_array(b)) ? new Node(b, {flex: true}) : b;
+            return [s, new Place(b, p, r ?? radius)];
+        }));
+        let boxes = Object.values(bmap);
+        let cont1 = new Container(boxes);
 
-        let nmap = Object.fromEntries(nodes);
         let lines = edges.map(([n1, n2]) => {
-            let [p1, p2] = [nmap[n1], nmap[n2]];
+            let [b1, b2] = [bmap[n1], bmap[n2]];
+            let [p1, p2] = [get_center(b1), get_center(b2)]
             let [d1, d2] = [get_direction(p1, p2), get_direction(p2, p1)];
-            let [a1, a2] = [get_anchor(n1, d1), get_anchor(n2, d2)];
-            return Bezier2Line([a1, a2]);
+            let [a1, a2] = [get_anchor(b1, d1), get_anchor(b2, d2)];
+            return new Edge(a1, a2, {direc: d1});
         });
         let cont2 = new Container(lines);
 
+        let [xmins, xmaxs] = zip(...boxes.map(b => b.xlim));
+        let [ymins, ymaxs] = zip(...boxes.map(b => b.ylim));
+
         super([cont1, cont2], attr);
+        this.xlim = [min(...xmins), max(...xmaxs)];
+        this.ylim = [min(...ymins), max(...ymaxs)];
     }
 }
 
@@ -2582,7 +2626,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Network, Close, SymPath, SymPoints, Scatter, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymPoints, Scatter, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2689,5 +2733,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Network, Close, SymPath, SymPoints, Scatter, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymPoints, Scatter, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
 };
