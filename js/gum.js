@@ -740,7 +740,7 @@ class Frame extends Container {
         margin = margin ?? 0;
         adjust = adjust ?? true;
         flex = flex ?? false;
-        shape = shape ?? Rect;
+        shape = shape ?? (a => new Rect(a));
 
         // convenience boxing
         padding = pad_rect(padding);
@@ -759,7 +759,7 @@ class Frame extends Container {
 
         // make border box
         let rargs = {stroke_width: border, ...border_attr};
-        let rect = new shape(rargs);
+        let rect = shape(rargs);
 
         // gather children
         let children = [[rect, brect], [child, crect]];
@@ -1566,12 +1566,14 @@ class Edge extends Bezier2Path {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {radius, ...attr} = args ?? {};
+        let {radius, ...attr0} = args ?? {};
+        let [node_attr, attr] = prefix_attr(['node'], attr0);
         radius = radius ?? 0.1;
 
+        let make_node = b => new Node(b, {flex: true, ...node_attr});
         let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
             let [s, b] = is_string(n) ? [n, n] : n;
-            b = (is_string(b) || is_array(b)) ? new Node(b, {flex: true}) : b;
+            b = (is_string(b) || is_array(b)) ? make_node(b) : b;
             return [s, new Place(b, p, r ?? radius)];
         }));
         let boxes = Object.values(bmap);
@@ -1693,7 +1695,7 @@ class Place extends Container {
         let [[x, y], [rx, ry]] = [pos, rad];
         let rect = [x-rx, y-ry, x+rx, y+ry];
 
-        let attr1 = {clip: false, attr};
+        let attr1 = {clip: false, ...attr};
         super([[child, rect]], attr1);
     }
 }
