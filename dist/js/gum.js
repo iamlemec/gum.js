@@ -1511,6 +1511,7 @@ class Edge extends Bezier2Path {
 class Network extends Container {
     constructor(nodes, edges, args) {
         let {radius, ...attr} = args ?? {};
+        radius = radius ?? 0.1;
 
         let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
             let [s, b] = is_string(n) ? [n, n] : n;
