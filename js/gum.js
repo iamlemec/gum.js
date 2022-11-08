@@ -1567,7 +1567,7 @@ class Edge extends Bezier2Path {
 class Network extends Container {
     constructor(nodes, edges, args) {
         let {radius, ...attr0} = args ?? {};
-        let [node_attr, attr] = prefix_attr(['node'], attr0);
+        let [node_attr, edge_attr, attr] = prefix_attr(['node', 'edge'], attr0);
         radius = radius ?? 0.1;
 
         let make_node = b => new Node(b, {flex: true, ...node_attr});
@@ -1584,7 +1584,7 @@ class Network extends Container {
             let [p1, p2] = [get_center(b1), get_center(b2)]
             let [d1, d2] = [get_direction(p1, p2), get_direction(p2, p1)];
             let [a1, a2] = [get_anchor(b1, d1), get_anchor(b2, d2)];
-            return new Edge(a1, a2, {direc: d1});
+            return new Edge(a1, a2, {direc: d1, ...edge_attr});
         });
         let cont2 = new Container(lines);
 
