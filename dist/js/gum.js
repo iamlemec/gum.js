@@ -1081,8 +1081,10 @@ class Pointstring extends Element {
 
     props(ctx) {
         let points = ctx.coord_to_pixel(this.points);
-        let str = points.map(([x, y]) => `${x},${y}`).join(' ');
-        return {points: str, ...this.attr};
+        let str = points.map(
+            ([x, y]) => `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
+        ).join(' ');
+        return {points: str, fill_opacity: 0, ...this.attr};
     }
 }
 
@@ -1101,7 +1103,7 @@ class Polygon extends Pointstring {
 function arg(s, d, ctx) {
     if (s == 'xy') {
         let [[x, y]] = ctx.coord_to_pixel([d]);
-        return `${x},${y}`;
+        return `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`;
     } else {
         return `${d}`;
     }
@@ -1187,7 +1189,7 @@ class Path extends Element {
 
     props(ctx) {
         let cmd = this.commands.map(c => c.string(ctx)).join(' ');
-        return {d: cmd, ...this.attr};
+        return {d: cmd, fill_opacity: 0, ...this.attr};
     }
 }
 
@@ -1243,7 +1245,7 @@ class Bezier3Line extends Path {
 // unary | aspect | graphable
 class Triangle extends Polygon {
     constructor(args) {
-        let {c, w, h, theta, ...attr} = args ?? {};
+        let {c, w, h, ...attr} = args ?? {};
         c = c ?? [0.5, 0.5];
         w = w ?? 1;
         h = h ?? 1;
@@ -1258,7 +1260,7 @@ class Triangle extends Polygon {
 
 class Arrowhead extends Triangle {
     constructor(args) {
-        let {p, theta, w, h, ...attr} = args ?? {};
+        let {p, w, h, ...attr} = args ?? {};
         w = w ?? 0.018;
         h = h ?? 0.02;
 

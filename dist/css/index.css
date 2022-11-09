@@ -117,28 +117,35 @@ body {
     background-color: #ff0d57;
 }
 
-#copy {
+#icon-bar {
     position: absolute;
     top: 50%;
     right: 0;
-    width: 20px;
-    height: 20px;
+    width: 63px;
+    height: 25px;
     border-radius: 2px;
-    padding: 2px;
-    margin: 3px;
+    margin-top: 5px;
+    margin-right: 3px;
+    padding-top: 3px;
     z-index: 10;
-    border-radius: 5px;
 }
 
-#copy svg {
+svg.icon {
+    padding: 3px;
+    border: 1px solid gray;
+    border-radius: 5px;
+    background-color: #EEE;
+}
+
+svg.icon {
     fill: white;
 }
 
-#copy:active svg {
+svg.icon:active {
     fill: #DDD;
 }
 
-#copy:hover svg {
+svg.icon:hover {
     stroke-width: 1.3px;
 }
 

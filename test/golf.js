@@ -6,6 +6,18 @@ return Frame(HStack(gum), {
   border: 1, margin: 0.15, border_stroke: 'blue', border_stroke_dasharray: [10, 6]
 });
 
+// save icon
+let [mid, rad] = [0.25, 0.06];
+let [apt, asz] = [0.17, 0.25];
+let vline = VLine({pos: 0.5, ymin: 0, ymax: 1-apt});
+let arrow = Polyline([[0.5-asz, 1-apt-asz], [0.5, 1-apt], [0.5+asz, 1-apt-asz]]);
+let base = Bezier2Path([0, 1-mid], [
+  [0, 1-rad], [[rad, 1], [0, 1]], [1-rad, 1], [[1, 1-rad], [1, 1]], [1, 1-mid]
+]);
+let shape = Group([vline, base, arrow]);
+let frame = Frame(shape, {margin: 0.1});
+return SVG(frame, {size: 25, prec: 2});
+
 // copy icon
 let x = 0.35;
 let s = Scatter(
