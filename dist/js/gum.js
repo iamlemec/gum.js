@@ -708,7 +708,10 @@ class Frame extends Container {
         let rect = shape(rargs);
 
         // gather children
-        let children = [[rect, brect], [child, crect]];
+        let children = [[child, crect]];
+        if (border != 0) {
+            children.unshift([rect, brect]);
+        }
 
         // pass to Container
         let attr1 = {aspect, clip: false, ...attr};
@@ -1084,7 +1087,7 @@ class Pointstring extends Element {
         let str = points.map(
             ([x, y]) => `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
         ).join(' ');
-        return {points: str, fill_opacity: 0, ...this.attr};
+        return {points: str, ...this.attr};
     }
 }
 
@@ -1189,7 +1192,7 @@ class Path extends Element {
 
     props(ctx) {
         let cmd = this.commands.map(c => c.string(ctx)).join(' ');
-        return {d: cmd, fill_opacity: 0, ...this.attr};
+        return {d: cmd, ...this.attr};
     }
 }
 

@@ -118,35 +118,32 @@ body {
 }
 
 #icon-bar {
+    display: flex;
+    gap: 5px;
+    margin: 5px;
     position: absolute;
-    top: 50%;
-    right: 0;
-    width: 63px;
-    height: 25px;
-    border-radius: 2px;
-    margin-top: 5px;
-    margin-right: 3px;
-    padding-top: 3px;
+    bottom: 0%;
+    right: 0px;
     z-index: 10;
 }
 
 svg.icon {
     padding: 3px;
     border: 1px solid gray;
-    border-radius: 5px;
+    border-radius: 2px;
     background-color: #EEE;
 }
 
-svg.icon {
+#copy {
     fill: white;
 }
 
 svg.icon:active {
-    fill: #DDD;
+    background-color: #DDD;
 }
 
 svg.icon:hover {
-    stroke-width: 1.3px;
+    stroke-width: 1.5px;
 }
 
 /* IINTERACTIVE */

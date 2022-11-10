@@ -15,6 +15,7 @@ let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
+let save = document.querySelector('#save');
 let copy = document.querySelector('#copy');
 let mid = document.querySelector('#mid');
 let left = document.querySelector('#left');
@@ -183,7 +184,25 @@ let edit_text = new EditorView({
     parent: code,
 });
 
+// download tools
+function downloadFile(name, blob) {
+    let element = document.createElement('a');
+    let url = URL.createObjectURL(blob);
+    element.setAttribute('href', url);
+    element.setAttribute('download', `${name}`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
+
 // connect handlers
+save.addEventListener('click', evt => {
+    let text = conv_text.state.doc.toString();
+    let blob = new Blob([text], {type: 'text/svg'});
+    downloadFile('output.svg', blob);
+});
+
 copy.addEventListener('click', evt => {
     let text = conv_text.state.doc.toString();
     navigator.clipboard.writeText(text);
