@@ -1584,12 +1584,13 @@ class Network extends Container {
         let boxes = Object.values(bmap);
         let cont1 = new Container(boxes);
 
-        let lines = edges.map(([n1, n2]) => {
+        let lines = edges.map(([n1, n2, eattr]) => {
+            eattr = eattr ?? {};
             let [b1, b2] = [bmap[n1], bmap[n2]];
             let [p1, p2] = [get_center(b1), get_center(b2)]
             let [d1, d2] = [get_direction(p1, p2), get_direction(p2, p1)];
             let [a1, a2] = [get_anchor(b1, d1), get_anchor(b2, d2)];
-            return new Edge(a1, a2, {direc: d1, ...edge_attr});
+            return new Edge(a1, a2, {direc: d1, ...edge_attr, ...eattr});
         });
         let cont2 = new Container(lines);
 
@@ -1599,6 +1600,12 @@ class Network extends Container {
         super([cont1, cont2], attr);
         this.xlim = [min(...xmins), max(...xmaxs)];
         this.ylim = [min(...ymins), max(...ymaxs)];
+        this.bmap = bmap;
+    }
+
+    get_anchor(tag, pos) {
+        let box = this.bmap[tag];
+        return get_anchor(box, pos);
     }
 }
 
