@@ -535,7 +535,9 @@ class Element {
         this.tag = tag;
         this.unary = unary;
         this.aspect = aspect ?? null;
-        this.attr = Object.fromEntries(Object.entries(attr).filter(([k, v]) => v != null));
+        this.attr = Object.fromEntries(
+            Object.entries(attr).filter(([k, v]) => v != null)
+        );
     }
 
     props(ctx) {
@@ -857,6 +859,40 @@ class VStack extends Stack {
 class HStack extends Stack {
     constructor(children, args) {
         super('h', children, args);
+    }
+}
+
+ // non-unary | variable-aspect | graphable
+ class Place extends Container {
+    constructor(child, pos, rad, args) {
+        let {...attr} = args ?? {};
+
+        if (is_scalar(rad)) {
+            rad = aspect_invariant(rad, child.aspect);
+        }
+
+        let [[x, y], [rx, ry]] = [pos, rad];
+        let rect = [x-rx, y-ry, x+rx, y+ry];
+
+        let attr1 = {clip: false, ...attr};
+        super([[child, rect]], attr1);
+    }
+}
+
+// non-unary | variable-aspect | graphable
+class Scatter extends Container {
+    constructor(points, args) {
+        let {shape, radius, xlim, ylim, ...attr} = args ?? {};
+        shape = shape ?? black_dot();
+        radius = radius ?? 0.05;
+
+        // handle different forms
+        points = points.map(p => is_element(p[0]) ? p : [shape, p]);
+
+        // pass to container
+        let children = points.map(([s, p]) => [s, rad_rect(p, radius)]);
+        let attr1 = {clip: false, ...attr};
+        super(children, attr1);
     }
 }
 
@@ -1588,7 +1624,7 @@ function sympath(args) {
     return [tvals, xvals, yvals];
 }
 
-class SymPath extends Element {
+class SymPath extends Polyline {
     constructor(args) {
         let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
 
@@ -1596,21 +1632,37 @@ class SymPath extends Element {
         [tvals, xvals, yvals] = sympath({
             fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
+        let points = zip(xvals, yvals);
 
         // pass to element
-        super('polyline', true, attr);
-
-        // normalize coordinates
-        this.xlim = xlim ?? [min(...xvals), max(...xvals)];
-        this.ylim = ylim ?? [min(...yvals), max(...yvals)];
-        this.points = zip(xvals, yvals);
+        super(points, attr);
     }
+}
 
-    props(ctx) {
-        let points = ctx.coord_to_pixel(this.points);
-        let pstr = points.map(([x, y]) => `${x},${y}`).join(' ');
-        let base = {points: pstr};
-        return {...base, ...this.attr};
+class SymFill extends Polygon {
+    constructor(args) {
+        let {fx1, fy1, fx2, fy2, xlim, ylim, N, ...attr} = args ?? {};
+
+        // compute point values
+        let [tvals1, xvals1, yvals1] = sympath({fx: fx1, fy: fy1, xlim, ylim, N});
+        let [tvals2, xvals2, yvals2] = sympath({fx: fx2, fy: fy2, xlim, ylim, N});
+        let points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()];
+
+        // pass to element
+        super(points, attr);
+    }
+}
+
+class SymPoly extends Polygon {
+    constructor(args) {
+        let {fx, fy, xlim, ylim, tlim, N, ...attr} = args ?? {};
+
+        // compute point values
+        let [tvals, xvals, yvals] = sympath({fx, fy, xlim, ylim, tlim, N});
+        let points = zip(xvals, yvals);
+
+        // pass to element
+        super(points, attr);
     }
 }
 
@@ -1639,39 +1691,9 @@ class SymPoints extends Container {
     }
 }
 
-// non-unary | variable-aspect | graphable
-class Place extends Container {
-    constructor(child, pos, rad, args) {
-        let {...attr} = args ?? {};
-
-        if (is_scalar(rad)) {
-            rad = aspect_invariant(rad, child.aspect);
-        }
-
-        let [[x, y], [rx, ry]] = [pos, rad];
-        let rect = [x-rx, y-ry, x+rx, y+ry];
-
-        let attr1 = {clip: false, ...attr};
-        super([[child, rect]], attr1);
-    }
-}
-
-// non-unary | variable-aspect | graphable
-class Scatter extends Container {
-    constructor(points, args) {
-        let {shape, radius, xlim, ylim, ...attr} = args ?? {};
-        shape = shape ?? black_dot();
-        radius = radius ?? 0.05;
-
-        // handle different forms
-        points = points.map(p => is_element(p[0]) ? p : [shape, p]);
-
-        // pass to container
-        let children = points.map(([s, p]) => [s, rad_rect(p, radius)]);
-        let attr1 = {clip: false, ...attr};
-        super(children, attr1);
-    }
-}
+/**
+ ** bar components
+ **/
 
 // no aspect, but has a ylim and optional width that is used by Bars
 class Bar extends Stack {
@@ -2585,7 +2607,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymPoints, Scatter, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2687,4 +2709,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymPath, SymPoints, Tex, Text, Toggle, Triangle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, Triangle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
