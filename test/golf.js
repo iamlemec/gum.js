@@ -382,6 +382,15 @@ return Network([
   radius: 0.1, aspect: phi
 });
 
+// normalized hypotrochoid thingy
+let [b, h] = [0.13, 0.5];
+let poly = SymPath({
+  fx: t => (1-b)*cos(t) + h*cos((1-b)/b*t),
+  fy: t => (1-b)*sin(t) - h*sin((1-b)/b*t),
+  tlim: [0, 30*pi], N: 5000
+});
+return Graph(poly, {xlim: [-1.5, 1.5], ylim: [-1.5, 1.5]});
+
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {

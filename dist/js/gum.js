@@ -167,6 +167,14 @@ function linspace(x0, x1, n) {
     return [...Array(n).keys()].map(i => x0 + step*i);
 }
 
+function ensure_vector(x, n) {
+    if (typeof(x) == 'number') {
+        return range(n).map(i => x);
+    } else {
+        return x;
+    }
+}
+
 function string_to_int(s) {
     return (s != null) ? parseInt(s) : null;
 }
@@ -1281,32 +1289,38 @@ class Bezier3Line extends Path {
  ** advanced shapes
  **/
 
-// unary | aspect | graphable
-class Triangle extends Polygon {
-    constructor(args) {
-        let {c, w, h, ...attr} = args ?? {};
-        c = c ?? [0.5, 0.5];
-        w = w ?? 1;
-        h = h ?? 1;
-
-        let [cx, cy] = c;
-        let p1 = [cx, cy - 0.5*h];
-        let p2 = [cx - 0.5*w, cy + 0.5*h];
-        let p3 = [cx + 0.5*w, cy + 0.5*h];
-        super([p1, p2, p3], attr);
-    }
+function radial_move(point, theta, size) {
+    size = ensure_vector(size ?? 1, 2);
+    let rads = (pi/180)*theta;
+    let vec = [cos(rads), sin(rads)];
+    return zip(point, size, vec).map(([p, s, v]) => p + s*v);
 }
 
-class Arrowhead extends Triangle {
-    constructor(args) {
-        let {p, w, h, ...attr} = args ?? {};
-        w = w ?? 0.018;
-        h = h ?? 0.02;
+// unary | aspect | graphable
+class Arrowhead extends Polygon {
+    constructor(p, args) {
+        let {size, rot, arc, ...attr} = args ?? {};
+        size = size ?? 0.02;
+        arc = arc ?? 50;
+        rot = (rot ?? 0) - 180;
 
-        let [x, y] = p;
-        let c = [x, y + 0.5*h];
-        let attr1 = {c, w, h, fill: 'black', ...attr};
-        super(attr1);
+        let points = [
+            p, radial_move(p, rot-arc/2, size), radial_move(p, rot+arc/2, size)
+        ];
+
+        let attr1 = {fill: 'black', ...attr};
+        super(points, attr1);
+        this.points0 = points;
+        this.stroke_width = attr.stroke_width ?? 1;
+        this.rotate = rot;
+    }
+
+    // this is hacky! shifts by stroke-width so there's no overlap on target
+    props(ctx) {
+        let size = rect_dims(ctx.rect).map(x => 0.5*this.stroke_width/x);
+        let poff = radial_move(this.points0[0], this.rotate, size);
+        this.points = [poff, ...this.points0.slice(1)];
+        return super.props(ctx);
     }
 }
 
@@ -1528,10 +1542,13 @@ function get_anchor(elem, pos) {
     }
 }
 
-class Edge extends Bezier2Path {
+let arrow_dir = {'north': -90, 'south': 90, 'east': 0, 'west': 180};
+class Edge extends Container {
     constructor(p1, p2, args) {
-        let {squiggle, direc, ...attr} = args ?? {};
+        let {squiggle, direc, arrow, ...attr0} = args ?? {};
+        let [arrow_attr, attr] = prefix_attr(['arrow'], attr0);
         squiggle = squiggle ?? 0.4;
+        arrow = arrow ?? 0;
         direc = direc ?? get_direction(p1, p2);
 
         let [[x1, y1], [x2, y2]] = [p1, p2];
@@ -1544,8 +1561,17 @@ class Edge extends Bezier2Path {
         } else if (direc == 'east' || direc == 'west') {
             px = [x1 + 0.5*squiggle*dx, y1];
         }
+        let line = new Bezier2Path([p1, px], [[cx, cy], p2], attr);
+        let children = [line];
 
-        super([p1, px], [[cx, cy], p2], attr);
+        if (arrow > 0) {
+            let rot = arrow_dir[direc];
+            let arrow_attr1 = {size: arrow, rot, ...arrow_attr};
+            let head = new Arrowhead(p2, arrow_attr1);
+            children.push(head);
+        }
+
+        super(children);
     }
 }
 
@@ -2607,7 +2633,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Triangle, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, XScale, YScale, XAxis, YAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, XTicks, YTicks, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2709,4 +2735,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, Triangle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HStack, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VBar, VBars, VStack, Variable, XAxis, XScale, XTicks, YAxis, YScale, YTicks, abs, ceil, cos, demangle, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
