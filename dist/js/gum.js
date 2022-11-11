@@ -364,6 +364,12 @@ function prefix_attr(pres, attr) {
     return [...out, attr1];
 }
 
+function prefix_add(pre, attr) {
+    return Object.fromEntries(
+        Object.entries(attr).map(([k, v]) => [`${pre}_${k}`, v])
+    );
+}
+
 /**
  ** string formatters
  **/
@@ -1311,13 +1317,13 @@ class Arrowhead extends Polygon {
         let attr1 = {fill: 'black', ...attr};
         super(points, attr1);
         this.points0 = points;
-        this.stroke_width = attr.stroke_width ?? 1;
+        this.stroke = attr.stroke ?? 1;
         this.rotate = rot;
     }
 
     // this is hacky! shifts by stroke-width so there's no overlap on target
     props(ctx) {
-        let size = rect_dims(ctx.rect).map(x => 0.5*this.stroke_width/x);
+        let size = rect_dims(ctx.rect).map(x => 0.5*this.stroke/x);
         let poff = radial_move(this.points0[0], this.rotate, size);
         this.points = [poff, ...this.points0.slice(1)];
         return super.props(ctx);
@@ -1545,9 +1551,9 @@ function get_anchor(elem, pos) {
 let arrow_dir = {'north': -90, 'south': 90, 'east': 0, 'west': 180};
 class Edge extends Container {
     constructor(p1, p2, args) {
-        let {squiggle, direc, arrow, ...attr0} = args ?? {};
+        let {curve, direc, arrow, ...attr0} = args ?? {};
         let [arrow_attr, attr] = prefix_attr(['arrow'], attr0);
-        squiggle = squiggle ?? 0.4;
+        curve = curve ?? 0.4;
         arrow = arrow ?? 0;
         direc = direc ?? get_direction(p1, p2);
 
@@ -1557,9 +1563,9 @@ class Edge extends Container {
     
         let px;
         if (direc == 'north' || direc == 'south') {
-            px = [x1, y1 + 0.5*squiggle*dy];
+            px = [x1, y1 + 0.5*curve*dy];
         } else if (direc == 'east' || direc == 'west') {
-            px = [x1 + 0.5*squiggle*dx, y1];
+            px = [x1 + 0.5*curve*dx, y1];
         }
         let line = new Bezier2Path([p1, px], [[cx, cy], p2], attr);
         let children = [line];
@@ -1577,8 +1583,9 @@ class Edge extends Container {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {radius, ...attr0} = args ?? {};
-        let [node_attr, edge_attr, attr] = prefix_attr(['node', 'edge'], attr0);
+        let {radius, arrow, ...attr0} = args ?? {};
+        let [node_attr, edge_attr, arrow_attr, attr] = prefix_attr(['node', 'edge', 'arrow'], attr0);
+        edge_attr = {arrow, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
         radius = radius ?? 0.1;
 
         let make_node = b => new Node(b, {flex: true, ...node_attr});
