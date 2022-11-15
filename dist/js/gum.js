@@ -24,6 +24,7 @@ let svg_props_base = {
 // fonts
 let font_family_base = 'sans-serif';
 let font_size_base = 12;
+let font_size_latex = 14;
 
 // plot defaults
 let plot_font_base = 'IBMPlexSans';
@@ -74,10 +75,13 @@ function sideRenderTextSizer(html, args) {
     actual = actual ?? false;
 
     let textDiv = document.createElement('div');
+    textDiv.id = 'sizer';
     document.body.appendChild(textDiv);
 
     textDiv.style.fontSize = `${size}px`;
     textDiv.style.position = 'absolute';
+    textDiv.style.top = '0';
+    textDiv.style.left = '0';
     textDiv.style.fontFamily = family;
     textDiv.style.visibility = 'hidden';
 
@@ -1407,7 +1411,7 @@ class Text extends Element {
 class Tex extends Element {
     constructor(text, args) {
         let {family, size, actual, calc_family, vshift, xover, yover, rotate, ...attr} = args ?? {};
-        size = size ?? font_size_base;
+        size = size ?? font_size_latex;
         rotate = (rotate ?? 0) % 360;
         actual = actual ?? true;
         vshift = vshift ?? 0;
@@ -1443,7 +1447,6 @@ class Tex extends Element {
         this.hfact = hfact;
         this.rotate = rotate;
         this.katex = katex$1;
-
     }
 
     props(ctx) {
@@ -2127,12 +2130,14 @@ class Legend extends Place {
 
 class Note extends Place {
     constructor(text, pos, size, args) {
-        let {font_family, font_weight, ...attr} = args ?? {};
+        let {font_family, font_weight, latex, ...attr} = args ?? {};
         font_family = font_family ?? plot_font_base;
         font_weight = font_weight ?? 100;
+        latex = latex ?? false;
 
         let attr1 = {font_family, font_weight, ...attr};
-        let label = new Text(text, attr1);
+        let Maker = latex ? Tex : Text;
+        let label = new Maker(text, attr1);
         super(label, pos, size);
     }
 }
