@@ -391,6 +391,25 @@ let poly = SymPath({
 });
 return Graph(poly, {xlim: [-1.5, 1.5], ylim: [-1.5, 1.5]});
 
+// stacked density plots
+func = x => 0.9*exp(-6*pow(log(max(0, x)), 2));
+base_func = b => (x => b + func(x/pow(b+1, 0.3)));
+xlim = [-0.3, 4.3]; ylim = [-0.2, 3.8];
+fill_func = b => Group([
+  SymFill({fy1: base_func(b), fy2: x => b, xlim: [0, 4], fill: '#00BBFF', stroke_width: 0}),
+  SymPath({fy: base_func(b), xlim: [0, 4], stroke_width: 1.5}),
+  HLine(b, {lim: [0, 4], opacity: 0.5})
+]);
+offsets = linspace(0, 3, 5);
+kdes = Group(offsets.map(fill_func).reverse());
+let lines = Group([HLine(ylim[1], {lim: xlim}), VLine(xlim[1], {lim: ylim})]);
+let plot = Plot([lines, kdes], {
+  aspect: 0.7, xticks: linspace(0, 4, 5), xlim: xlim, ylim, xaxis_tick_lim: [0.5, 1],
+  yaxis_tick_lim: [0.5, 1], xgrid: true, ygrid: true,
+  yticks: zip(offsets, ['A', 'B', 'C', 'D', 'E'])
+});
+return Frame(plot, {margin: 0.1});
+
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {

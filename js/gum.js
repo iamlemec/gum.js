@@ -191,6 +191,12 @@ function linspace(x0, x1, n) {
     return [...Array(n).keys()].map(i => x0 + step*i);
 }
 
+function enumerate(x) {
+    let n = x.length;
+    let idx = range(n);
+    return zip(idx, x);
+}
+
 function ensure_vector(x, n) {
     if (typeof(x) == 'number') {
         return range(n).map(i => x);
@@ -2790,7 +2796,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, VScale, HScale, VTicks, HTicks, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, VScale, HScale, VTicks, HTicks, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2897,5 +2903,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, VScale, HScale, VTicks, HTicks, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, VScale, HScale, VTicks, HTicks, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
 };
