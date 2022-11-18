@@ -351,8 +351,8 @@ let s = SymPoints({
 });
 
 let p = Plot([f, s], {
-  aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1], labeloffset: [0.05, 0.1],
-  xanchor: 0, xticks: xt, yticks: yt, ygrid: true, xlabel_offset: 0.1,
+  aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1], xanchor: 0,
+  xticks: xt, yticks: yt, ygrid: true, xlabel_offset: 0.1,
   xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave'
 });
 return Frame(p, {margin: 0.25});

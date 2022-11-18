@@ -1301,19 +1301,27 @@ function make_bezier2(d) {
 
 class Bezier2Path extends Path {
     constructor(start, bezs, args) {
-        let [s0, px] = start;
-        if (is_scalar(s0)) {
-            start = new MoveTo(start);
-            bezs = bezs.map(make_bezier2);   
-        } else {
-            // simple bezier input
-            start = new MoveTo(s0);
-            let [b0, ...b1] = bezs;
-            let bez0 = new Bezier2(b0, px);
-            let bez1 = b1.map(b => new Bezier2(b));
-            bezs = [bez0, ...bez1];
-        }
-        super([start, ...bezs], args); 
+        start = new MoveTo(start);
+        bezs = bezs.map(make_bezier2);   
+        super([start, ...bezs], args);
+    }
+}
+
+// draws little vectors for path
+class Bezier2PathDebug extends Container {
+    constructor(start, bezs, args) {
+        let bezo = new Bezier2Path(start, bezs, args);
+        let [nodes, arrows] = zip(...bezs);
+        nodes.unshift(start);
+
+        let red = new Circle({stroke: 'red', fill: 'red'});
+        let scatter1 = new Scatter(nodes, {radius: 0.01});
+        let scatter2 = new Scatter(arrows, {radius: 0.007, shape: red});
+        let lines = zip(nodes.slice(0, -1), arrows).map(([n, a]) =>
+            new Line(n, a, {stroke: 'blue', stroke_dasharray: 2, opacity: 0.7})
+        );
+
+        super([bezo, ...lines, scatter1, scatter2]);
     }
 }
 
@@ -1591,33 +1599,95 @@ function get_anchor(elem, pos) {
     }
 }
 
-let arrow_dir = {'north': -90, 'south': 90, 'east': 0, 'west': 180};
-class Edge extends Container {
-    constructor(p1, p2, args) {
-        let {curve, direc, arrow, ...attr0} = args ?? {};
-        let [arrow_attr, attr] = prefix_attr(['arrow'], attr0);
-        curve = curve ?? 0.4;
-        arrow = arrow ?? 0;
-        direc = direc ?? get_direction(p1, p2);
+function norm_direc(direc) {
+    if (direc == 'n' || direc == 'north') {
+        return 'n';
+    } else if (direc == 's' || direc == 'south') {
+        return 's';
+    } else if (direc == 'e' || direc == 'east') {
+        return 'e';
+    } else if (direc == 'w' || direc == 'west') {
+        return 'w';
+    } else {
+        throw new Error(`Unrecognized direction specification: ${direc}`);
+    }
+}
 
+let arrow_dir = {'n': 90, 's': -90, 'e': 180, 'w': 0};
+class Edge extends Container {
+    constructor(pd1, pd2, args) {
+        let {curve, arrow, debug, ...attr0} = args ?? {};
+        let [arrow_attr, attr] = prefix_attr(['arrow'], attr0);
+        curve = curve ?? 0.3;
+        arrow = arrow ?? 0;
+        debug = debug ?? false;
+
+        let [[p1, d1], [p2, d2]] = [pd1, pd2];
         let [[x1, y1], [x2, y2]] = [p1, p2];
         let [dx, dy] = [x2 - x1, y2 - y1];
-        let [cx, cy] = [0.5*(x1+x2), 0.5*(y1+y2)];
-    
-        let px;
-        if (direc == 'north' || direc == 'south') {
-            px = [x1, y1 + 0.5*curve*dy];
-        } else if (direc == 'east' || direc == 'west') {
-            px = [x1 + 0.5*curve*dx, y1];
-        }
-        let line = new Bezier2Path([p1, px], [[cx, cy], p2], attr);
-        let children = [line];
 
+        [d1, d2] = [norm_direc(d1), norm_direc(d2)];
+        let vert1 = d1 == 'n' || d1 == 's';
+        let vert2 = d2 == 'n' || d2 == 's';
+        let wide = abs(dx) > abs(dy);
+
+        let ahead = null;
         if (arrow > 0) {
-            let rot = arrow_dir[direc];
+            let rot = arrow_dir[d2];
             let arrow_attr1 = {size: arrow, rot, ...arrow_attr};
-            let head = new Arrowhead(p2, arrow_attr1);
-            children.push(head);
+            ahead = new Arrowhead(p2, arrow_attr1);
+        }
+
+        // reorient so that when non-aliged:
+        // (1) when wide, we go vertical first
+        // (2) when tall, we go horizontal first
+        if (vert1 != vert2) {
+            if (vert1 != wide) {
+                [p1, p2] = [p2, p1];
+                [[x1, y1], [x2, y2]] = [[x2, y2], [x1, y1]];
+                [dx, dy] = [-dx, -dy];
+                [vert1, vert2] = [vert2, vert1];
+            }
+        }
+
+        let curve1, curve2;
+        if (vert1 == vert2) {
+            [curve1, curve2] = [curve, curve];
+        } else {
+            [curve1, curve2] = [1.0, curve];
+        }
+
+        let px1;
+        if (vert1) {
+            px1 = [x1, y1 + curve1*dy];
+        } else {
+            px1 = [x1 + curve1*dx, y1];
+        }
+
+        let px2;
+        if (vert2) {
+            px2 = [x2, y2 - curve2*dy];
+        } else {
+            px2 = [x2 - curve2*dx, y2];
+        }
+
+        // center point
+        let pc;
+        if (vert1 == vert2) {
+            pc = [0.5*(x1+x2), 0.5*(y1+y2)];
+        } else {
+            if (wide) {
+                pc = [0.5*(x1+x2), y2];
+            } else {
+                pc = [x2, 0.5*(y1+y2)];
+            }
+        }
+
+        let BezClass = debug ? Bezier2PathDebug : Bezier2Path;
+        let line = new BezClass(p1, [[pc, px1], [p2, px2]], attr);
+        let children = [line];
+        if (ahead != null) {
+            children.push(ahead);
         }
 
         super(children);
@@ -1626,9 +1696,9 @@ class Edge extends Container {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {radius, arrow, ...attr0} = args ?? {};
+        let {radius, arrow, debug, ...attr0} = args ?? {};
         let [node_attr, edge_attr, arrow_attr, attr] = prefix_attr(['node', 'edge', 'arrow'], attr0);
-        edge_attr = {arrow, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
+        edge_attr = {arrow, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
         radius = radius ?? 0.1;
 
         let make_node = b => new Node(b, {flex: true, ...node_attr});
@@ -1640,13 +1710,18 @@ class Network extends Container {
         let boxes = Object.values(bmap);
         let cont1 = new Container(boxes);
 
-        let lines = edges.map(([n1, n2, eattr]) => {
+        let lines = edges.map(([na1, na2, eattr]) => {
             eattr = eattr ?? {};
+
+            let [n1, d1] = is_array(na1) ? na1 : [na1, null];
+            let [n2, d2] = is_array(na2) ? na2 : [na2, null];
             let [b1, b2] = [bmap[n1], bmap[n2]];
-            let [p1, p2] = [get_center(b1), get_center(b2)]
-            let [d1, d2] = [get_direction(p1, p2), get_direction(p2, p1)];
+
+            let [p1, p2] = [get_center(b1), get_center(b2)];
+            [d1, d2] = [d1 ?? get_direction(p1, p2), d2 ?? get_direction(p2, p1)];
             let [a1, a2] = [get_anchor(b1, d1), get_anchor(b2, d2)];
-            return new Edge(a1, a2, {direc: d1, ...edge_attr, ...eattr});
+
+            return new Edge([a1, d1], [a2, d2], {...edge_attr, ...eattr});
         });
         let cont2 = new Container(lines);
 
