@@ -397,7 +397,7 @@ base_func = b => (x => b + func(x/pow(b+1, 0.3)));
 xlim = [-0.3, 4.3]; ylim = [-0.2, 3.8];
 fill_func = b => Group([
   SymFill({fy1: base_func(b), fy2: x => b, xlim: [0, 4], fill: '#00BBFF', stroke_width: 0}),
-  SymPath({fy: base_func(b), xlim: [0, 4], stroke_width: 1.5}),
+  SymPath({fy: base_func(b), xlim: [0, 4], stroke_width: 1.5, opacity: 0.8}),
   HLine(b, {lim: [0, 4], opacity: 0.5})
 ]);
 offsets = linspace(0, 3, 5);

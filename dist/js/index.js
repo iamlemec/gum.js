@@ -17,6 +17,7 @@ let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
 let save = document.querySelector('#save');
 let copy = document.querySelector('#copy');
+let save_png = document.querySelector('#save-png');
 let mid = document.querySelector('#mid');
 let left = document.querySelector('#left');
 let right = document.querySelector('#right');
@@ -24,7 +25,6 @@ document.querySelector('#interActiveControl');
 
 // wrap in SVG if needed
 function renderGum(out) {
-    let svg;
     let anchors = null;
     let redraw = document.querySelector('#disp');
     let iac = document.querySelector('#interActiveControl');
@@ -38,12 +38,56 @@ function renderGum(out) {
     if (out instanceof Element) {
         let args = {size: size, prec: prec};
         out = (out instanceof SVG) ? out : new SVG(out, args);
-        svg = out.svg();
-        return svg
+        return out.svg();
     } else {
         return String(out);
     }
 }
+
+// export to PNG
+let drawSvg = (elem) => new Promise((resolve, reject) => {
+    try {
+        // get viewBox size
+        let vbox = elem.getAttribute('viewBox');
+        let [xlo, ylo, xhi, yhi] = vbox.split(' ');
+        let [width, height] = [xhi - xlo, yhi - ylo];
+
+        // clone and add in dimensions
+        elem = elem.cloneNode(true);
+        elem.setAttribute('width', width);
+        elem.setAttribute('height', height);
+
+        // create a canvas element
+        let canvas = document.createElement('canvas');
+        [canvas.width, canvas.height] = [width, height];
+
+        // fill white background
+        let ctx = canvas.getContext('2d');
+        ctx.font = 'normal 12px IBMPlexSans';
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+
+        // make a url from the svg
+        let svg = new XMLSerializer().serializeToString(elem);
+        let blob = new Blob([svg], {type: 'image/svg+xml'});
+        let url = URL.createObjectURL(blob);
+
+        // create a new image to hold it the converted type
+        let image = new Image();
+
+        // when the image is loaded we can get it as base64 url
+        image.addEventListener('load', () => {
+            ctx.drawImage(image, 0, 0);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(resolve);
+        });
+
+        // load the image
+        image.src = url;
+    } catch (err) {
+        reject(err);
+    }
+});
 
 // example code
 let example0 = `
@@ -186,8 +230,8 @@ let edit_text = new EditorView({
 
 // download tools
 function downloadFile(name, blob) {
-    let element = document.createElement('a');
     let url = URL.createObjectURL(blob);
+    let element = document.createElement('a');
     element.setAttribute('href', url);
     element.setAttribute('download', `${name}`);
     element.style.display = 'none';
@@ -206,6 +250,15 @@ save.addEventListener('click', evt => {
 copy.addEventListener('click', evt => {
     let text = conv_text.state.doc.toString();
     navigator.clipboard.writeText(text);
+});
+
+save_png.addEventListener('click', evt => {
+    let elem = disp.querySelector('svg');
+    drawSvg(elem).then(data => {
+        downloadFile('output.png', data);
+    }).catch(err => {
+        console.log(err);
+    }); 
 });
 
 // trigger input
