@@ -45,28 +45,79 @@ function renderGum(out) {
     }
 }
 
+function readBlobAsync(blob) {
+    return new Promise((resolve, reject) => {
+        let reader = new FileReader();
+        reader.onload = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    })
+}
+
+// load fonts for injection
+async function loadFontData(path) {
+    let resp = await fetch(path);
+    let blob = await resp.blob();
+    let data = await readBlobAsync(blob);
+    return data;
+}
+
+// generate font-face text
+async function makeFontFace(family, style, weight, path) {
+    let data = await loadFontData(path);
+    return `
+    @font-face {
+        font-family: "${family}";
+        font-style: ${style};
+        font-weight: ${weight};
+        src: url("${data}");
+    }
+    `;
+}
+
+// get ibm font
+let ibmFontFace = await makeFontFace(
+    'IBMPlexSans', 'normal', 100, 'dist/css/fonts/IBMPlexSans-Thin.ttf'
+);
+
+function embedSvgText(elem) {
+    // get viewBox size
+    let vbox = elem.getAttribute('viewBox');
+    let [xlo, ylo, xhi, yhi] = vbox.split(' ');
+    let [width, height] = [xhi - xlo, yhi - ylo];
+
+    // clone and add in dimensions
+    elem = elem.cloneNode(true);
+    elem.setAttribute('width', width);
+    elem.setAttribute('height', height);
+
+    // inject font data as style
+    let style = document.createElement('style');
+    style.textContent = ibmFontFace;
+
+    // insert into document
+    let defs = document.createElement('defs');
+    defs.appendChild(style);
+    elem.prepend(defs);
+
+    return elem;
+}
+
 // export to PNG
 let drawSvg = (elem) => new Promise((resolve, reject) => {
     try {
-        // get viewBox size
-        let vbox = elem.getAttribute('viewBox');
-        let [xlo, ylo, xhi, yhi] = vbox.split(' ');
-        let [width, height] = [xhi - xlo, yhi - ylo];
-
-        // clone and add in dimensions
-        elem = elem.cloneNode(true);
-        elem.setAttribute('width', width);
-        elem.setAttribute('height', height);
+        // embed font data
+        elem = embedSvgText(elem);
+        let width = elem.getAttribute('width');
+        let height = elem.getAttribute('height');
 
         // create a canvas element
         let canvas = document.createElement('canvas');
-        [canvas.width, canvas.height] = [width, height];
-
-        // fill white background
+        canvas.setAttribute('width', width);
+        canvas.setAttribute('height', height);
         let ctx = canvas.getContext('2d');
-        ctx.font = 'normal 12px IBMPlexSans';
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, width, height);
 
         // make a url from the svg
         let svg = new XMLSerializer().serializeToString(elem);
@@ -78,7 +129,7 @@ let drawSvg = (elem) => new Promise((resolve, reject) => {
 
         // when the image is loaded we can get it as base64 url
         image.addEventListener('load', () => {
-            ctx.drawImage(image, 0, 0);
+            ctx.drawImage(image, 0, 0, width, height);
             URL.revokeObjectURL(url);
             canvas.toBlob(resolve);
         });
@@ -243,7 +294,10 @@ function downloadFile(name, blob) {
 
 // connect handlers
 save.addEventListener('click', evt => {
-    let text = conv_text.state.doc.toString();
+    // let text = conv_text.state.doc.toString();
+    let elem0 = disp.querySelector('svg');
+    let elem = embedSvgText(elem0);
+    let text = new XMLSerializer().serializeToString(elem);
     let blob = new Blob([text], {type: 'text/svg'});
     downloadFile('output.svg', blob);
 });
