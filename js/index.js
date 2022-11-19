@@ -82,11 +82,17 @@ let ibmFontFace = await makeFontFace(
     'IBMPlexSans', 'normal', 100, 'dist/css/fonts/IBMPlexSans-Thin.ttf'
 );
 
-function embedSvgText(elem) {
-    // get viewBox size
+// get viewBox size
+function parseViewbox(elem) {
     let vbox = elem.getAttribute('viewBox');
     let [xlo, ylo, xhi, yhi] = vbox.split(' ');
     let [width, height] = [xhi - xlo, yhi - ylo];
+    return [width, height];
+}
+
+function embedSvgText(elem) {
+    // get true dims
+    let [width, height] = parseViewbox(elem);
 
     // clone and add in dimensions
     elem = elem.cloneNode(true);
@@ -113,10 +119,17 @@ let drawSvg = (elem) => new Promise((resolve, reject) => {
         let width = elem.getAttribute('width');
         let height = elem.getAttribute('height');
 
+        // get converted size
+        let ratio = window.devicePixelRatio;
+        let width2 = ratio*width;
+        let height2 = ratio*height;
+
         // create a canvas element
         let canvas = document.createElement('canvas');
-        canvas.setAttribute('width', width);
-        canvas.setAttribute('height', height);
+        canvas.width = width2;
+        canvas.height = height2;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
         let ctx = canvas.getContext('2d');
 
         // make a url from the svg
@@ -129,7 +142,7 @@ let drawSvg = (elem) => new Promise((resolve, reject) => {
 
         // when the image is loaded we can get it as base64 url
         image.addEventListener('load', () => {
-            ctx.drawImage(image, 0, 0, width, height);
+            ctx.drawImage(image, 0, 0, width2, height2);
             URL.revokeObjectURL(url);
             canvas.toBlob(resolve);
         });
@@ -175,6 +188,10 @@ function setConvert(text) {
     conv_text.dispatch(upd);
 }
 
+function setDisplay(svg) {
+    disp.innerHTML = svg;
+}
+
 function setState(good) {
     if (good == null) {
         stat.classList = [];
@@ -209,31 +226,31 @@ async function updateView(src) {
     try {
         elem = await parseGum(src);
     } catch (err) {
+        setState(false);
         if (err == 'timeout') {
             setConvert('function timeout');
         } else {
             setConvert(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
         }
-        setState(false);
         return;
     }
 
     // render gum tree
     if (elem == null) {
-        setConvert(err_nodata);
         setState();
+        setConvert(err_nodata);
     } else {
         let svg;
         try {
             svg = renderGum(elem);
         } catch (err) {
-            setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
             setState(false);
+            setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
             return;
         }
-        setConvert(svg);
         setState(true);
-        disp.innerHTML = svg;
+        setConvert(svg);
+        setDisplay(svg);
     }
 }
 
@@ -270,7 +287,6 @@ let edit_text = new EditorView({
             syntaxHighlighting(defaultHighlightStyle),
             EditorView.updateListener.of(upd => {
                 if (upd.docChanged) {
-                    console.log('updating');
                     let text = getText(upd.state);
                     updateView(text);
                 }
