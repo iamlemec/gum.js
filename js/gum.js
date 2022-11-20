@@ -708,7 +708,7 @@ class SVG extends Container {
         size = size ?? size_base;
         prec = prec ?? prec_base;
 
-        let attr1 = {tag: 'svg', clip: clip, ...svg_props_base, ...args};
+        let attr1 = {tag: 'svg', clip: clip, ...svg_props_base, ...attr};
         super(children, attr1);
 
         if (is_scalar(size)) {

@@ -110,7 +110,8 @@ function embedSvgText(elem) {
     return elem;
 }
 
-// export to PNG
+// export to PNG: have to be careful with devices with different pixel ratios
+// https://stackoverflow.com/questions/31910043/html5-canvas-drawimage-draws-image-blurry/58345223#58345223
 let drawSvg = (elem) => new Promise((resolve, reject) => {
     try {
         // embed font data
@@ -120,16 +121,19 @@ let drawSvg = (elem) => new Promise((resolve, reject) => {
 
         // get converted size
         let ratio = window.devicePixelRatio;
-        let width2 = ratio*width;
-        let height2 = ratio*height;
+        let [width2, height2] = [ratio*width, ratio*height];
 
         // create a canvas element
         let canvas = document.createElement('canvas');
-        canvas.width = width2;
-        canvas.height = height2;
+        canvas.setAttribute('width', width2);
+        canvas.setAttribute('height', height2);
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
+
+        // fill white background
         let ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width2, height2);
 
         // make a url from the svg
         let svg = new XMLSerializer().serializeToString(elem);
