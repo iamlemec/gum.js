@@ -164,15 +164,22 @@ let drawSvg = (elem, embed) => new Promise((resolve, reject) => {
 
 // example code
 let example0 = `
-let n = 12;
-let r = Rect();
-let s = Group(
-  range(-90, 90, 180/n).map(t => Ray(t))
-);
-let hs = HStack([s, s]);
-let vs = VStack([hs, hs]);
-let gg = Group([vs, r]);
-return Frame(gg, {border: 1, margin: 0.05});
+// fancy plot
+let xlim = [0, 2*pi], ylim = [-1, 1];
+let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
+let xt = linspace(0, 2, 6).slice(1).map(x => [x*pi, \`\${rounder(x, 1)} π\`]);
+let f = SymPath({fy: x => -sin(x), xlim});
+let s = SymPoints({
+  fy: x => -sin(x), xlim, N: 21,
+  fr: (x, y) => 0.03+abs(y)/20,
+  fs: (x, y) => Circle({fill: pal((1+y)/2)})
+});
+let p = Plot([f, s], {
+  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
+  xticks: xt, yticks: 5, ygrid: true, xlabel_offset: 0.1,
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave' 
+});
+return Frame(p, {margin: 0.25});
 `.trim();
 
 // initial value
