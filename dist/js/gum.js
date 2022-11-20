@@ -2002,11 +2002,11 @@ class HTicks extends Ticks {
 }
 
 function get_ticklim(lim) {
-    if (lim == 'inner') {
+    if (lim == null || lim == 'inner') {
         return [0.5, 1];
     } else if (lim == 'outer') {
         return [0, 0.5];
-    } else if (lim == null) {
+    } else if (lim == 'both') {
         return [0, 1];
     } else {
         return lim;

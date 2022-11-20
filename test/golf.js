@@ -162,21 +162,14 @@ let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
 
 // multi plot
-let s = [0.5, 0.7, 1.0, 1.4].map(a =>
-  SymPath({fy: x => sin(a*x), xlim: [-1, 1]})
-);
+let s = [0.5, 0.7, 1.0, 1.4].map(a => SymPath({fy: x => sin(a*x), xlim: [-1, 1]}));
 let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
-let e = Ellipse({cx: 0, cy: 0, rx: 0.5, ry: 0.5});
-let r = Scatter([
-  [Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]
-], {radius: 0.1});
-let p = Plot([...s, e, r, t], {
+let r = Scatter([[Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]], {radius: 0.1});
+let p = Plot([...s, r, t], {
   xlim: [-1, 1], ylim: [-1, 1], ygrid: true, xgrid: true,
-  xlabel: 'time (seconds)', ylabel: 'space (meters)',
-  title: 'Spacetime Vibes'
+  xlabel: 'time (seconds)', ylabel: 'space (meters)', title: 'Spacetime Vibes'
 });
-let f = Frame(p, {margin: 0.3});
-return f;
+return Frame(p, {margin: 0.3});
 
 // complex scatter
 let r0 = Rect({stroke: 'red', opacity: 0.5});
@@ -353,7 +346,8 @@ let s = SymPoints({
 let p = Plot([f, s], {
   aspect: 1.5, xlim: [0, 2*pi], ylim: [-1, 1], xanchor: 0,
   xticks: xt, yticks: yt, ygrid: true, xlabel_offset: 0.1,
-  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave'
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave',
+  xaxis_tick_lim: 'both'
 });
 return Frame(p, {margin: 0.25});
 
@@ -390,6 +384,20 @@ let poly = SymPath({
   tlim: [0, 30*pi], N: 5000
 });
 return Graph(poly, {xlim: [-1.5, 1.5], ylim: [-1.5, 1.5]});
+
+// shaded density plot
+xlim = [0, 4]; ylim = [0, 1];
+func = x => 1/(max(0.01,x)*sqrt(pi/2))*exp(-2*pow(log(x), 2));
+fill = Group([
+  SymFill({fy1: func, fy2: 0, xlim, fill: '#00BBFF', stroke_width: 0}),
+  SymPath({fy: func, xlim, stroke_width: 1.5, N: 200})
+], {opacity: 0.8});
+plot = Plot(fill, {
+  aspect: 1.5, xlim, ylim, xticks: 5, yticks: 3, xgrid: true, ygrid: true,
+  xaxis_tick_lim: 'inner', yaxis_tick_lim: 'inner'
+});
+frame = Frame(plot, {margin: 0.1});
+return frame;
 
 // stacked density plots
 func = x => 0.9*exp(-6*pow(log(max(0, x)), 2));

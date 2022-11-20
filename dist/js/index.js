@@ -17,7 +17,8 @@ let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
 let save = document.querySelector('#save');
 let copy = document.querySelector('#copy');
-let save_png = document.querySelector('#save-png');
+let spng = document.querySelector('#spng');
+let font = document.querySelector('#font');
 let mid = document.querySelector('#mid');
 let left = document.querySelector('#left');
 let right = document.querySelector('#right');
@@ -89,7 +90,7 @@ function parseViewbox(elem) {
     return [width, height];
 }
 
-function embedSvgText(elem) {
+function prepareSvg(elem, embed) {
     // get true dims
     let [width, height] = parseViewbox(elem);
 
@@ -98,24 +99,26 @@ function embedSvgText(elem) {
     elem.setAttribute('width', width);
     elem.setAttribute('height', height);
 
-    // inject font data as style
-    let style = document.createElement('style');
-    style.textContent = ibmFontFace;
+    if (embed) {
+        // inject font data as style
+        let style = document.createElement('style');
+        style.textContent = ibmFontFace;
 
-    // insert into document
-    let defs = document.createElement('defs');
-    defs.appendChild(style);
-    elem.prepend(defs);
+        // insert into document
+        let defs = document.createElement('defs');
+        defs.appendChild(style);
+        elem.prepend(defs);
+    }
 
     return elem;
 }
 
 // export to PNG: have to be careful with devices with different pixel ratios
 // https://stackoverflow.com/questions/31910043/html5-canvas-drawimage-draws-image-blurry/58345223#58345223
-let drawSvg = (elem) => new Promise((resolve, reject) => {
+let drawSvg = (elem, embed) => new Promise((resolve, reject) => {
     try {
         // embed font data
-        elem = embedSvgText(elem);
+        elem = prepareSvg(elem, embed);
         let width = elem.getAttribute('width');
         let height = elem.getAttribute('height');
 
@@ -316,7 +319,7 @@ function downloadFile(name, blob) {
 save.addEventListener('click', evt => {
     // let text = conv_text.state.doc.toString();
     let elem0 = disp.querySelector('svg');
-    let elem = embedSvgText(elem0);
+    let elem = prepareSvg(elem0, embed_font);
     let text = new XMLSerializer().serializeToString(elem);
     let blob = new Blob([text], {type: 'text/svg'});
     downloadFile('output.svg', blob);
@@ -327,9 +330,15 @@ copy.addEventListener('click', evt => {
     navigator.clipboard.writeText(text);
 });
 
-save_png.addEventListener('click', evt => {
+let embed_font = false;
+font.addEventListener('click', evt => {
+    embed_font = !embed_font;
+    font.classList.toggle('fill');
+});
+
+spng.addEventListener('click', evt => {
     let elem = disp.querySelector('svg');
-    drawSvg(elem).then(data => {
+    drawSvg(elem, true).then(data => {
         downloadFile('output.png', data);
     }).catch(err => {
         console.log(err);
