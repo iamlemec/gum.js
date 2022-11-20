@@ -1849,7 +1849,7 @@ class SymPoints extends Container {
         // make points
         let points = zip(tvals, xvals, yvals);
         let children = points.map(([t, x, y]) =>
-            [fs(t, x, y), rad_rect([x, y], fr(t, x, y))]
+            [fs(x, y, t), rad_rect([x, y], fr(x, y, t))]
         );
 
         // pass to element

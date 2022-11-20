@@ -132,11 +132,6 @@ svg.icon {
     border: 1px solid gray;
     border-radius: 2px;
     background-color: #EEE;
-    cursor: pointer;
-}
-
-svg.icon.fill { 
-    fill: #AAA;
 }
 
 #copy {
