@@ -1702,10 +1702,20 @@ class Network extends Container {
  ** parametric paths
  **/
 
+function func_or_scalar(x) {
+    if (is_scalar(x)) {
+        return () => x;
+    } else {
+        return x;
+    }
+}
+
 // determines actual values given combinations of limits, values, and functions
 function sympath(args) {
     let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
     tlim = tlim ?? limit_base;
+    fx = func_or_scalar(fx);
+    fy = func_or_scalar(fy);
 
     // determine data size
     let Ns = new Set([tvals, xvals, yvals].filter(v => v != null).map(v => v.length));
@@ -1991,13 +2001,25 @@ class HTicks extends Ticks {
     }
 }
 
+function get_ticklim(lim) {
+    if (lim == 'inner') {
+        return [0.5, 1];
+    } else if (lim == 'outer') {
+        return [0, 0.5];
+    } else if (lim == null) {
+        return [0, 1];
+    } else {
+        return lim;
+    }
+}
+
 class Axis extends Container {
     constructor(direc, ticks, args) {
         let {label_size, label_inner, label_align, tick_lim, lim, prec, ...attr0} = args ?? {};
         let [label_attr, tick_attr, line_attr, attr] = prefix_attr(['label', 'tick', 'line'], attr0);
         label_size = label_size ?? tick_label_size_base;
-        tick_lim = tick_lim ?? limit_base;
         lim = lim ?? limit_base;
+        tick_lim = get_ticklim(tick_lim);
         direc = get_orient(direc);
 
         // get default label alignment

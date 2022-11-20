@@ -133,6 +133,7 @@ let drawSvg = (elem) => new Promise((resolve, reject) => {
 
         // fill white background
         let ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, width2, height2);
 
