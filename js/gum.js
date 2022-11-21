@@ -23,11 +23,13 @@ let svg_props_base = {
 
 // fonts
 let font_family_base = 'sans-serif';
+let font_weight_base = 'normal';
 let font_size_base = 12;
 let font_size_latex = 14;
 
 // plot defaults
 let plot_font_base = 'IBMPlexSans';
+let plot_weight_base = 100;
 let num_ticks_base = 5;
 let tick_size_base = 0.03;
 let tick_label_size_base = 1.5;
@@ -47,12 +49,13 @@ function setTextSizer(sizer) {
 
 // use canvas sizer
 function canvasTextSizer(ctx, text, args) {
-    let {family, size, actual} = args ?? {};
+    let {family, weight, size, actual} = args ?? {};
     family = family ?? font_family_base;
+    weight = weight ?? font_weight_base;
     size = size ?? font_size_base;
     actual = actual ?? false;
 
-    ctx.font = `${size}px ${family}`;
+    ctx.font = `${weight} ${size}px ${family}`;
     let met = ctx.measureText(text);
 
     let x, y, w, h;
@@ -1392,23 +1395,18 @@ class Arrowhead extends Polygon {
 
 class Text extends Element {
     constructor(text, args) {
-        let {family, size, rotate, actual, calc_family, vshift, ...attr} = args ?? {};
+        let {family, weight, size, rotate, actual, calc_family, calc_weight, vshift, ...attr} = args ?? {};
         size = size ?? font_size_base;
         actual = actual ?? false;
         rotate = (rotate ?? 0) % 360;
         vshift = vshift ?? -0.13;
 
-        // select fonts
-        let font_disp, font_calc;
-        if (calc_family != null) {
-            font_calc = calc_family;
-        } else {
-            font_disp = family ?? font_family_base;
-            font_calc = font_disp;
-        }
-
+        // select calculated fonts
+        calc_family = calc_family ?? family ?? font_family_base;
+        calc_weight = calc_weight ?? weight ?? font_weight_base;
+        
         // compute text box
-        let fargs = {family: font_calc, size: size, actual: actual};
+        let fargs = {calc_family, calc_weight, size, actual};
         let [xoff, yoff, width0, height0] = textSizer(text, fargs);
         [xoff, yoff, size] = [xoff/height0, yoff/height0, size/height0];
         let aspect0 = width0/height0;
@@ -1421,7 +1419,7 @@ class Text extends Element {
 
         // pass to element
         let aspect = width/height;
-        let attr1 = {aspect: aspect, font_family: font_disp, fill: 'black', ...attr};
+        let attr1 = {aspect: aspect, font_family: family, font_weight: weight, fill: 'black', ...attr};
         super('text', false, attr1);
 
         // store metrics
@@ -1966,14 +1964,14 @@ class VBars extends Bars {
 function make_ticklabel(s, prec) {
     let t = rounder(s, prec);
     return new Text(t, {
-        calc_family: plot_font_base, font_weight: 100, vshift: -0.15
+        calc_family: plot_font_base, calc_weight: 100, vshift: -0.15
     });
 }
 
 function make_axislabel(s, attr) {
     attr = attr ?? {};
     return new Text(s, {
-        calc_family: plot_font_base, font_weight: 100, ...attr
+        calc_family: plot_font_base, calc_weight: 100, ...attr
     });
 }
 
@@ -2018,10 +2016,12 @@ class HScale extends Scale {
 // the tick classes extend well outside their bounds (so don't clip)
 class Ticks extends Container {
     constructor(direc, ticks, args) {
-        let {size, lim, align, ...attr} = args ?? {};
+        let {size, lim, align, font_family, font_weight, ...attr} = args ?? {};
         size = size ?? tick_label_size_base;
         lim = lim ?? limit_base;
         align = align ?? 0.5;
+        font_family = plot_font_base;
+        font_weight = plot_weight_base;
         direc = get_orient(direc);
         ticks = ticks.map(ensure_tick);
 
@@ -2033,7 +2033,8 @@ class Ticks extends Container {
             [t-(1-align)*tsize*x.aspect, 0, t+align*tsize*x.aspect, 1];
         let children = ticks.map(([t, x]) => [x, locator(t, x)]);
 
-        super(children, {clip: false, ...attr});
+        let attr1 = {clip: false, font_family, font_weight, ...attr};
+        super(children, {clip: false, ...attr1});
     }
 }
 
@@ -2102,7 +2103,7 @@ class Axis extends Container {
 
         // pass to container
         let children = [cline, scale, [label, lbox]];
-        super(children, {font_family: plot_font_base, scale: tscale, ...attr});
+        super(children, {scale: tscale, ...attr});
     }
 }
 
@@ -2223,7 +2224,8 @@ class Title extends Container {
 
 class Grid extends Container {
     constructor(args) {
-        let {xgrid, ygrid, xlim, ylim, gridcolor, ...attr} = args ?? {};
+        let {xgrid, ygrid, xlim, ylim, gridcolor, ...attr0} = args ?? {};
+        let [xgrid_attr, ygrid_attr, attr] = prefix_attr(['xgrid', 'ygrid'], attr0);
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
         gridcolor = gridcolor ?? grid_color_base;
@@ -2232,12 +2234,12 @@ class Grid extends Container {
         let [ymin, ymax] = ylim;
         let grids = [];
 
-        if (xgrid != null) {
-            let xgridlines = new HScale(xgrid, {lim: ylim, stroke: gridcolor});
+        if (xgrid != null && xgrid !== false) {
+            let xgridlines = new HScale(xgrid, {lim: ylim, stroke: gridcolor, ...ygrid_attr});
             grids.push(xgridlines);
         }
-        if (ygrid != null) {
-            let ygridlines = new VScale(ygrid, {lim: xlim, stroke: gridcolor});
+        if (ygrid != null && ygrid !== false) {
+            let ygridlines = new VScale(ygrid, {lim: xlim, stroke: gridcolor, ...xgrid_attr});
             grids.push(ygridlines);
         }
 
@@ -2312,7 +2314,7 @@ function expand_limits(lim, fact) {
 
 class Graph extends Container {
     constructor(lines, args) {
-        let {xlim, ylim, xgrid, ygrid, aspect, padding, ...attr} = args ?? {};
+        let {xlim, ylim, aspect, padding, ...attr} = args ?? {};
         aspect = aspect ?? 'auto';
         padding = padding ?? 0;
 
@@ -2359,13 +2361,18 @@ class Plot extends Container {
             title_size, title_offset, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset,
             padding, margin, prec, aspect, ...attr0
         } = args ?? {};
-        let [xaxis_attr, yaxis_attr, attr] = prefix_attr(['xaxis', 'yaxis'], attr0);
+        let [
+            xaxis_attr, yaxis_attr, xgrid_attr, ygrid_attr, xlabel_attr, ylabel_attr, title_attr, attr
+        ] = prefix_attr(
+            ['xaxis', 'yaxis', 'xgrid', 'ygrid', 'xlabel', 'ylabel', 'title'], attr0
+        );
         let axes_attr = {...prefix_add('xaxis', xaxis_attr), ...prefix_add('yaxis', yaxis_attr)};
+        let grid_attr = {...prefix_add('xgrid', xgrid_attr), ...prefix_add('ygrid', ygrid_attr)};
         title_size = title_size ?? title_size_base;
         title_offset = title_offset ?? title_offset_base;
 
         // create graph from lines
-        let graph = new Graph(lines, {xlim, ylim, xgrid, ygrid, aspect, padding});
+        let graph = new Graph(lines, {xlim, ylim, aspect, padding});
 
         // create axes to match
         let axes = new Axes({
@@ -2384,7 +2391,7 @@ class Plot extends Container {
             ygrid = (ygrid == true) ? ytick_locs : ygrid;
             let grid = new Grid({
                 xgrid, ygrid, grid_color, xlim: graph.xlim,
-                ylim: graph.ylim, aspect: graph.aspect
+                ylim: graph.ylim, aspect: graph.aspect, ...grid_attr
             });
             children.unshift(grid);
         }
@@ -2403,19 +2410,19 @@ class Plot extends Container {
 
         // optional axis labels
         if (xlabel != null) {
-            xlabel = new XLabel(xlabel);
+            xlabel = new XLabel(xlabel, xlabel_attr);
             let xlabel_rect = [0, 1+xlabel_offset, 1, 1+xlabel_offset+xlabel_size];
             children.push([xlabel, xlabel_rect]);
         }
         if (ylabel != null) {
-            ylabel = new YLabel(ylabel);
+            ylabel = new YLabel(ylabel, ylabel_attr);
             let ylabel_rect = [-ylabel_offset-ylabel_size, 0, -ylabel_offset, 1];
             children.push([ylabel, ylabel_rect]);
         }
 
         // optional plot title
         if (title != null) {
-            title = new Title(title);
+            title = new Title(title, title_attr);
             let title_rect = [0, -title_offset-title_size, 1, -title_offset];
             children.push([title, title_rect]);
         }
