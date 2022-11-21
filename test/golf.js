@@ -328,20 +328,21 @@ return f;
 
 // fancy plot
 let xlim = [0, 2*pi], ylim = [-1, 1];
+let func = x => -sin(x);
 let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
-let xt = linspace(0, 2, 6).slice(1).map(x => [x*pi, `${rounder(x, 1)} π`]);
-let f = SymPath({fy: x => -sin(x), xlim});
-let s = SymPoints({
-  fy: x => -sin(x), xlim, N: 21,
-  fr: (x, y) => 0.03+abs(y)/20,
-  fs: (x, y) => Circle({fill: pal((1+y)/2)})
+let xticks = linspace(0, 2, 6).slice(1).map(x => [x*pi, `${rounder(x, 1)} π`]);
+let line = SymPath({fy: func, xlim});
+let points = SymPoints({
+  fy: func, xlim, N: 21, radius: 0.04,
+  fs: (x, y) => Circle({fill: pal((1+y)/2), r: (1+abs(y))/2})
 });
-let p = Plot([f, s], {
+let plot = Plot([line, points], {
   xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
-  xticks: xt, yticks: 5, ygrid: true, xlabel_offset: 0.1,
-  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave' 
+  xticks, yticks: 5, xgrid: true, ygrid: true, xlabel_offset: 0.1,
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave',
+  xgrid_stroke_dasharray: 3, ygrid_stroke_dasharray: 3
 });
-return Frame(p, {margin: 0.25});
+return Frame(plot, {margin: 0.25});
 
 // bezier paths
 let p0 = [0.2, 0.8];

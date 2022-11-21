@@ -1395,7 +1395,9 @@ class Arrowhead extends Polygon {
 
 class Text extends Element {
     constructor(text, args) {
-        let {family, weight, size, rotate, actual, calc_family, calc_weight, vshift, ...attr} = args ?? {};
+        let {
+            family, weight, size, rotate, actual, calc_family, calc_weight, calc_size, vshift, ...attr
+        } = args ?? {};
         size = size ?? font_size_base;
         actual = actual ?? false;
         rotate = (rotate ?? 0) % 360;
@@ -1404,9 +1406,10 @@ class Text extends Element {
         // select calculated fonts
         calc_family = calc_family ?? family ?? font_family_base;
         calc_weight = calc_weight ?? weight ?? font_weight_base;
-        
+        calc_size = calc_size ?? size;
+
         // compute text box
-        let fargs = {calc_family, calc_weight, size, actual};
+        let fargs = {family: calc_family, weight: calc_weight, calc_size: size, actual};
         let [xoff, yoff, width0, height0] = textSizer(text, fargs);
         [xoff, yoff, size] = [xoff/height0, yoff/height0, size/height0];
         let aspect0 = width0/height0;
