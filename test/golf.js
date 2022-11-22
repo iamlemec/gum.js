@@ -339,7 +339,7 @@ let points = SymPoints({
 let plot = Plot([line, points], {
   xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
   xticks, yticks: 5, xgrid: true, ygrid: true, xlabel_offset: 0.1,
-  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave',
+  xlabel: 'phase', ylabel: 'amplitude', title: 'Inverted Sine Wave',
   xgrid_stroke_dasharray: 3, ygrid_stroke_dasharray: 3
 });
 return Frame(plot, {margin: 0.25});

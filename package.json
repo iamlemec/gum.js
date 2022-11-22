@@ -19,7 +19,8 @@
     "@codemirror/language": "^6.3.0",
     "@codemirror/state": "^6.1.2",
     "@codemirror/view": "^6.4.0",
-    "katex": "^0.16.3"
+    "katex": "^0.16.3",
+    "marked": "^4.2.3"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",
