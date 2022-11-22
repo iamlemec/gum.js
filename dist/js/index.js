@@ -1,50 +1,22 @@
-import { EditorView, drawSelection, lineNumbers, keymap } from '../node_modules/@codemirror/view/dist/index.js';
-import { EditorState } from '../node_modules/@codemirror/state/dist/index.js';
-import { history, indentWithTab, defaultKeymap, historyKeymap } from '../node_modules/@codemirror/commands/dist/index.js';
-import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '../node_modules/@codemirror/language/dist/index.js';
-import { javascript } from '../node_modules/@codemirror/lang-javascript/dist/index.js';
-import { xml } from '../node_modules/@codemirror/lang-xml/dist/index.js';
-import { parseGum, InterActive, Animation, Element, SVG } from './gum.js';
-
-// svg presets
-let prec = 2;
-let size = 500;
+import { enableResize, GumEditor } from './editor.js';
 
 // global elements
+let left = document.querySelector('#left');
+let right = document.querySelector('#right');
+let mid = document.querySelector('#mid');
+
 let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
+let inter = document.querySelector('#inter');
+
 let save = document.querySelector('#save');
 let copy = document.querySelector('#copy');
 let spng = document.querySelector('#spng');
 let font = document.querySelector('#font');
-let mid = document.querySelector('#mid');
-let left = document.querySelector('#left');
-let right = document.querySelector('#right');
-document.querySelector('#interActiveControl');
 
-// wrap in SVG if needed
-function renderGum(out) {
-    let anchors = null;
-    let redraw = document.querySelector('#disp');
-    let iac = document.querySelector('#interActiveControl');
-    iac.innerHTML = '';
-
-    if (out instanceof InterActive || out instanceof Animation) {
-        anchors = out.createAnchors(redraw);
-        out = out.create(redraw);
-        iac.append(...anchors);
-    }
-    if (out instanceof Element) {
-        let args = {size: size, prec: prec};
-        out = (out instanceof SVG) ? out : new SVG(out, args);
-        return out.svg();
-    } else {
-        return String(out);
-    }
-}
-
+// wrapper to use async
 function readBlobAsync(blob) {
     return new Promise((resolve, reject) => {
         let reader = new FileReader();
@@ -90,6 +62,7 @@ function parseViewbox(elem) {
     return [width, height];
 }
 
+// embed fonts as data
 function prepareSvg(elem, embed) {
     // get true dims
     let [width, height] = parseViewbox(elem);
@@ -161,61 +134,19 @@ let drawSvg = (elem, embed) => new Promise((resolve, reject) => {
     }
 });
 
-// example code
-let example0 = `
-// fancy plot
-let xlim = [0, 2*pi], ylim = [-1, 1];
-let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
-let xt = linspace(0, 2, 6).slice(1).map(x => [x*pi, \`\${rounder(x, 1)} π\`]);
-let f = SymPath({fy: x => -sin(x), xlim});
-let s = SymPoints({
-  fy: x => -sin(x), xlim, N: 21,
-  fr: (x, y) => 0.03+abs(y)/20,
-  fs: (x, y) => Circle({fill: pal((1+y)/2)})
-});
-let p = Plot([f, s], {
-  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
-  xticks: xt, yticks: 5, ygrid: true, xlabel_offset: 0.1,
-  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave' 
-});
-return Frame(p, {margin: 0.25});
-`.trim();
-
-// initial value
-let urlParams = new URLSearchParams(window.location.search);
-let source = urlParams.get('source');
-let cook = getCookie();
-let example = source ?? cook ?? example0;
-
-// canned error messages
-let err_nodata = 'No data. Does your final line return an element?';
-
-function getText(state) {
-    return state.doc.toString();
+// download tools
+function downloadFile(name, blob) {
+    let url = URL.createObjectURL(blob);
+    let element = document.createElement('a');
+    element.setAttribute('href', url);
+    element.setAttribute('download', `${name}`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
 }
 
-function setConvert(text) {
-    let len = conv_text.state.doc.length;
-    let upd = conv_text.state.update({
-        changes: {from: 0, to: len, insert: text}
-    });
-    conv_text.dispatch(upd);
-}
-
-function setDisplay(svg) {
-    disp.innerHTML = svg;
-}
-
-function setState(good) {
-    if (good == null) {
-        stat.classList = [];
-    } else if (good) {
-        stat.classList = ['good'];
-    } else {
-        stat.classList = ['bad'];
-    }
-}
-
+// cookie tools
 function getCookie() {
     let cookies = document.cookie.split(';').map(x => x.trim().split('='));
     let cgum = cookies.filter(([k, v]) => k == 'gum').shift();
@@ -232,99 +163,8 @@ function setCookie(src) {
     document.cookie = `gum=${vgum}; SameSite=Lax`;
 }
 
-async function updateView(src) {
-    setCookie(src);
-
-    // parse gum into tree
-    let elem;
-    try {
-        elem = await parseGum(src);
-    } catch (err) {
-        setState(false);
-        if (err == 'timeout') {
-            setConvert('function timeout');
-        } else {
-            setConvert(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-        }
-        return;
-    }
-
-    // render gum tree
-    if (elem == null) {
-        setState();
-        setConvert(err_nodata);
-    } else {
-        let svg;
-        try {
-            svg = renderGum(elem);
-        } catch (err) {
-            setState(false);
-            setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-            return;
-        }
-        setState(true);
-        setConvert(svg);
-        setDisplay(svg);
-    }
-}
-
-// init convert
-let conv_text = new EditorView({
-    state: EditorState.create({
-        doc: '',
-        extensions: [
-            xml(),
-            drawSelection(),
-            syntaxHighlighting(defaultHighlightStyle),
-            EditorState.readOnly.of(true),
-            EditorView.editable.of(false),
-        ],
-    }),
-    parent: conv,
-});
-
-// init editor
-let edit_text = new EditorView({
-    state: EditorState.create({
-        doc: example,
-        extensions: [
-            javascript(),
-            history(),
-            drawSelection(),
-            lineNumbers(),
-            bracketMatching(),
-            keymap.of([
-                indentWithTab,
-                ...defaultKeymap,
-                ...historyKeymap,
-            ]),
-            syntaxHighlighting(defaultHighlightStyle),
-            EditorView.updateListener.of(upd => {
-                if (upd.docChanged) {
-                    let text = getText(upd.state);
-                    updateView(text);
-                }
-            }),
-        ],
-    }),
-    parent: code,
-});
-
-// download tools
-function downloadFile(name, blob) {
-    let url = URL.createObjectURL(blob);
-    let element = document.createElement('a');
-    element.setAttribute('href', url);
-    element.setAttribute('download', `${name}`);
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-}
-
 // connect handlers
 save.addEventListener('click', evt => {
-    // let text = conv_text.state.doc.toString();
     let elem0 = disp.querySelector('svg');
     let elem = prepareSvg(elem0, embed_font);
     let text = new XMLSerializer().serializeToString(elem);
@@ -352,22 +192,37 @@ spng.addEventListener('click', evt => {
     }); 
 });
 
-// trigger input
-let text = getText(edit_text.state);
-updateView(text);
-
 // resize panels
-function resizePane(e) {
-    let vw = window.innerWidth;
-    let x = e.clientX;
-    left.style.width = `${x-2}px`;
-    right.style.width = `${vw-x-2}px`;
-}
+enableResize(left, right, mid);
 
-mid.addEventListener('mousedown', evt => {
-    document.addEventListener('mousemove', resizePane, false);
-}, false);
+// example code
+let example0 = `
+// fancy plot
+let xlim = [0, 2*pi], ylim = [-1, 1];
+let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
+let xt = linspace(0, 2, 6).slice(1).map(x => [x*pi, \`\${rounder(x, 1)} π\`]);
+let f = SymPath({fy: x => -sin(x), xlim});
+let s = SymPoints({
+  fy: x => -sin(x), xlim, N: 21,
+  fr: (x, y) => 0.03+abs(y)/20,
+  fs: (x, y) => Circle({fill: pal((1+y)/2)})
+});
+let p = Plot([f, s], {
+  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
+  xticks: xt, yticks: 5, ygrid: true, xlabel_offset: 0.1,
+  xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave' 
+});
+return Frame(p, {margin: 0.25});
+`.trim();
 
-document.addEventListener('mouseup', evt => {
-    document.removeEventListener('mousemove', resizePane, false);
-}, false);
+// initial value
+let urlParams = new URLSearchParams(window.location.search);
+let source = urlParams.get('source');
+let cook = getCookie();
+let example = source ?? cook ?? example0;
+
+// make the actual editor
+let gum_editor = new GumEditor(code, conv, disp, stat, inter, setCookie);
+
+// set initial code input
+gum_editor.setCode(example);

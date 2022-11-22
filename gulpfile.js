@@ -12,8 +12,10 @@ gulp.task('js-core', () => {
     return rollup({
         cache: cache.esm,
         input: [
+            'js/gum.js',
+            'js/editor.js',
             'js/index.js',
-            'js/gum.js'
+            'js/docs.js'
         ],
         plugins: [
             resolve(),
@@ -32,7 +34,7 @@ gulp.task('js-core', () => {
 gulp.task('js', gulp.parallel('js-core'));
 
 // css core
-gulp.task('css-core', () => gulp.src(['./css/index.css'])
+gulp.task('css-core', () => gulp.src(['./css/editor.css', './css/index.css', './css/docs.css'])
     .pipe(gulp.dest('./dist/css'))
 );
 
@@ -94,9 +96,9 @@ gulp.task('dev', () => {
         livereload: true
     });
 
-    gulp.watch(['index.html'], gulp.series('reload'));
+    gulp.watch(['index.html', 'docs.html'], gulp.series('reload'));
     gulp.watch(['js/*.js'], gulp.series('js', 'reload'));
-    gulp.watch(['css/index.css'], gulp.series('css', 'reload'));
+    gulp.watch(['css/*.css'], gulp.series('css', 'reload'));
     gulp.watch(['css/fonts/*'], gulp.series('fonts', 'reload'));
     gulp.watch(['css/*.svg'], gulp.series('assets', 'reload'));
 });

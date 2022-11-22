@@ -1,0 +1,63 @@
+@import './editor.css';
+
+body {
+    margin: 0;
+}
+
+#main {
+    position: fixed;
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+#left, #right {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+#list {
+    width: 10%;
+    border-right: 1px solid #CCC;
+}
+
+#left {
+    justify-content: space-between;
+    width: 40%;
+}
+
+#right {
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+}
+
+#code, #disp {
+    width: 100%;
+}
+
+#code {
+    height: 40%;
+    background-color: white;
+}
+
+#disp {
+    height: 60%;
+    border-top: 1px solid #CCC;
+    box-sizing: border-box;
+    background-color: #EEE;
+}
+
+#disp svg {
+    max-height: 90%;
+}
+
+#disp.error {
+    background-color: white;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    align-items: start;
+    padding: 5px;
+}
