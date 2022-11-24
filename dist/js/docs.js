@@ -44,11 +44,12 @@ let gum_editor = new GumEditor(code, conv, disp, stat);
 let meta = await getData('docs/meta.json', true);
 
 // populate list
-let items = meta.entries.map(name => {
+let items = meta.entries.map(name0 => {
+    let [name, text] = Array.isArray(name0) ? name0 : [name0, name0];
     let item = document.createElement('div');
     item.setAttribute('name', name);
     item.classList.add('item');
-    item.innerText = name;
+    item.innerText = text;
     return item;
 });
 items.forEach(item => {

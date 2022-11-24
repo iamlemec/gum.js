@@ -103,6 +103,10 @@ class GumEditor {
         setText(this.edit_text, src);
     }
 
+    getConvert() {
+        return getText(this.conv_text.state);
+    }
+
     setConvert(text) {
         if (this.conv_text != null) {
             setText(this.conv_text, text);

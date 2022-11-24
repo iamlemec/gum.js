@@ -67,6 +67,7 @@ body {
 #list {
     display: flex;
     flex-direction: column;
+    background-color: #EEE;
 }
 
 #list .item {
@@ -77,12 +78,12 @@ body {
 
 #list .item {
     cursor: default;
-    border-left: 4px solid white;
+    border-left: 4px solid #EEE;
 }
 
 #list .item:hover {
-    background-color: #EEE;
-    border-left: 4px solid #EEE;
+    background-color: #DDD;
+    border-left: 4px solid #DDD;
 }
 
 #list .item.active {
@@ -101,6 +102,30 @@ body {
     font-family: 'IBMPlexSans';
 }
 
+#left .inherit {
+    color: #777;
+}
+
+#left .inherit::before {
+    content: 'Inherits: ';
+}
+
+#left a {
+    text-decoration: none;
+}
+
+#left a,
+#left a:visited {
+    color: #1e88e5;
+}
+
 #left h1 {
     margin-top: 0px;
+    border-bottom: 2px solid black;
+}
+
+#left code {
+    background-color: #EEE;
+    padding: 2px;
+    border-radius: 4px;
 }

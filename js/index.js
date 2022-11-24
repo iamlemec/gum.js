@@ -13,6 +13,7 @@ let inter = document.querySelector('#inter');
 
 let save = document.querySelector('#save');
 let copy = document.querySelector('#copy');
+let docs = document.querySelector('#docs');
 let spng = document.querySelector('#spng');
 let font = document.querySelector('#font');
 
@@ -173,7 +174,7 @@ save.addEventListener('click', evt => {
 });
 
 copy.addEventListener('click', evt => {
-    let text = conv_text.state.doc.toString();
+    let text = gum_editor.getConvert();
     navigator.clipboard.writeText(text);
 });
 
@@ -182,6 +183,10 @@ font.addEventListener('click', evt => {
     embed_font = !embed_font;
     font.classList.toggle('fill');
 });
+
+docs.addEventListener('click', evt => {
+    window.open('docs.html', '_blank');
+})
 
 spng.addEventListener('click', evt => {
     let elem = disp.querySelector('svg');

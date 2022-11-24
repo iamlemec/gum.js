@@ -30,6 +30,7 @@ body {
 }
 
 #code, #conv {
+    position: relative;
     height: 50%;
 }
 
