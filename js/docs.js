@@ -43,6 +43,16 @@ function activateItem(item) {
     loadEntry(name);
 }
 
+function parseEntry(name0, type) {
+    let [name, text] = Array.isArray(name0) ? name0 : [name0, name0];
+    let item = document.createElement('div');
+    item.setAttribute('name', name);
+    item.classList.add('item');
+    item.classList.add(type);
+    item.innerText = text;
+    return item;
+}
+
 // resize panels
 enableResize(left, right, mid);
 
@@ -52,15 +62,14 @@ let gum_editor = new GumEditor(code, conv, disp, stat);
 // get docs data
 let meta = await getData('docs/meta.json', true);
 
+// parse meta data
+let items = [].concat(...Object.entries(meta).map(([t, es]) => {
+    let es1 = es.map(e => parseEntry(e, t));
+    es1[es1.length-1].classList.add('last');
+    return es1;
+}));
+
 // populate list
-let items = meta.entries.map(name0 => {
-    let [name, text] = Array.isArray(name0) ? name0 : [name0, name0];
-    let item = document.createElement('div');
-    item.setAttribute('name', name);
-    item.classList.add('item');
-    item.innerText = text;
-    return item;
-});
 items.forEach(item => {
     item.addEventListener('click', evt => {
         let name = item.getAttribute('name');
@@ -68,7 +77,6 @@ items.forEach(item => {
     });
     list.append(item);
 });
-let item0 = items[0];
 
 // find particular entires
 function findItem(name) {

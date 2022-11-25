@@ -1,6 +1,8 @@
 {
-    "entries": [
-        ["gum", "gum.js"],
+    "main": [
+        ["gum", "gum.js"]
+    ],
+    "class": [
         "Element",
         "Rect",
         "Circle",

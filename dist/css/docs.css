@@ -98,6 +98,10 @@ body {
     border-left: 4px solid #1e88e5;
 }
 
+#list .item.last {
+    border-bottom: 1px dashed #BBB;
+}
+
 #list .item:first-child {
 }
 
