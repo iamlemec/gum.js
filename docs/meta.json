@@ -1,7 +1,10 @@
 {
     "entries": [
         ["gum", "gum.js"],
+        "Element",
         "Rect",
-        "Circle"
+        "Circle",
+        "Axis",
+        "Plot"
     ]
 }

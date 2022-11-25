@@ -23,16 +23,24 @@ async function getData(url, json=false) {
             return resp.text();
         }
     } else {
-        return `Error (${resp.status}): ${resp.statusText}`;
+        return null;
     }
 }
 
+let code_empty = '// no example code found';
 async function loadEntry(name) {
     let name1 = name.toLowerCase();
     let text = await getData(`docs/text/${name1}.md`);
     left.innerHTML = marked(text);
-    let code = await getData(`docs/code/${name1}.js`);
+    let code = await getData(`docs/code/${name1}.js`) ?? code_empty;
     gum_editor.setCode(code);
+}
+
+function activateItem(item) {
+    let name = item.getAttribute('name');
+    items.forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    loadEntry(name);
 }
 
 // resize panels
@@ -56,12 +64,45 @@ let items = meta.entries.map(name0 => {
 items.forEach(item => {
     item.addEventListener('click', evt => {
         let name = item.getAttribute('name');
-        items.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        loadEntry(name);
+        window.location.hash = `#${name}`;
     });
     list.append(item);
 });
+let item0 = items[0];
+
+// find particular entires
+function findItem(name) {
+    let [isel, ..._] = items.filter(item => item.getAttribute('name') == name);
+    return isel;
+}
+
+// activate item by name
+function activateName(name) {
+    if (name.length > 0) {
+        let item = findItem(name);
+        if (item != null) {
+            activateItem(item);
+            return true;
+        }
+    }
+    return false;
+}
+
+// detect hash changes
+window.addEventListener('hashchange', evt => {
+    let url = new URL(evt.newURL);
+    let targ = url.hash.slice(1);
+    if (targ.length == 0) {
+        window.location.hash = '#gum';
+    } else {
+        if (!activateName(targ)) {
+            window.location = evt.oldURL;
+        }
+    }
+});
 
 // go to docs home
-items[0].click();
+let targ = window.location.hash.slice(1);
+if (targ.length == 0 || !activateName(targ)) {
+    window.location.hash = '#gum';
+}

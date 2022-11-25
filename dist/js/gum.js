@@ -2268,21 +2268,21 @@ function expand_limits(lim, fact) {
 }
 
 class Graph extends Container {
-    constructor(lines, args) {
+    constructor(elems, args) {
         let {xlim, ylim, aspect, padding, ...attr} = args ?? {};
         aspect = aspect ?? 'auto';
         padding = padding ?? 0;
 
         // handle singleton line
-        if (lines instanceof Element) {
-            lines = [lines];
+        if (elems instanceof Element) {
+            elems = [elems];
         }
 
         // collect line ranges
-        let [xmins, xmaxs] = zip(...lines
+        let [xmins, xmaxs] = zip(...elems
             .filter(c => 'xlim' in c).map(c => c.xlim)
         );
-        let [ymins, ymaxs] = zip(...lines
+        let [ymins, ymaxs] = zip(...elems
             .filter(c => 'ylim' in c).map(c => c.ylim)
         );
 
@@ -2302,14 +2302,14 @@ class Graph extends Container {
         // pass to container
         let scale = [xmin, ymax, xmax, ymin];
         let attr1 = {aspect, scale, ...attr};
-        super(lines, attr1);
+        super(elems, attr1);
         this.xlim = xlim;
         this.ylim = ylim;
     }
 }
 
 class Plot extends Container {
-    constructor(lines, args) {
+    constructor(elems, args) {
         let {
             xlim, ylim, xticks, yticks, xanchor, yanchor, xgrid, ygrid, grid_color,
             xlabel, ylabel, title, tick_size, label_size, label_offset, tick_label_size,
@@ -2326,8 +2326,8 @@ class Plot extends Container {
         title_size = title_size ?? title_size_base;
         title_offset = title_offset ?? title_offset_base;
 
-        // create graph from lines
-        let graph = new Graph(lines, {xlim, ylim, aspect, padding});
+        // create graph from elements
+        let graph = new Graph(elems, {xlim, ylim, aspect, padding});
 
         // create axes to match
         let axes = new Axes({
@@ -2780,7 +2780,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, VScale, HScale, VTicks, HTicks, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2882,4 +2882,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, round, rounder, sin, sqrt, zip };
