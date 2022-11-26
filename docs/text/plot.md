@@ -8,8 +8,8 @@ Positional arguments:
 - `elems`: either a single `Element` or a list of `Element`s to graph 
 
 Keyword arguments:
-- `xlim`/`ylim`: the range over which to graph
-- `xticks`/`yticks`: either an integer for evenly spaced ticks, a list of tick locations, or list of tick [location, label] pairs (see [Axis](#Axis) for more details)
+- `xlim`/`ylim` = `[0, 1]` — the range over which to graph
+- `xticks`/`yticks` = `5` — either an integer for evenly spaced ticks, a list of tick locations, or list of tick [location, label] pairs (see [Axis](#Axis) for more details)
 
 Subunit names:
 - `xaxis`/`yaxis` — the axes, including lines, ticks, and tick labels

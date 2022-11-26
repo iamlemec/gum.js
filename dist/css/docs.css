@@ -26,7 +26,15 @@ body {
 }
 
 #left {
-    width: 40%;
+    width: 45%;
+    overflow-y: scroll;
+    scrollbar-width: none;
+}
+
+#left::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 #right {
@@ -34,7 +42,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 50%;
+    width: 45%;
 }
 
 #code, #disp {

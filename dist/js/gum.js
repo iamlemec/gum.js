@@ -2019,7 +2019,7 @@ function get_ticklim(lim) {
 
 class Axis extends Container {
     constructor(direc, ticks, args) {
-        let {label_size, label_inner, label_align, tick_lim, lim, prec, ...attr0} = args ?? {};
+        let {label_size, label_inner, label_align, tick_lim, lim, ...attr0} = args ?? {};
         let [label_attr, tick_attr, line_attr, attr] = prefix_attr(['label', 'tick', 'line'], attr0);
         label_size = label_size ?? tick_label_size_base;
         lim = lim ?? limit_base;

@@ -2,10 +2,15 @@
     "main": [
         ["gum", "gum.js"]
     ],
-    "class": [
+    "core": [
         "Element",
+        "Container"
+    ],
+    "simple": [
         "Rect",
-        "Circle",
+        "Circle"
+    ],
+    "complex": [
         "Axis",
         "Plot"
     ]
