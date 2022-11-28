@@ -37,7 +37,6 @@ let label_size_base = 0.06;
 let label_offset_base = 0.15;
 let title_size_base = 0.1;
 let title_offset_base = 0.1;
-let grid_color_base = '#CCC';
 let limit_base = [0, 1];
 let N_base = 100;
 
@@ -2179,27 +2178,26 @@ class Title extends Container {
 
 class Grid extends Container {
     constructor(args) {
-        let {xgrid, ygrid, xlim, ylim, gridcolor, ...attr0} = args ?? {};
+        let {xgrid, ygrid, xlim, ylim, ...attr0} = args ?? {};
         let [xgrid_attr, ygrid_attr, attr] = prefix_attr(['xgrid', 'ygrid'], attr0);
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
-        gridcolor = gridcolor ?? grid_color_base;
 
         let [xmin, xmax] = xlim;
         let [ymin, ymax] = ylim;
         let grids = [];
 
         if (xgrid != null && xgrid !== false) {
-            let xgridlines = new HScale(xgrid, {lim: ylim, stroke: gridcolor, ...ygrid_attr});
+            let xgridlines = new HScale(xgrid, {lim: ylim, ...ygrid_attr});
             grids.push(xgridlines);
         }
         if (ygrid != null && ygrid !== false) {
-            let ygridlines = new VScale(ygrid, {lim: xlim, stroke: gridcolor, ...xgrid_attr});
+            let ygridlines = new VScale(ygrid, {lim: xlim, ...xgrid_attr});
             grids.push(ygridlines);
         }
 
         let scale = [xmin, ymax, xmax, ymin];
-        let attr1 = {scale: scale, ...attr};
+        let attr1 = {scale, ...attr};
         super(grids, attr1);
         this.xlim = xlim;
         this.ylim = ylim;

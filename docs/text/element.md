@@ -14,5 +14,5 @@ Keyword arguments:
 
 Methods:
 - `props(ctx)` — returns a dictionary of attributes for the SVG element. The default implementation returns the non-null `args` passed to the constructor
-- `inner(ctx)` — returns the inner text of the SVG element (for non-unary). Defaults to returing empty string.
-- `svg(ctx)` — returns the rendered SVG of the element as a `String`. Default implementation constructs SVG from `tag`, `unary`, `props`, and `inner`.
+- `inner(ctx)` — returns the inner text of the SVG element (for non-unary). Defaults to returing empty string
+- `svg(ctx)` — returns the rendered SVG of the element as a `String`. Default implementation constructs SVG from `tag`, `unary`, `props`, and `inner`
