@@ -360,7 +360,7 @@ function aspect_invariant(value, aspect, alpha) {
  ** attributes
  **/
 
-function prefix_attr(pres, attr) {
+function prefix_split(pres, attr) {
     let attr1 = {...attr};
     let pres1 = pres.map(p => `${p}_`);
     let out = pres.map(p => Object());
@@ -708,7 +708,7 @@ class Group extends Container {
 class Frame extends Container {
     constructor(child, args) {
         let {padding, margin, border, aspect, adjust, flex, shape, ...attr0} = args ?? {};
-        let [border_attr, attr] = prefix_attr(['border'], attr0);
+        let [border_attr, attr] = prefix_split(['border'], attr0);
         border = border ?? 0;
         padding = padding ?? 0;
         margin = margin ?? 0;
@@ -1490,7 +1490,7 @@ class Tex extends Element {
 class Node extends Frame {
     constructor(text, args) {
         let {padding, border, aspect, spacing, align, ...attr0} = args ?? {};
-        let [text_attr, attr] = prefix_attr(['text'], attr0);
+        let [text_attr, attr] = prefix_split(['text'], attr0);
         padding = padding ?? 0.1;
         spacing = spacing ?? 0.02;
         border = border ?? 1;
@@ -1575,7 +1575,7 @@ let arrow_dir = {'n': 90, 's': -90, 'e': 180, 'w': 0};
 class Edge extends Container {
     constructor(pd1, pd2, args) {
         let {curve, arrow, debug, ...attr0} = args ?? {};
-        let [arrow_attr, attr] = prefix_attr(['arrow'], attr0);
+        let [arrow_attr, attr] = prefix_split(['arrow'], attr0);
         curve = curve ?? 0.3;
         arrow = arrow ?? 0;
         debug = debug ?? false;
@@ -1655,7 +1655,7 @@ class Edge extends Container {
 class Network extends Container {
     constructor(nodes, edges, args) {
         let {radius, arrow, debug, ...attr0} = args ?? {};
-        let [node_attr, edge_attr, arrow_attr, attr] = prefix_attr(['node', 'edge', 'arrow'], attr0);
+        let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
         edge_attr = {arrow, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
         radius = radius ?? 0.1;
 
@@ -2019,7 +2019,7 @@ function get_ticklim(lim) {
 class Axis extends Container {
     constructor(direc, ticks, args) {
         let {label_size, label_inner, label_align, tick_lim, lim, ...attr0} = args ?? {};
-        let [label_attr, tick_attr, line_attr, attr] = prefix_attr(['label', 'tick', 'line'], attr0);
+        let [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
         label_size = label_size ?? tick_label_size_base;
         lim = lim ?? limit_base;
         tick_lim = get_ticklim(tick_lim);
@@ -2088,7 +2088,7 @@ class Axes extends Container {
             xaxis_tick_size, yaxis_tick_size, xaxis_label_size, yaxis_label_size,
             aspect, prec, ...attr0
         } = args ?? {};
-        let [xaxis_attr, yaxis_attr, attr] = prefix_attr(['xaxis', 'yaxis'], attr0);
+        let [xaxis_attr, yaxis_attr, attr] = prefix_split(['xaxis', 'yaxis'], attr0);
         xticks = xticks ?? num_ticks_base;
         yticks = yticks ?? num_ticks_base;
         xlim = xlim ?? limit_base;
@@ -2179,7 +2179,7 @@ class Title extends Container {
 class Grid extends Container {
     constructor(args) {
         let {xgrid, ygrid, xlim, ylim, ...attr0} = args ?? {};
-        let [xgrid_attr, ygrid_attr, attr] = prefix_attr(['xgrid', 'ygrid'], attr0);
+        let [xgrid_attr, ygrid_attr, attr] = prefix_split(['xgrid', 'ygrid'], attr0);
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
 
@@ -2314,15 +2314,20 @@ class Plot extends Container {
             title_size, title_offset, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset,
             padding, margin, prec, aspect, ...attr0
         } = args ?? {};
-        let [
-            xaxis_attr, yaxis_attr, xgrid_attr, ygrid_attr, xlabel_attr, ylabel_attr, title_attr, attr
-        ] = prefix_attr(
-            ['xaxis', 'yaxis', 'xgrid', 'ygrid', 'xlabel', 'ylabel', 'title'], attr0
-        );
-        let axes_attr = {...prefix_add('xaxis', xaxis_attr), ...prefix_add('yaxis', yaxis_attr)};
-        let grid_attr = {...prefix_add('xgrid', xgrid_attr), ...prefix_add('ygrid', ygrid_attr)};
         title_size = title_size ?? title_size_base;
         title_offset = title_offset ?? title_offset_base;
+
+        // some advanced piping
+        let [
+            xaxis_attr, yaxis_attr, axis_attr, xgrid_attr, ygrid_attr, grid_attr, xlabel_attr, ylabel_attr, label_attr, title_attr, attr
+        ] = prefix_split(
+            ['xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label', 'title'], attr0
+        );
+        [xaxis_attr, yaxis_attr] = [{...axis_attr, ...xaxis_attr}, {...axis_attr, ...yaxis_attr}];
+        [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
+        [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
+        axis_attr = {...prefix_add('xaxis', xaxis_attr), ...prefix_add('yaxis', yaxis_attr)};
+        grid_attr = {...prefix_add('xgrid', xgrid_attr), ...prefix_add('ygrid', ygrid_attr)};
 
         // create graph from elements
         let graph = new Graph(elems, {xlim, ylim, aspect, padding});
@@ -2330,7 +2335,7 @@ class Plot extends Container {
         // create axes to match
         let axes = new Axes({
             xticks, yticks, xanchor, yanchor, tick_size, label_size: tick_label_size,
-            xlim: graph.xlim, ylim: graph.ylim, aspect: graph.aspect, prec, ...axes_attr
+            xlim: graph.xlim, ylim: graph.ylim, aspect: graph.aspect, prec, ...axis_attr
         });
 
         // create base layout
