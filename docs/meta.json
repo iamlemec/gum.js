@@ -4,7 +4,8 @@
     ],
     "core": [
         "Element",
-        "Container"
+        "Container",
+        "Frame"
     ],
     "simple": [
         "Rect",
