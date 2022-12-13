@@ -1,8 +1,9 @@
-// simple frame for text a la Node
+// fancy frame for text a la Node
 let text = Text('hello!', {
     family: 'IBMPlexSans', weight: 100
 });
 let frame = Frame(text, {
-    padding: 0.1, border: 1, margin: 0.1, border_stroke_dasharray: 5
+    padding: 0.1, border: 1, margin: 0.1,
+    border_stroke_dasharray: 5, border_radius: 0.05
 });
 return frame;
