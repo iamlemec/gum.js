@@ -145,6 +145,6 @@ body {
 #left code {
     color: var(--neon-blue);
     background-color: #EEE;
-    padding: 2px;
+    padding: 0 2px;
     border-radius: 4px;
 }

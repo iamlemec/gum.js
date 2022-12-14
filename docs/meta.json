@@ -6,7 +6,8 @@
         "Element",
         "Container",
         "Frame",
-        "Stack"
+        "Stack",
+        "Scatter"
     ],
     "simple": [
         "Rect",

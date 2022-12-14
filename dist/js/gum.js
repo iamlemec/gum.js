@@ -15,21 +15,13 @@ let rect_base = [0, 0, size_base, size_base];
 let frac_base = [0, 0, 1, 1];
 let prec_base = 13;
 
-// styling
-let svg_props_base = {
-    stroke: 'black',
-    fill: 'none'
-};
-
 // fonts
-let font_family_base = 'sans-serif';
-let font_weight_base = 'normal';
+let font_family_base = 'IBMPlexSans';
+let font_weight_base = 100;
 let font_size_base = 12;
 let font_size_latex = 14;
 
 // plot defaults
-let plot_font_base = 'IBMPlexSans';
-let plot_weight_base = 100;
 let num_ticks_base = 5;
 let tick_size_base = 0.03;
 let tick_label_size_base = 1.5;
@@ -39,6 +31,14 @@ let title_size_base = 0.1;
 let title_offset_base = 0.1;
 let limit_base = [0, 1];
 let N_base = 100;
+
+// default styling
+let svg_props_base = {
+    stroke: 'black',
+    fill: 'none',
+    font_family: font_family_base,
+    font_weight: font_weight_base,
+};
 
 // text sizer
 let textSizer = null;
@@ -888,8 +888,8 @@ class HStack extends Stack {
     }
 }
 
- // non-unary | variable-aspect | graphable
- class Place extends Container {
+// non-unary | variable-aspect | graphable
+class Place extends Container {
     constructor(child, pos, rad, args) {
         let {...attr} = args ?? {};
 
@@ -1918,17 +1918,11 @@ class VBars extends Bars {
  **/
 
 function make_ticklabel(s, prec) {
-    let t = rounder(s, prec);
-    return new Text(t, {
-        calc_family: plot_font_base, calc_weight: 100, vshift: -0.15
-    });
+    return new Text(rounder(s, prec), {vshift: -0.15});
 }
 
 function make_axislabel(s, attr) {
-    attr = attr ?? {};
-    return new Text(s, {
-        calc_family: plot_font_base, calc_weight: 100, ...attr
-    });
+    return new Text(s, attr);
 }
 
 function ensure_tick(t, prec) {
@@ -1972,12 +1966,10 @@ class HScale extends Scale {
 // the tick classes extend well outside their bounds (so don't clip)
 class Ticks extends Container {
     constructor(direc, ticks, args) {
-        let {size, lim, align, font_family, font_weight, ...attr} = args ?? {};
+        let {size, lim, align, ...attr} = args ?? {};
         size = size ?? tick_label_size_base;
         lim = lim ?? limit_base;
         align = align ?? 0.5;
-        font_family = plot_font_base;
-        font_weight = plot_weight_base;
         direc = get_orient(direc);
         ticks = ticks.map(ensure_tick);
 
@@ -1989,8 +1981,7 @@ class Ticks extends Container {
             [t-(1-align)*tsize*x.aspect, 0, t+align*tsize*x.aspect, 1];
         let children = ticks.map(([t, x]) => [x, locator(t, x)]);
 
-        let attr1 = {clip: false, font_family, font_weight, ...attr};
-        super(children, {clip: false, ...attr1});
+        super(children, {clip: false, ...attr});
     }
 }
 
@@ -2157,44 +2148,42 @@ class Axes extends Container {
 class XLabel extends Container {
     constructor(text, attr) {
         let label = is_element(text) ? text : make_axislabel(text);
-        let attr1 = {font_family: plot_font_base, font_weight: 100, ...attr};
-        super(label, attr1);
+        super(label, attr);
     }
 }
 
 class YLabel extends Container {
     constructor(text, attr) {
         let label = is_element(text) ? text : make_axislabel(text, {rotate: -90});
-        let attr1 = {font_family: plot_font_base, font_weight: 100, ...attr};
-        super(label, attr1);
+        super(label, attr);
     }
 }
 
 class Title extends Container {
     constructor(text, attr) {
         let label = is_element(text) ? text : make_axislabel(text);
-        let attr1 = {font_family: plot_font_base, font_weight: 100, ...attr};
-        super(label, attr1);
+        super(label, attr);
     }
 }
 
 class Grid extends Container {
     constructor(args) {
-        let {xgrid, ygrid, xlim, ylim, ...attr0} = args ?? {};
+        let {xgrid, ygrid, xlim, ylim, opacity, ...attr0} = args ?? {};
         let [xgrid_attr, ygrid_attr, attr] = prefix_split(['xgrid', 'ygrid'], attr0);
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
+        opacity = opacity ?? 0.3;
 
         let [xmin, xmax] = xlim;
         let [ymin, ymax] = ylim;
         let grids = [];
 
         if (xgrid != null && xgrid !== false) {
-            let xgridlines = new HScale(xgrid, {lim: ylim, ...ygrid_attr});
+            let xgridlines = new HScale(xgrid, {lim: ylim, opacity, ...ygrid_attr});
             grids.push(xgridlines);
         }
         if (ygrid != null && ygrid !== false) {
-            let ygridlines = new VScale(ygrid, {lim: xlim, ...xgrid_attr});
+            let ygridlines = new VScale(ygrid, {lim: xlim, opacity, ...xgrid_attr});
             grids.push(ygridlines);
         }
 
@@ -2219,11 +2208,8 @@ function make_legendbadge(c) {
     return new HLine(attr1);
 }
 
-function make_legendlabel(s, attr) {
-    attr = attr ?? {};
-    return new Text(s, {
-        calc_family: plot_font_base, font_weight: 100, vshift: -0.12, ...attr
-    });
+function make_legendlabel(s) {
+    return new Text(s, {vshift: -0.12});
 }
 
 class Legend extends Place {
@@ -2240,8 +2226,7 @@ class Legend extends Place {
         let ls = new VStack(labels, {expand: false, align: 'left', spacing: vspacing});
         let vs = new HStack([bs, ls], {spacing: hspacing});
 
-        let attr1 = {font_family: plot_font_base, ...attr};
-        let fr = new Frame(vs, attr1);
+        let fr = new Frame(vs, attr);
 
         super(fr, pos, size);
     }
@@ -2250,13 +2235,10 @@ class Legend extends Place {
 class Note extends Place {
     constructor(text, pos, size, args) {
         let {font_family, font_weight, latex, ...attr} = args ?? {};
-        font_family = font_family ?? plot_font_base;
-        font_weight = font_weight ?? 100;
         latex = latex ?? false;
 
-        let attr1 = {font_family, font_weight, ...attr};
         let Maker = latex ? Tex : Text;
-        let label = new Maker(text, attr1);
+        let label = new Maker(text, attr);
         super(label, pos, size);
     }
 }

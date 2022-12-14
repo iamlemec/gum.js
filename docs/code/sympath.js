@@ -5,5 +5,6 @@ let spiral = SymPath({
     tlim: [0, 100], N: 1000
 });
 let frame = Frame(spiral, {
-    padding: 0.05, border: 1, margin: 0.05});
+    padding: 0.05, border: 1, margin: 0.05
+});
 return frame;
