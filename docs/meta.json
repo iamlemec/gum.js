@@ -16,6 +16,7 @@
     ],
     "complex": [
         "Axis",
-        "Plot"
+        "Plot",
+        "Node"
     ]
 }

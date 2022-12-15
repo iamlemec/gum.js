@@ -652,6 +652,7 @@ class Container extends Element {
         // for when this has a scale
         let inside = children
             .map(([c, r]) => c.svg(ctx.map(r, c.aspect, this.scale)))
+            .filter(s => s.length > 0)
             .join('\n');
         return `\n${inside}\n`;
     }
@@ -1489,7 +1490,7 @@ class Tex extends Element {
 
 class Node extends Frame {
     constructor(text, args) {
-        let {padding, border, aspect, spacing, align, ...attr0} = args ?? {};
+        let {padding, border, spacing, align, ...attr0} = args ?? {};
         let [text_attr, attr] = prefix_split(['text'], attr0);
         padding = padding ?? 0.1;
         spacing = spacing ?? 0.02;
@@ -1507,7 +1508,7 @@ class Node extends Frame {
         }
 
         // pass to container
-        let attr1 = {padding, border, aspect, ...attr};
+        let attr1 = {padding, border, ...attr};
         super(child, attr1);
     }
 }
