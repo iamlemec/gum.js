@@ -2173,7 +2173,7 @@ class Grid extends Container {
         let [xgrid_attr, ygrid_attr, attr] = prefix_split(['xgrid', 'ygrid'], attr0);
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
-        opacity = opacity ?? 0.3;
+        opacity = opacity ?? 0.2;
 
         let [xmin, xmax] = xlim;
         let [ymin, ymax] = ylim;
