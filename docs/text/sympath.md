@@ -1,6 +1,6 @@
 # SymPath
 
-<span class="inherit">Polyline > Pointstring > Element</span>
+<span class="inherit">Polyline > Pointstring > [Element](#Element)</span>
 
 Flexible interface to generate two-dimensional paths symbolically or in combination with fixed inputs. There are variety of acceptable input combinations, but the most common usage is to specify the range to use for x-values with `xlim` and a function to plot with `fy`.
 

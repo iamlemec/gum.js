@@ -1,6 +1,6 @@
 # Scatter
 
-<span class="inherit">Container > Element</span>
+<span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
 Place copies of a common shape at various points. The radius can be specified by the `radius` keyword and overridden for particular children.
 

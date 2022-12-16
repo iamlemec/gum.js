@@ -6,6 +6,13 @@ return Frame(HStack(gum), {
   border: 1, margin: 0.15, border_stroke: 'blue', border_stroke_dasharray: [10, 6]
 });
 
+// gum favicon
+let make_node = t => Node(t, {aspect: 1, fill: '#EEE'});
+let [g, u, m] = 'GUM'.split('').map(make_node);
+let s = VStack([g, HStack([u, m])], {expand: false});
+let f = Frame(s, {margin: 0.02});
+return SVG(f, {size: 100});
+
 // save icon
 let [mid, rad] = [0.25, 0.06];
 let [apt, asz] = [0.17, 0.25];

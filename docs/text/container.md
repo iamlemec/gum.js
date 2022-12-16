@@ -1,6 +1,6 @@
 # Container
 
-<span class="inherit">Element</span>
+<span class="inherit">[Element](#Element)</span>
 
 This is the `Element` class by which components are grouped together. It accepts a list of `Element`s and their positions and attempts to place them accordingly, taking `Context` information an input and passing re-scoped `Context` information to sub-`Element`s. The position of an element is specified by a rectangle, which is is a length 4 list of the form `[x1, y1, x2, y2]`.
 

@@ -1,6 +1,6 @@
 # Frame
 
-<span class="inherit">Container > Element</span>
+<span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
 This is a simple container class allowing you to add padding, margins, and a border to a single `Element`. Mirroring the standard CSS definitions, padding is space inside the border and margin is space outside the border.
 

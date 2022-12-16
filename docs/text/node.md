@@ -1,6 +1,6 @@
 # Node
 
-<span class="inherit">Frame > Container > Element</span>
+<span class="inherit">[Frame](#Frame) > [Container](#Container) > [Element](#Element)</span>
 
 This is a simple container class descending from [Frame](#Frame) that is designed to enclose text in a border. It is called `Node` as it performs that function in the [Network](#Network) class, but can also be used independently. The standard usage is to pass a string that will automatically be converted into a `Text` object. One can also pass a list of strings, which will be used to create a `VStack` of `Text` objects. Finally, one can simply pass a generic `Element`.
 

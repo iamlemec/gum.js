@@ -1,6 +1,6 @@
 # Stack
 
-<span class="inherit">Container > Element</span>
+<span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
 Stack one or more `Element`s either verticall or horizontally. There are specialized classes `VStack` and `HStack` that don't take the `direc` argument. Members of `children` that are just `Element`s will be distributed space based on what is available.
 

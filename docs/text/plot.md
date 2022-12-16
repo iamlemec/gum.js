@@ -1,6 +1,6 @@
 # Plot
 
-<span class="inherit">Container > Element</span>
+<span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
 This will graph one or more elements over the desired limits and frame them with axes. If not specified by `xlim` and `ylim`, the limits of the plot will be computed from the bounding box of the constituent elements. By default, it's `aspect` will be the ratio of the range of the `xlim` and `ylim`.
 
