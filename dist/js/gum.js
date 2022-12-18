@@ -497,26 +497,17 @@ class Context {
     }
 
     coord_to_frac(coord) {
-        if (this.coord == null) {
-            return coord;
-        }
+        if (this.coord == null) { return coord; }
         let [cx1, cy1, cx2, cy2] = this.coord;
         let [cw, ch] = [cx2 - cx1, cy2 - cy1];
-        let [cix, ciy] = [cx2 < cx1, cy2 < cy1];
-        let frac = coord.map(([cx, cy]) => [
-            cix ? (cx1-cx)/abs(cw) : (cx-cx1)/cw,
-            ciy ? (cy1-cy)/abs(ch) : (cy-cy1)/ch
-        ]);
+        let frac = coord.map(([cx, cy]) => [(cx-cx1)/cw, (cy-cy1)/ch]);
         return frac;
     }
 
     frac_to_pixel(frac) {
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        let pixel = frac.map(([fx, fy]) => [
-            px1 + fx*pw,
-            py1 + fy*ph
-        ]);
+        let pixel = frac.map(([fx, fy]) => [px1 + fx*pw, py1 + fy*ph]);
         return pixel;
     }
 
@@ -531,14 +522,9 @@ class Context {
     coord_to_pixel_size(size) {
         let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
         let [cw, ch] = [cx2 - cx1, cy2 - cy1];
-
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-
-        let pixel = size.map(([sw, sh]) => [
-            sw*abs(pw)/abs(cw),
-            sh*abs(ph)/abs(ch)
-        ]);
+        let pixel = size.map(([sw, sh]) => [sw*abs(pw)/abs(cw), sh*abs(ph)/abs(ch)]);
         return pixel;
     }
 
