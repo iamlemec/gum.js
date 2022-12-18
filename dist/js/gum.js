@@ -12,7 +12,7 @@ let ns_svg = 'http://www.w3.org/2000/svg';
 // sizing
 let size_base = 500;
 let rect_base = [0, 0, size_base, size_base];
-let frac_base = [0, 0, 1, 1];
+let coord_base = [0, 0, 1, 1];
 let prec_base = 13;
 
 // fonts
@@ -263,7 +263,7 @@ let phi = new NamedNumber('phi', (1+sqrt(5))/2);
 // convenience mapper for rectangle positions
 function pos_rect(r) {
     if (r == null) {
-        return frac_base;
+        return coord_base;
     } else if (is_scalar(r)) {
         return [0, 0, r, r];
     } else if (r.length == 2) {
@@ -276,7 +276,7 @@ function pos_rect(r) {
 
 function pad_rect(p) {
     if (p == null) {
-        return frac_base;
+        return coord_base;
     } else if (is_scalar(p)) {
         return [p, p, p, p];
     } else if (p.length == 2) {
@@ -489,52 +489,44 @@ function interpolateVectorsPallet(c1, c2, n) {
  **/
 
 class Context {
-    constructor(rect, args) {
-        let {frac, prec} = args ?? {};
-        frac = frac ?? frac_base;
-        prec = prec ?? prec_base;
-        this.rect = rect;
-        this.frac = frac;
+    constructor(prect, args) {
+        let {coord, prec} = args ?? {};
+        this.prect = prect;
+        this.coord = coord;
         this.prec = prec;
     }
 
-    coord_to_frac(pos) {
-        let [fx1, fy1, fx2, fy2] = this.frac;
+    coord_to_frac(coord) {
+        if (this.coord == null) {
+            return coord;
+        }
+        let [fx1, fy1, fx2, fy2] = this.coord;
         let [fw, fh] = [fx2 - fx1, fy2 - fy1];
         let [fix, fiy] = [fx2 < fx1, fy2 < fy1];
-        return pos.map(([zx, zy]) => [
+        return coord.map(([zx, zy]) => [
             fix ? (fx1-zx)/abs(fw) : (zx-fx1)/fw,
             fiy ? (fy1-zy)/abs(fh) : (zy-fy1)/fh
         ]);
     }
 
-    rect_to_frac(rec) {
-        let [x1, y1, x2, y2] = zip(...rec);
-        let rec0 = zip(x1, y1);
-        let rec1 = zip(x2, y2);
-        rec0 = this.coord_to_frac(rec0);
-        rec1 = this.coord_to_frac(rec1);
-        return zip(rec0, rec1).map(([r0, r1]) => [...r0, ...r1]);
-    }
-
-    frac_to_pixel(pos) {
-        let [px1, py1, px2, py2] = this.rect;
+    frac_to_pixel(frac) {
+        let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        return pos.map(([zx, zy]) => [px1 + zx*pw, py1 + zy*ph]);
+        return frac.map(([zx, zy]) => [px1 + zx*pw, py1 + zy*ph]);
     }
 
     // map using both domain (frac) and range (rect)
-    coord_to_pixel(pos) {
-        pos = this.coord_to_frac(pos);
-        pos = this.frac_to_pixel(pos);
-        return pos;
+    coord_to_pixel(coord) {
+        let frac = this.coord_to_frac(coord);
+        let pixel = this.frac_to_pixel(frac);
+        return pixel;
     }
 
-    size_to_pixel(siz) {
-        let [fx1, fy1, fx2, fy2] = this.frac;
-        let [px1, py1, px2, py2] = this.rect;
-
+    coord_to_pixel_size(siz) {
+        let [fx1, fy1, fx2, fy2] = this.coord ?? coord_base;
         let [fw, fh] = [fx2 - fx1, fy2 - fy1];
+
+        let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
 
         return siz.map(([zw, zh]) => [
@@ -543,21 +535,22 @@ class Context {
         ]);
     }
 
-    // project fractional coordinates
-    // prect — outer rect (absolute)
-    // frect — inner rect (fraction)
-    map(frect, aspect, scale) {
-        let [pxa, pya, pxb, pyb] = this.rect;
-        let [fxa, fya, fxb, fyb] = frect;
+    coord_to_pixel_rect(coord) {
+        let [x1, y1, x2, y2] = zip(...coord);
+        let [c0, c1] = [zip(x1, y1), zip(x2, y2)];
+        let p0 = this.coord_to_pixel(c0);
+        let p1 = this.coord_to_pixel(c1);
+        return zip(p0, p1).map(([r0, r1]) => [...r0, ...r1]);
+    }
 
-        let [pw, ph] = [pxb - pxa, pyb - pya];
-        let [fw, fh] = [fxb - fxa, fyb - fya];
-
-        let [pxa1, pya1] = [pxa + fxa*pw, pya + fya*ph];
-        let [pxb1, pyb1] = [pxa + fxb*pw, pya + fyb*ph];
+    // project coordinates
+    // c = coordinate, f = fractional, p = pixel
+    // TODO: rotation option?
+    map(crect, aspect, scale) {
+        let [[pxa1, pya1, pxb1, pyb1]] = this.coord_to_pixel_rect([crect]);
 
         if (aspect != null) {
-            let [pw1, ph1] = [fw*pw, fh*ph];
+            let [pw1, ph1] = [pxb1 - pxa1, pyb1 - pya1];
             let asp1 = pw1/ph1;
 
             if (asp1 == aspect) ; else if (asp1 > aspect) { // too wide
@@ -573,8 +566,8 @@ class Context {
             }
         }
 
-        let rect1 = [pxa1, pya1, pxb1, pyb1];
-        return new Context(rect1, {frac: scale, prec: this.prec});
+        let prect = [pxa1, pya1, pxb1, pyb1];
+        return new Context(prect, {coord: scale, prec: this.prec});
     }
 }
 
@@ -640,10 +633,10 @@ class Container extends Element {
 
         // inherit aspect of clipped contents
         if (aspect == null && clip) {
-            let ctx = new Context(frac_base);
+            let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, c.aspect).rect);
+                .map(([c, r]) => ctx.map(r, c.aspect).prect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -660,23 +653,18 @@ class Container extends Element {
     }
 
     inner(ctx) {
+        // empty container
         if (this.children.length == 0) {
             return '\n';
         }
 
-        // for when the parent has a scale (ctx.frac)
-        let children = this.children;
-        if (ctx.frac != null) {
-            let [childs, rects0] = zip(...children);
-            let rects1 = ctx.rect_to_frac(rects0);
-            children = zip(childs, rects1);
-        }
-
-        // for when this has a scale
-        let inside = children
+        // map to new contexts and render
+        let inside = this.children
             .map(([c, r]) => c.svg(ctx.map(r, c.aspect, this.scale)))
             .filter(s => s.length > 0)
             .join('\n');
+
+        // return padded
         return `\n${inside}\n`;
     }
 }
@@ -1073,7 +1061,7 @@ class Ellipse extends Element {
 
     props(ctx) {
         let [[cx, cy]] = ctx.coord_to_pixel([this.c]);
-        let [[rx, ry]] = ctx.size_to_pixel([this.r]);
+        let [[rx, ry]] = ctx.coord_to_pixel_size([this.r]);
         let base = {cx, cy, rx, ry};
         return {...base, ...this.attr};
     }
@@ -1359,7 +1347,7 @@ class Arrowhead extends Polygon {
 
     // this is hacky! shifts by stroke-width so there's no overlap on target
     props(ctx) {
-        let size = rect_dims(ctx.rect).map(x => 0.5*this.stroke/x);
+        let size = rect_dims(ctx.prect).map(x => 0.5*this.stroke/x);
         let poff = radial_move(this.points0[0], this.rotate, size);
         this.points = [poff, ...this.points0.slice(1)];
         return super.props(ctx);
@@ -1412,7 +1400,7 @@ class Text extends Element {
     }
 
     props(ctx) {
-        let [x1, y1, x2, y2] = ctx.rect;
+        let [x1, y1, x2, y2] = ctx.prect;
         let [w, h] = [x2 - x1, y2 - y1];
 
         // get unrotated height
@@ -1480,7 +1468,7 @@ class Tex extends Element {
     }
 
     props(ctx) {
-        let [x1, y1, x2, y2] = ctx.rect;
+        let [x1, y1, x2, y2] = ctx.prect;
         let [w, h] = [x2 - x1, y2 - y1];
 
         let w0 = this.wfact*w;
