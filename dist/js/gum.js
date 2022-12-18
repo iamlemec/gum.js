@@ -496,25 +496,14 @@ class Context {
         this.prec = prec;
     }
 
-    coord_to_frac(coord) {
-        if (this.coord == null) { return coord; }
-        let [cx1, cy1, cx2, cy2] = this.coord;
-        let [cw, ch] = [cx2 - cx1, cy2 - cy1];
-        let frac = coord.map(([cx, cy]) => [(cx-cx1)/cw, (cy-cy1)/ch]);
-        return frac;
-    }
-
-    frac_to_pixel(frac) {
-        let [px1, py1, px2, py2] = this.prect;
-        let [pw, ph] = [px2 - px1, py2 - py1];
-        let pixel = frac.map(([fx, fy]) => [px1 + fx*pw, py1 + fy*ph]);
-        return pixel;
-    }
-
     // map using both domain (frac) and range (rect)
     coord_to_pixel(coord) {
-        let frac = this.coord_to_frac(coord);
-        let pixel = this.frac_to_pixel(frac);
+        let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
+        let [cw, ch] = [cx2 - cx1, cy2 - cy1];
+        let [px1, py1, px2, py2] = this.prect;
+        let [pw, ph] = [px2 - px1, py2 - py1];
+        let frac = coord.map(([cx, cy]) => [(cx-cx1)/cw, (cy-cy1)/ch]);
+        let pixel = frac.map(([fx, fy]) => [px1 + fx*pw, py1 + fy*ph]);
         return pixel;
     }
 
