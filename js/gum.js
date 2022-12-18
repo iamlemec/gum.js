@@ -521,12 +521,12 @@ class Context {
         if (this.coord == null) {
             return coord;
         }
-        let [fx1, fy1, fx2, fy2] = this.coord;
-        let [fw, fh] = [fx2 - fx1, fy2 - fy1];
-        let [fix, fiy] = [fx2 < fx1, fy2 < fy1];
-        let frac = coord.map(([zx, zy]) => [
-            fix ? (fx1-zx)/abs(fw) : (zx-fx1)/fw,
-            fiy ? (fy1-zy)/abs(fh) : (zy-fy1)/fh
+        let [cx1, cy1, cx2, cy2] = this.coord;
+        let [cw, ch] = [cx2 - cx1, cy2 - cy1];
+        let [cix, ciy] = [cx2 < cx1, cy2 < cy1];
+        let frac = coord.map(([cx, cy]) => [
+            cix ? (cx1-cx)/abs(cw) : (cx-cx1)/cw,
+            ciy ? (cy1-cy)/abs(ch) : (cy-cy1)/ch
         ]);
         return frac;
     }
@@ -534,7 +534,10 @@ class Context {
     frac_to_pixel(frac) {
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        let pixel = frac.map(([zx, zy]) => [px1 + zx*pw, py1 + zy*ph]);
+        let pixel = frac.map(([fx, fy]) => [
+            px1 + fx*pw,
+            py1 + fy*ph
+        ]);
         return pixel;
     }
 
@@ -547,15 +550,15 @@ class Context {
 
     // used for sizes such as radii or vectors
     coord_to_pixel_size(size) {
-        let [fx1, fy1, fx2, fy2] = this.coord ?? coord_base;
-        let [fw, fh] = [fx2 - fx1, fy2 - fy1];
+        let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
+        let [cw, ch] = [cx2 - cx1, cy2 - cy1];
 
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
 
-        let pixel = size.map(([zw, zh]) => [
-            zw*abs(pw)/abs(fw),
-            zh*abs(ph)/abs(fh)
+        let pixel = size.map(([sw, sh]) => [
+            sw*abs(pw)/abs(cw),
+            sh*abs(ph)/abs(ch)
         ]);
         return pixel;
     }
@@ -571,7 +574,6 @@ class Context {
     }
 
     // project coordinates
-    // c = coordinate, f = fractional, p = pixel
     // TODO: rotation option?
     map(coord, aspect, scale) {
         let [[px1, py1, px2, py2]] = this.coord_to_pixel_rect([coord]);
