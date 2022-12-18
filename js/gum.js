@@ -519,39 +519,41 @@ class Context {
 
     // map using both domain (frac) and range (rect)
     coord_to_pixel(coord) {
+        let [cx, cy] = coord;
         let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
         let [cw, ch] = [cx2 - cx1, cy2 - cy1];
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        let frac = coord.map(([cx, cy]) => [(cx-cx1)/cw, (cy-cy1)/ch]);
-        let pixel = frac.map(([fx, fy]) => [px1 + fx*pw, py1 + fy*ph]);
-        return pixel;
+        let [fx, fy] = [(cx-cx1)/cw, (cy-cy1)/ch];
+        let [px, py] = [px1 + fx*pw, py1 + fy*ph];
+        return [px, py];
     }
 
     // used for sizes such as radii or vectors
     coord_to_pixel_size(size) {
+        let [sw, sh] = size;
         let [cx1, cy1, cx2, cy2] = this.coord ?? coord_base;
         let [cw, ch] = [cx2 - cx1, cy2 - cy1];
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        let pixel = size.map(([sw, sh]) => [sw*abs(pw)/abs(cw), sh*abs(ph)/abs(ch)]);
-        return pixel;
+        let [px, py] = [sw*abs(pw)/abs(cw), sh*abs(ph)/abs(ch)];
+        return [px, py];
     }
 
     // used for whole rectangles
-    coord_to_pixel_rect(coord) {
-        let [x1, y1, x2, y2] = zip(...coord);
-        let [c1, c2] = [zip(x1, y1), zip(x2, y2)];
+    coord_to_pixel_rect(crect) {
+        let [x1, y1, x2, y2] = crect;
+        let [c1, c2] = [[x1, y1], [x2, y2]];
         let p1 = this.coord_to_pixel(c1);
         let p2 = this.coord_to_pixel(c2);
-        let pixel = zip(p1, p2).map(([r1, r2]) => [...r1, ...r2]);
-        return pixel;
+        let prect = [...p1, ...p2];
+        return prect;
     }
 
     // project coordinates
     // TODO: rotation option?
     map(coord, aspect, scale) {
-        let [[px1, py1, px2, py2]] = this.coord_to_pixel_rect([coord]);
+        let [px1, py1, px2, py2] = this.coord_to_pixel_rect(coord);
 
         if (aspect != null) {
             let [pw, ph] = [px2 - px1, py2 - py1];
@@ -965,7 +967,8 @@ class Line extends Element {
     }
 
     props(ctx) {
-        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([this.p1, this.p2]);
+        let [x1, y1] = ctx.coord_to_pixel(this.p1);
+        let [x2, y2] = ctx.coord_to_pixel(this.p2);
         return {x1, y1, x2, y2, ...this.attr};
     }
 }
@@ -1010,7 +1013,8 @@ class Rect extends Element {
     }
 
     props(ctx) {
-        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([this.p1, this.p2]);
+        let [x1, y1] = ctx.coord_to_pixel(this.p1);
+        let [x2, y2] = ctx.coord_to_pixel(this.p2);
 
         // orient increasing
         let [x, y] = [x1, y1];
@@ -1065,8 +1069,8 @@ class Ellipse extends Element {
     }
 
     props(ctx) {
-        let [[cx, cy]] = ctx.coord_to_pixel([this.c]);
-        let [[rx, ry]] = ctx.coord_to_pixel_size([this.r]);
+        let [cx, cy] = ctx.coord_to_pixel(this.c);
+        let [rx, ry] = ctx.coord_to_pixel_size(this.r);
         let base = {cx, cy, rx, ry};
         return {...base, ...this.attr};
     }
@@ -1131,7 +1135,8 @@ class Ray extends Element {
         } else {
             [p1, p2] = [[0, 1], [1, 0]];
         }
-        let [[x1, y1], [x2, y2]] = ctx.coord_to_pixel([p1, p2]);
+        let [x1, y1] = ctx.coord_to_pixel(this.p1);
+        let [x2, y2] = ctx.coord_to_pixel(this.p2);
         let base = {x1, y1, x2, y2};
         return {...base, ...this.attr};
     }
@@ -1154,7 +1159,7 @@ class Pointstring extends Element {
     }
 
     props(ctx) {
-        let points = ctx.coord_to_pixel(this.points);
+        let points = this.points.map(p => ctx.coord_to_pixel(p));
         let str = points.map(
             ([x, y]) => `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`
         ).join(' ');
@@ -1176,7 +1181,7 @@ class Polygon extends Pointstring {
 
 function arg(s, d, ctx) {
     if (s == 'xy') {
-        let [[x, y]] = ctx.coord_to_pixel([d]);
+        let [x, y] = ctx.coord_to_pixel(d);
         return `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`;
     } else {
         return `${d}`;

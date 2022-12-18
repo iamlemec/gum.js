@@ -5,7 +5,7 @@ class Triangle extends Element.class {
     this.coords = [p0, p1, p2];
   }
   props(ctx) {
-    let pixels = ctx.coord_to_pixel(this.coords);
+    let pixels = this.coords.map(c => ctx.coord_to_pixel(c));
     let points = pixels.map(([x, y]) => `${x},${y}`).join(' ');
     return {points, ...this.attr};
   }
