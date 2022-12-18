@@ -510,15 +510,17 @@ function interpolateVectorsPallet(c1, c2, n) {
  **/
 
 class Context {
-    constructor(args) {
-        let {rect, frac, prec} = args ?? {};
-        this.rect = rect ?? rect_base;
+    constructor(rect, args) {
+        let {frac, prec} = args ?? {};
+        frac = frac ?? frac_base;
+        prec = prec ?? prec_base;
+        this.rect = rect;
         this.frac = frac;
         this.prec = prec;
     }
 
     coord_to_frac(pos) {
-        let [fx1, fy1, fx2, fy2] = this.frac ?? frac_base;
+        let [fx1, fy1, fx2, fy2] = this.frac;
         let [fw, fh] = [fx2 - fx1, fy2 - fy1];
         let [fix, fiy] = [fx2 < fx1, fy2 < fy1];
         return pos.map(([zx, zy]) => [
@@ -539,11 +541,7 @@ class Context {
     frac_to_pixel(pos) {
         let [px1, py1, px2, py2] = this.rect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        let [pix, piy] = [px2 < px1, py2 < py1];
-        return pos.map(([zx, zy]) => [
-            px1 + zx*pw,
-            py1 + zy*ph
-        ]);
+        return pos.map(([zx, zy]) => [px1 + zx*pw, py1 + zy*ph]);
     }
 
     // map using both domain (frac) and range (rect)
@@ -554,7 +552,7 @@ class Context {
     }
 
     size_to_pixel(siz) {
-        let [fx1, fy1, fx2, fy2] = this.frac ?? frac_base;
+        let [fx1, fy1, fx2, fy2] = this.frac;
         let [px1, py1, px2, py2] = this.rect;
 
         let [fw, fh] = [fx2 - fx1, fy2 - fy1];
@@ -598,7 +596,7 @@ class Context {
         }
 
         let rect1 = [pxa1, pya1, pxb1, pyb1];
-        return new Context({rect: rect1, frac: scale, prec: this.prec});
+        return new Context(rect1, {frac: scale, prec: this.prec});
     }
 }
 
@@ -622,7 +620,7 @@ class Element {
     }
 
     svg(ctx) {
-        ctx = ctx ?? new Context();
+        ctx = ctx ?? new Context(rect_base);
 
         let pvals = this.props(ctx);
         let props = props_repr(pvals, ctx.prec);
@@ -664,7 +662,7 @@ class Container extends Element {
 
         // inherit aspect of clipped contents
         if (aspect == null && clip) {
-            let ctx = new Context({rect: frac_base});
+            let ctx = new Context(frac_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
                 .map(([c, r]) => ctx.map(r, c.aspect).rect);
@@ -736,9 +734,9 @@ class SVG extends Container {
         return {...base, ...this.attr};
     }
 
-    svg(args) {
+    svg() {
         let rect = [0, 0, ...this.size];
-        let ctx = new Context({rect: rect, prec: this.prec});
+        let ctx = new Context(rect ,{prec: this.prec});
         return super.svg(ctx);
     }
 }
@@ -2817,7 +2815,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, black_dot, range, linspace, enumerate, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, black_dot, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2835,9 +2833,11 @@ let gums = Gum.map(g => g.name);
 let mako = Gum.map(g => {
     let t = detect(g);
     if (t == 'class') {
-        return function(...args) {
+        let func = function(...args) {
             return new g(...args);
         };
+        func.class = g;
+        return func;
     } else if (t == 'function') {
         return function(...args) {
             return g(...args);
@@ -2924,5 +2924,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, black_dot, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, hex2rgb, rgb2hex, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, black_dot, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, injectImage, injectImages, injectScripts
 };
