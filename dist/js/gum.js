@@ -503,16 +503,18 @@ class Context {
         let [fx1, fy1, fx2, fy2] = this.coord;
         let [fw, fh] = [fx2 - fx1, fy2 - fy1];
         let [fix, fiy] = [fx2 < fx1, fy2 < fy1];
-        return coord.map(([zx, zy]) => [
+        let frac = coord.map(([zx, zy]) => [
             fix ? (fx1-zx)/abs(fw) : (zx-fx1)/fw,
             fiy ? (fy1-zy)/abs(fh) : (zy-fy1)/fh
         ]);
+        return frac;
     }
 
     frac_to_pixel(frac) {
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
-        return frac.map(([zx, zy]) => [px1 + zx*pw, py1 + zy*ph]);
+        let pixel = frac.map(([zx, zy]) => [px1 + zx*pw, py1 + zy*ph]);
+        return pixel;
     }
 
     // map using both domain (frac) and range (rect)
@@ -522,52 +524,56 @@ class Context {
         return pixel;
     }
 
-    coord_to_pixel_size(siz) {
+    // used for sizes such as radii or vectors
+    coord_to_pixel_size(size) {
         let [fx1, fy1, fx2, fy2] = this.coord ?? coord_base;
         let [fw, fh] = [fx2 - fx1, fy2 - fy1];
 
         let [px1, py1, px2, py2] = this.prect;
         let [pw, ph] = [px2 - px1, py2 - py1];
 
-        return siz.map(([zw, zh]) => [
+        let pixel = size.map(([zw, zh]) => [
             zw*abs(pw)/abs(fw),
             zh*abs(ph)/abs(fh)
         ]);
+        return pixel;
     }
 
+    // used for whole rectangles
     coord_to_pixel_rect(coord) {
         let [x1, y1, x2, y2] = zip(...coord);
-        let [c0, c1] = [zip(x1, y1), zip(x2, y2)];
-        let p0 = this.coord_to_pixel(c0);
+        let [c1, c2] = [zip(x1, y1), zip(x2, y2)];
         let p1 = this.coord_to_pixel(c1);
-        return zip(p0, p1).map(([r0, r1]) => [...r0, ...r1]);
+        let p2 = this.coord_to_pixel(c2);
+        let pixel = zip(p1, p2).map(([r1, r2]) => [...r1, ...r2]);
+        return pixel;
     }
 
     // project coordinates
     // c = coordinate, f = fractional, p = pixel
     // TODO: rotation option?
-    map(crect, aspect, scale) {
-        let [[pxa1, pya1, pxb1, pyb1]] = this.coord_to_pixel_rect([crect]);
+    map(coord, aspect, scale) {
+        let [[px1, py1, px2, py2]] = this.coord_to_pixel_rect([coord]);
 
         if (aspect != null) {
-            let [pw1, ph1] = [pxb1 - pxa1, pyb1 - pya1];
-            let asp1 = pw1/ph1;
+            let [pw, ph] = [px2 - px1, py2 - py1];
+            let asp = pw/ph;
 
-            if (asp1 == aspect) ; else if (asp1 > aspect) { // too wide
-                let pw2 = aspect*ph1;
-                let dpw = pw1 - pw2;
-                pxa1 += 0.5*dpw;
-                pxb1 -= 0.5*dpw;
-            } else if (asp1 < aspect) { // too tall
-                let ph2 = pw1/aspect;
-                let dph = ph2 - ph1;
-                pya1 -= 0.5*dph;
-                pyb1 += 0.5*dph;
+            if (asp == aspect) ; else if (asp > aspect) { // too wide
+                let pw1 = aspect*ph;
+                let dpw = pw - pw1;
+                px1 += 0.5*dpw;
+                px2 -= 0.5*dpw;
+            } else if (asp < aspect) { // too tall
+                let ph1 = pw/aspect;
+                let dph = ph1 - ph;
+                py1 -= 0.5*dph;
+                py2 += 0.5*dph;
             }
         }
 
-        let prect = [pxa1, pya1, pxb1, pyb1];
-        return new Context(prect, {coord: scale, prec: this.prec});
+        let pixel = [px1, py1, px2, py2];
+        return new Context(pixel, {coord: scale, prec: this.prec});
     }
 }
 
