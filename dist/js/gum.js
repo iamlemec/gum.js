@@ -531,9 +531,11 @@ class Context {
 
     // project coordinates
     // TODO: rotation option?
-    map(coord, aspect, scale) {
-        let [px1, py1, px2, py2] = this.coord_to_pixel_rect(coord);
+    map(rect, args) {
+        let {aspect, coord} = args ?? {};
+        let [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
 
+        // shink down if aspect mismatch
         if (aspect != null) {
             let [pw, ph] = [px2 - px1, py2 - py1];
             let asp = pw/ph;
@@ -552,7 +554,7 @@ class Context {
         }
 
         let pixel = [px1, py1, px2, py2];
-        return new Context(pixel, {coord: scale, prec: this.prec});
+        return new Context(pixel, {coord, prec: this.prec});
     }
 }
 
@@ -593,7 +595,7 @@ class Element {
 // non-unary | variable-aspect | graphable
 class Container extends Element {
     constructor(children, args) {
-        let {tag, aspect, scale, clip, ...attr} = args ?? {};
+        let {tag, aspect, coord, clip, ...attr} = args ?? {};
         tag = tag ?? 'g';
         clip = clip ?? true;
 
@@ -621,7 +623,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, c.aspect).prect);
+                .map(([c, r]) => ctx.map(r, {aspect: c.aspect}).prect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -632,7 +634,7 @@ class Container extends Element {
         let attr1 = {aspect: aspect, ...attr};
         super(tag, false, attr1);
         this.children = children;
-        this.scale = scale;
+        this.coord = coord;
         this.xlim = xlim;
         this.ylim = ylim;
     }
@@ -645,7 +647,9 @@ class Container extends Element {
 
         // map to new contexts and render
         let inside = this.children
-            .map(([c, r]) => c.svg(ctx.map(r, c.aspect, this.scale)))
+            .map(([c, r]) => c.svg(
+                ctx.map(r, {aspect: c.aspect, coord: this.coord}))
+            )
             .filter(s => s.length > 0)
             .join('\n');
 
@@ -1029,7 +1033,7 @@ class Square extends Rect {
     }
 }
 
-// unary | null-aspect | graphable
+// unary | aspect | graphable
 class Ellipse extends Element {
     constructor(args) {
         let {c, r, ...attr} = args ?? {};
@@ -2028,20 +2032,20 @@ class Axis extends Container {
         });
 
         // position children
-        let lbox, tscale;
+        let lbox, tcoord;
         if (direc == 'v') {
             let lbase = label_inner ? 1 : -1;
             lbox = [lbase, 0, lbase + 1, 1];
-            tscale = [0, hi, 1, lo];
+            tcoord = [0, hi, 1, lo];
         } else {
             let lbase = label_inner ? -label_size : 1;
             lbox = [0, lbase, 1, lbase + label_size];
-            tscale = [lo, 0, hi, 1];
+            tcoord = [lo, 0, hi, 1];
         }
 
         // pass to container
         let children = [cline, scale, [label, lbox]];
-        super(children, {scale: tscale, ...attr});
+        super(children, {coord: tcoord, ...attr});
     }
 }
 
@@ -2112,7 +2116,7 @@ class Axes extends Container {
         // collect children
         let children = [];
 
-        // make xaxis scale
+        // make the xaxis
         if (xticks != null) {
             let xaxis = new HAxis(xticks, {lim: xlim, label_size: xaxis_label_size, ...xaxis_attr});
             children.push([
@@ -2120,7 +2124,7 @@ class Axes extends Container {
             ]);
         }
 
-        // make yaxis scale
+        // make the yaxis
         if (yticks != null) {
             let yaxis = new VAxis(yticks, {lim: ylim, label_size: yaxis_label_size, ...yaxis_attr});
             children.push([
@@ -2178,8 +2182,8 @@ class Grid extends Container {
             grids.push(ygridlines);
         }
 
-        let scale = [xmin, ymax, xmax, ymin];
-        let attr1 = {scale, ...attr};
+        let coord = [xmin, ymax, xmax, ymin];
+        let attr1 = {coord, ...attr};
         super(grids, attr1);
         this.xlim = xlim;
         this.ylim = ylim;
@@ -2273,8 +2277,8 @@ class Graph extends Container {
         }
 
         // pass to container
-        let scale = [xmin, ymax, xmax, ymin];
-        let attr1 = {aspect, scale, ...attr};
+        let coord = [xmin, ymax, xmax, ymin];
+        let attr1 = {aspect, coord, ...attr};
         super(elems, attr1);
         this.xlim = xlim;
         this.ylim = ylim;
