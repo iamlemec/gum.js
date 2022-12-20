@@ -490,9 +490,10 @@ function interpolateVectorsPallet(c1, c2, n) {
 
 class Context {
     constructor(prect, args) {
-        let {coord, prec} = args ?? {};
+        let {coord, rotate, prec} = args ?? {};
         this.prect = prect;
         this.coord = coord;
+        this.rotate = rotate;
         this.prec = prec;
     }
 
@@ -529,10 +530,20 @@ class Context {
         return prect;
     }
 
+    // just rotation right now
+    transform() {
+        if (this.rotate != null) {
+            let [deg, [cx, cy]] = this.rotate;
+            [cx, cy] = [rounder(cx, this.prec), rounder(cy, this.prec)];
+            return `rotate(${deg} ${cx} ${cy})`;
+        } else {
+            return null;
+        }
+    }
+
     // project coordinates
-    // TODO: rotation option?
     map(rect, args) {
-        let {aspect, coord} = args ?? {};
+        let {aspect, rotate, coord} = args ?? {};
         let [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
 
         // shink down if aspect mismatch
@@ -553,8 +564,14 @@ class Context {
             }
         }
 
+        // handle optional rotation
+        if (rotate != null) {
+            let center = [0.5*(px1+px2), 0.5*(py1+py2)];
+            rotate = [rotate, center];
+        }
+
         let pixel = [px1, py1, px2, py2];
-        return new Context(pixel, {coord, prec: this.prec});
+        return new Context(pixel, {coord, rotate, prec: this.prec});
     }
 }
 
@@ -580,7 +597,8 @@ class Element {
     svg(ctx) {
         ctx = ctx ?? new Context(rect_base);
 
-        let pvals = this.props(ctx);
+        let trans = ctx.transform();
+        let pvals = {transform: trans, ...this.props(ctx)};
         let props = props_repr(pvals, ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
 
@@ -589,6 +607,25 @@ class Element {
         } else {
             return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`;
         }
+    }
+}
+
+// information about rectangular bounds
+function parse_bounds(bnd) {
+    if (bnd == null) {
+        return {rect: coord_base};
+    } else if (bnd.length == 2) {
+        let [rect, rotate] = bnd;
+        rect = rect ?? coord_base;
+        return {rect, rotate};
+    } else if (bnd.length == 4) {
+        return {rect: bnd};
+    } else if (is_object(bnd)) {
+        let {rect, rotate} = bnd;
+        rect = rect ?? coord_base;
+        return {rect, rotate};
+    } else {
+        throw Error(`Unrecognized bounds info: ${bnd}`)
     }
 }
 
@@ -607,12 +644,12 @@ class Container extends Element {
         // handle default positioning
         children = children
             .map(c => c instanceof Element ? [c, null] : c)
-            .map(([c, r]) => [c, pos_rect(r)]);
+            .map(([c, r]) => [c, parse_bounds(r)]);
 
         // get data limits
         let xlim, ylim;
         if (children.length > 0) {
-            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r));
+            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r.rect));
             let [xall, yall] = [[...xmins, ...xmaxs], [...ymins, ...ymaxs]];
             xlim = [min(...xall), max(...xall)];
             ylim = [min(...yall), max(...yall)];
@@ -623,7 +660,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, {aspect: c.aspect}).prect);
+                .map(([c, r]) => ctx.map(r.rect, {aspect: c.aspect, rotate: r.rotate}).prect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -648,7 +685,7 @@ class Container extends Element {
         // map to new contexts and render
         let inside = this.children
             .map(([c, r]) => c.svg(
-                ctx.map(r, {aspect: c.aspect, coord: this.coord}))
+                ctx.map(r.rect, {aspect: c.aspect, coord: this.coord, rotate: r.rotate}))
             )
             .filter(s => s.length > 0)
             .join('\n');
@@ -1033,7 +1070,7 @@ class Square extends Rect {
     }
 }
 
-// unary | aspect | graphable
+// unary | null-aspect | graphable
 class Ellipse extends Element {
     constructor(args) {
         let {c, r, ...attr} = args ?? {};
