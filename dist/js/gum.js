@@ -530,17 +530,6 @@ class Context {
         return prect;
     }
 
-    // just rotation right now
-    transform() {
-        if (this.rotate != null) {
-            let [deg, [cx, cy]] = this.rotate;
-            [cx, cy] = [rounder(cx, this.prec), rounder(cy, this.prec)];
-            return `rotate(${deg} ${cx} ${cy})`;
-        } else {
-            return null;
-        }
-    }
-
     // project coordinates
     map(rect, args) {
         let {aspect, rotate, coord} = args ?? {};
@@ -577,10 +566,11 @@ class Context {
 
 class Element {
     constructor(tag, unary, args) {
-        let {aspect, ...attr} = args ?? {};
+        let {aspect, rotate, ...attr} = args ?? {};
         this.tag = tag;
         this.unary = unary;
         this.aspect = aspect ?? null;
+        this.rotate = rotate ?? null;
         this.attr = Object.fromEntries(
             Object.entries(attr).filter(([k, v]) => v != null)
         );
@@ -590,6 +580,18 @@ class Element {
         return this.attr;
     }
 
+    // just rotation right now
+    transform(ctx) {
+        if (this.rotate != null) {
+            let [px1, py1, px2, py2] = ctx.prect;
+            let cent = [0.5*(px1+px2), 0.5*(py1+py2)];
+            let [sx, sy] = cent.map(z => rounder(z, this.prec));
+            return `rotate(${this.rotate} ${sx} ${sy})`;
+        } else {
+            return null;
+        }
+    }
+
     inner(ctx) {
         return '';
     }
@@ -597,7 +599,7 @@ class Element {
     svg(ctx) {
         ctx = ctx ?? new Context(rect_base);
 
-        let trans = ctx.transform();
+        let trans = this.transform(ctx);
         let pvals = {transform: trans, ...this.props(ctx)};
         let props = props_repr(pvals, ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
@@ -607,25 +609,6 @@ class Element {
         } else {
             return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`;
         }
-    }
-}
-
-// information about rectangular bounds
-function parse_bounds(bnd) {
-    if (bnd == null) {
-        return {rect: coord_base};
-    } else if (bnd.length == 2) {
-        let [rect, rotate] = bnd;
-        rect = rect ?? coord_base;
-        return {rect, rotate};
-    } else if (bnd.length == 4) {
-        return {rect: bnd};
-    } else if (is_object(bnd)) {
-        let {rect, rotate} = bnd;
-        rect = rect ?? coord_base;
-        return {rect, rotate};
-    } else {
-        throw Error(`Unrecognized bounds info: ${bnd}`)
     }
 }
 
@@ -644,12 +627,12 @@ class Container extends Element {
         // handle default positioning
         children = children
             .map(c => c instanceof Element ? [c, null] : c)
-            .map(([c, r]) => [c, parse_bounds(r)]);
+            .map(([c, r]) => [c, r ?? coord_base]);
 
         // get data limits
         let xlim, ylim;
         if (children.length > 0) {
-            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r.rect));
+            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r));
             let [xall, yall] = [[...xmins, ...xmaxs], [...ymins, ...ymaxs]];
             xlim = [min(...xall), max(...xall)];
             ylim = [min(...yall), max(...yall)];
@@ -660,7 +643,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r.rect, {aspect: c.aspect, rotate: r.rotate}).prect);
+                .map(([c, r]) => ctx.map(r, {aspect: c.aspect, rotate: c.rotate}).prect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -685,7 +668,7 @@ class Container extends Element {
         // map to new contexts and render
         let inside = this.children
             .map(([c, r]) => c.svg(
-                ctx.map(r.rect, {aspect: c.aspect, coord: this.coord, rotate: r.rotate}))
+                ctx.map(r, {aspect: c.aspect, rotate: c.rotate, coord: this.coord}))
             )
             .filter(s => s.length > 0)
             .join('\n');
