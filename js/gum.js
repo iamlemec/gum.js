@@ -553,46 +553,54 @@ class Context {
 
     // project coordinates
     map(rect, args) {
-        let {aspect, rotate, coord} = args ?? {};
+        let {aspect, rotate, shrink, coord} = args ?? {};
+        rotate = rotate ?? 0;
+        shrink = shrink ?? false;
+
+        // remap rotation angle
+        rotate = ((rotate + 90) % 180) - 90; // map to [-90, 90]
+        let theta0 = abs(rotate)*(pi/180); // in radians
+        let theta = shrink ? theta0 : 0; // account for rotate?
+
+        // get true pixel rect
         let [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
+        let [pw0, ph0] = [px2 - px1, py2 - py1];
+
+        // embedded rectangle aspect
+        let asp0 = pw0/ph0; // pixel rect
+        let rasp = aspect ?? asp0; // mimic outer if null
+        let asp1 = (rasp*cos(theta)+sin(theta))/(rasp*sin(theta)+cos(theta));
 
         // shink down if aspect mismatch
-        if (aspect != null) {
-            let [pw, ph] = [px2 - px1, py2 - py1];
-            let asp = pw/ph;
-
-            if (asp == aspect) { // just right
-            } else if (asp > aspect) { // too wide
-                let pw1 = aspect*ph;
-                let dpw = pw - pw1;
-                px1 += 0.5*dpw;
-                px2 -= 0.5*dpw;
-            } else if (asp < aspect) { // too tall
-                let ph1 = pw/aspect;
-                let dph = ph1 - ph;
-                py1 -= 0.5*dph;
-                py2 += 0.5*dph;
-            }
-        }
-
-        // handle optional rotation
-        if (rotate != null) {
-            let center = [0.5*(px1+px2), 0.5*(py1+py2)];
-            rotate = [rotate, center];
+        if (asp0 >= asp1) { // too tall
+            let ph1 = ph0/(rasp*sin(theta)+cos(theta));
+            let pw1 = rasp*ph1;
+            let dpw = pw1 - pw0;
+            let dph = ph1 - ph0;
+            px1 -= 0.5*dpw; px2 += 0.5*dpw;
+            py1 -= 0.5*dph; py2 += 0.5*dph;
+        } else if (asp0 < asp1) { // too wide
+            let pw1 = pw0/(cos(theta)+sin(theta)/rasp);
+            let ph1 = pw1/rasp;
+            let dpw = pw1 - pw0;
+            let dph = ph1 - ph0;
+            px1 -= 0.5*dpw; px2 += 0.5*dpw;
+            py1 -= 0.5*dph; py2 += 0.5*dph;
         }
 
         let pixel = [px1, py1, px2, py2];
-        return new Context(pixel, {coord, rotate, prec: this.prec});
+        return new Context(pixel, {coord, prec: this.prec});
     }
 }
 
 class Element {
     constructor(tag, unary, args) {
-        let {aspect, rotate, ...attr} = args ?? {};
+        let {aspect, rotate, shrink, ...attr} = args ?? {};
         this.tag = tag;
         this.unary = unary;
         this.aspect = aspect ?? null;
         this.rotate = rotate ?? null;
+        this.shrink = shrink ?? false;
         this.attr = Object.fromEntries(
             Object.entries(attr).filter(([k, v]) => v != null)
         );
@@ -665,7 +673,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, {aspect: c.aspect, rotate: c.rotate}).prect);
+                .map(([c, r]) => ctx.map(r, {aspect: c.aspect, rotate: c.rotate, shrink: c.shrink}).prect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -690,7 +698,7 @@ class Container extends Element {
         // map to new contexts and render
         let inside = this.children
             .map(([c, r]) => c.svg(
-                ctx.map(r, {aspect: c.aspect, rotate: c.rotate, coord: this.coord}))
+                ctx.map(r, {aspect: c.aspect, rotate: c.rotate, shrink: c.shrink, coord: this.coord}))
             )
             .filter(s => s.length > 0)
             .join('\n');
