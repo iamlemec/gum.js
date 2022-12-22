@@ -492,6 +492,12 @@ function degree_mod(degree, lower, upper) {
     return ((degree + lower) % (upper-lower)) - lower;
 }
 
+function rotate_aspect_degrees(aspect, degree) {
+    let rotate = degree_mod(degree, -90, 90);
+    let theta = (pi/180)*abs(rotate);
+    return rotate_aspect_radians(aspect, theta);
+}
+
 function rotate_aspect_radians(aspect, theta) {
     return (aspect*cos(theta)+sin(theta))/(aspect*sin(theta)+cos(theta));
 }
@@ -588,7 +594,15 @@ class Element {
         this.unary = unary;
         this.aspect = aspect ?? null;
         this.rotate = rotate ?? null;
-        this.shrink = shrink ?? false;
+        this.shrink = shrink ?? true;
+
+        // track rotated aspect
+        if (aspect != null) {
+            this.aspect0 = this.aspect;
+            this.aspect = rotate_aspect_degrees(this.aspect0, this.rotate); 
+        } else {
+            this.aspect0 = null;
+        }
 
         // store attributes
         this.attr = Object.fromEntries(
@@ -663,7 +677,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, {aspect: c.aspect, rotate: c.rotate, shrink: c.shrink}).rrect);
+                .map(([c, r]) => ctx.map(r, {aspect: c.aspect0, rotate: c.rotate, shrink: c.shrink}).rrect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -688,7 +702,7 @@ class Container extends Element {
         // map to new contexts and render
         let inside = this.children
             .map(([c, r]) => c.svg(
-                ctx.map(r, {aspect: c.aspect, rotate: c.rotate, shrink: c.shrink, coord: this.coord}))
+                ctx.map(r, {aspect: c.aspect0, rotate: c.rotate, shrink: c.shrink, coord: this.coord}))
             )
             .filter(s => s.length > 0)
             .join('\n');
