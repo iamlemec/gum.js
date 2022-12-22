@@ -509,12 +509,26 @@ function interpolateVectorsPallet(c1, c2, n) {
  ** core classes
  **/
 
+function degree_mod(degree, lower, upper) {
+    return ((degree + lower) % (upper-lower)) - lower;
+}
+
+function rotate_aspect_degrees(aspect, degree) {
+    let rotate = degree_mod(degree, -90, 90);
+    let theta = (pi/180)*abs(rotate);
+    return rotate_aspect_radians(aspect, theta);
+}
+
+function rotate_aspect_radians(aspect, theta) {
+    return (aspect*cos(theta)+sin(theta))/(aspect*sin(theta)+cos(theta));
+}
+
 class Context {
     constructor(prect, args) {
-        let {coord, rotate, prec} = args ?? {};
+        let {coord, rrect, prec} = args ?? {};
         this.prect = prect;
+        this.rrect = rrect;
         this.coord = coord;
-        this.rotate = rotate;
         this.prec = prec;
     }
 
@@ -558,8 +572,8 @@ class Context {
         shrink = shrink ?? false;
 
         // remap rotation angle
-        rotate = ((rotate + 90) % 180) - 90; // map to [-90, 90]
-        let theta0 = abs(rotate)*(pi/180); // in radians
+        let degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
+        let theta0 = abs(degrees)*(pi/180); // in radians
         let theta = shrink ? theta0 : 0; // account for rotate?
 
         // get true pixel rect
@@ -569,27 +583,28 @@ class Context {
         // embedded rectangle aspect
         let asp0 = pw0/ph0; // pixel rect
         let rasp = aspect ?? asp0; // mimic outer if null
-        let asp1 = (rasp*cos(theta)+sin(theta))/(rasp*sin(theta)+cos(theta));
+        let asp1 = rotate_aspect_radians(rasp, theta);
 
         // shink down if aspect mismatch
+        let pw1, ph1;
         if (asp0 >= asp1) { // too tall
-            let ph1 = ph0/(rasp*sin(theta)+cos(theta));
-            let pw1 = rasp*ph1;
-            let dpw = pw1 - pw0;
-            let dph = ph1 - ph0;
-            px1 -= 0.5*dpw; px2 += 0.5*dpw;
-            py1 -= 0.5*dph; py2 += 0.5*dph;
+            ph1 = ph0/(rasp*sin(theta)+cos(theta));
+            pw1 = rasp*ph1;
         } else if (asp0 < asp1) { // too wide
-            let pw1 = pw0/(cos(theta)+sin(theta)/rasp);
-            let ph1 = pw1/rasp;
-            let dpw = pw1 - pw0;
-            let dph = ph1 - ph0;
-            px1 -= 0.5*dpw; px2 += 0.5*dpw;
-            py1 -= 0.5*dph; py2 += 0.5*dph;
+            pw1 = pw0/(cos(theta)+sin(theta)/rasp);
+            ph1 = pw1/rasp;
         }
 
-        let pixel = [px1, py1, px2, py2];
-        return new Context(pixel, {coord, prec: this.prec});
+        // get unrotated pixel rect
+        let [cx, cy] = [0.5*(px1+px2), 0.5*(py1+py2)];
+        let prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
+
+        // get rotate bounding rect
+        let rw = pw1*(cos(theta)+sin(theta)/rasp);
+        let rh = ph1*(rasp*sin(theta)+cos(theta));
+        let rrect = shrink ? [cx-0.5*rw, cy-0.5*rh, cx+0.5*rw, cy+0.5*rh] : prect;
+
+        return new Context(prect, {coord, rrect, prec: this.prec});
     }
 }
 
@@ -601,6 +616,8 @@ class Element {
         this.aspect = aspect ?? null;
         this.rotate = rotate ?? null;
         this.shrink = shrink ?? false;
+
+        // store attributes
         this.attr = Object.fromEntries(
             Object.entries(attr).filter(([k, v]) => v != null)
         );
@@ -673,7 +690,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, {aspect: c.aspect, rotate: c.rotate, shrink: c.shrink}).prect);
+                .map(([c, r]) => ctx.map(r, {aspect: c.aspect, rotate: c.rotate, shrink: c.shrink}).rrect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -1403,11 +1420,11 @@ class Arrowhead extends Polygon {
 class Text extends Element {
     constructor(text, args) {
         let {
-            family, weight, size, rotate, actual, calc_family, calc_weight, calc_size, vshift, ...attr
+            family, weight, size, actual, calc_family, calc_weight, calc_size, hshift, vshift, ...attr
         } = args ?? {};
         size = size ?? font_size_base;
         actual = actual ?? false;
-        rotate = (rotate ?? 0) % 360;
+        hshift = hshift ?? 0.0;
         vshift = vshift ?? -0.13;
 
         // select calculated fonts
@@ -1417,50 +1434,31 @@ class Text extends Element {
 
         // compute text box
         let fargs = {family: calc_family, weight: calc_weight, calc_size: size, actual};
-        let [xoff, yoff, width0, height0] = textSizer(text, fargs);
-        [xoff, yoff, size] = [xoff/height0, yoff/height0, size/height0];
-        let aspect0 = width0/height0;
-
-        // account for rotation
-        let theta = (pi/180)*rotate;
-        let width = abs(cos(theta))*width0 + abs(sin(theta))*height0;
-        let height = abs(sin(theta))*width0 + abs(cos(theta))*height0;
-        let [wfact, hfact] = [width0/width, height0/height];
+        let [xoff, yoff, width, height] = textSizer(text, fargs);
+        [xoff, yoff, size] = [xoff/height, yoff/height, size/height];
+        let aspect = width/height;
 
         // pass to element
-        let aspect = width/height;
         let attr1 = {aspect: aspect, font_family: family, font_weight: weight, fill: 'black', ...attr};
         super('text', false, attr1);
 
         // store metrics
-        this.xoff = xoff;
+        this.xoff = xoff + hshift;
         this.yoff = yoff + vshift;
         this.size = size;
         this.text = text;
-        this.wfact = wfact;
-        this.hfact = hfact;
-        this.rotate = rotate;
     }
 
     props(ctx) {
-        let [x1, y1, x2, y2] = ctx.prect;
-        let [w, h] = [x2 - x1, y2 - y1];
+        // get pixel position
+        let [x, y0] = ctx.coord_to_pixel([this.xoff, this.yoff]);
+        let [w0, h0] = ctx.coord_to_pixel_size([0, this.size]);
 
-        // get unrotated height
-        let w0 = this.wfact*w;
-        let h0 = this.hfact*h;
-        let h1 = this.size*h0;
+        // get adjusted size
+        let h = this.size*h0;
+        let y = y0 + h;
 
-        // get unrotated origin
-        let cx = x1 + 0.5*w;
-        let cy = y1 + 0.5*h;
-        let x = cx - 0.5*w0 - this.xoff*h1;
-        let y = cy + 0.5*h0 + this.yoff*h1;
-
-        let rprop = (this.rotate != 0) ? {transform: `rotate(${this.rotate} ${cx} ${cy})`} : {};
-        let base = {
-            x: x, y: y, font_size: `${h1}px`, ...rprop
-        };
+        let base = {x, y, font_size: `${h}px`};
         return {...base, ...this.attr};
     }
 
