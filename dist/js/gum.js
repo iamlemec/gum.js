@@ -492,22 +492,27 @@ function degree_mod(degree, lower, upper) {
     return ((degree + lower) % (upper-lower)) - lower;
 }
 
-function rotate_aspect_degrees(aspect, degree) {
+// public usage
+function rotate_aspect(aspect, degree) {
+    if (degree == null) { return aspect; }
+    if (aspect == null) { return null; }
     let rotate = degree_mod(degree, -90, 90);
     let theta = (pi/180)*abs(rotate);
     return rotate_aspect_radians(aspect, theta);
 }
 
+// mostly private
 function rotate_aspect_radians(aspect, theta) {
     return (aspect*cos(theta)+sin(theta))/(aspect*sin(theta)+cos(theta));
 }
 
 class Context {
     constructor(prect, args) {
-        let {coord, rrect, prec} = args ?? {};
+        let {coord, rrect, trans, prec} = args ?? {};
         this.prect = prect;
         this.rrect = rrect;
         this.coord = coord;
+        this.trans = trans;
         this.prec = prec;
     }
 
@@ -543,12 +548,12 @@ class Context {
         let prect = [...p1, ...p2];
         return prect;
     }
-
+    
     // project coordinates
     map(rect, args) {
         let {aspect, rotate, shrink, coord} = args ?? {};
         rotate = rotate ?? 0;
-        shrink = shrink ?? false;
+        shrink = shrink ?? true;
 
         // remap rotation angle
         let degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
@@ -583,28 +588,22 @@ class Context {
         let rh = ph1*(rasp*sin(theta)+cos(theta));
         let rrect = shrink ? [cx-0.5*rw, cy-0.5*rh, cx+0.5*rw, cy+0.5*rh] : prect;
 
-        return new Context(prect, {coord, rrect, prec: this.prec});
+        // get transform string
+        let [sx, sy] = [cx, cy].map(z => rounder(z, this.prec));
+        let trans = (rotate != 0) ? `rotate(${rotate} ${sx} ${sy})` : null;
+
+        return new Context(prect, {coord, rrect, trans, prec: this.prec});
     }
 }
 
 class Element {
     constructor(tag, unary, args) {
-        let {aspect, rotate, shrink, ...attr} = args ?? {};
+        let {aspect, ...attr} = args ?? {};
         this.tag = tag;
         this.unary = unary;
         this.aspect = aspect ?? null;
-        this.rotate = rotate ?? null;
-        this.shrink = shrink ?? true;
 
-        // track rotated aspect
-        if (aspect != null) {
-            this.aspect0 = this.aspect;
-            this.aspect = rotate_aspect_degrees(this.aspect0, this.rotate); 
-        } else {
-            this.aspect0 = null;
-        }
-
-        // store attributes
+        // store non-null attributes
         this.attr = Object.fromEntries(
             Object.entries(attr).filter(([k, v]) => v != null)
         );
@@ -614,18 +613,6 @@ class Element {
         return this.attr;
     }
 
-    // just rotation right now
-    transform(ctx) {
-        if (this.rotate != null) {
-            let [px1, py1, px2, py2] = ctx.prect;
-            let cent = [0.5*(px1+px2), 0.5*(py1+py2)];
-            let [sx, sy] = cent.map(z => rounder(z, this.prec));
-            return `rotate(${this.rotate} ${sx} ${sy})`;
-        } else {
-            return null;
-        }
-    }
-
     inner(ctx) {
         return '';
     }
@@ -633,8 +620,7 @@ class Element {
     svg(ctx) {
         ctx = ctx ?? new Context(rect_base);
 
-        let trans = this.transform(ctx);
-        let pvals = {transform: trans, ...this.props(ctx)};
+        let pvals = {transform: ctx.trans, ...this.props(ctx)};
         let props = props_repr(pvals, ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
 
@@ -643,6 +629,16 @@ class Element {
         } else {
             return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`;
         }
+    }
+}
+
+function parse_bounds(bnd) {
+    if (bnd == null) {
+        return {rect: coord_base};
+    } else if (is_array(bnd)) {
+        return {rect: bnd};
+    } else {
+        return {rect: coord_base, ...bnd};
     }
 }
 
@@ -661,12 +657,12 @@ class Container extends Element {
         // handle default positioning
         children = children
             .map(c => c instanceof Element ? [c, null] : c)
-            .map(([c, r]) => [c, r ?? coord_base]);
+            .map(([c, r]) => [c, parse_bounds(r)]);
 
         // get data limits
         let xlim, ylim;
         if (children.length > 0) {
-            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, r]) => r));
+            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, a]) => a.rect));
             let [xall, yall] = [[...xmins, ...xmaxs], [...ymins, ...ymaxs]];
             xlim = [min(...xall), max(...xall)];
             ylim = [min(...yall), max(...yall)];
@@ -676,8 +672,8 @@ class Container extends Element {
         if (aspect == null && clip) {
             let ctx = new Context(coord_base);
             let rects = children
-                .filter(([c, r]) => c.aspect != null)
-                .map(([c, r]) => ctx.map(r, {aspect: c.aspect0, rotate: c.rotate, shrink: c.shrink}).rrect);
+                .filter(([c, a]) => c.aspect != null)
+                .map(([c, a]) => ctx.map(a.rect, {aspect: c.aspect, rotate: a.rotate, shrink: a.shrink}).rrect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -701,8 +697,8 @@ class Container extends Element {
 
         // map to new contexts and render
         let inside = this.children
-            .map(([c, r]) => c.svg(
-                ctx.map(r, {aspect: c.aspect0, rotate: c.rotate, shrink: c.shrink, coord: this.coord}))
+            .map(([c, a]) => c.svg(
+                ctx.map(a.rect, {aspect: c.aspect, rotate: a.rotate, shrink: a.shrink, coord: this.coord}))
             )
             .filter(s => s.length > 0)
             .join('\n');
@@ -762,7 +758,9 @@ class Group extends Container {
 
 class Frame extends Container {
     constructor(child, args) {
-        let {padding, margin, border, aspect, adjust, flex, shape, ...attr0} = args ?? {};
+        let {
+            padding, margin, border, aspect, adjust, flex, rotate, shrink, shape, ...attr0
+        } = args ?? {};
         let [border_attr, attr] = prefix_split(['border'], attr0);
         border = border ?? 0;
         padding = padding ?? 0;
@@ -782,7 +780,8 @@ class Frame extends Container {
         }
 
         // get box sizes
-        let iasp = aspect ?? child.aspect;
+        let casp = rotate_aspect(child.aspect, rotate);
+        let iasp = aspect ?? casp;
         let [crect, brect, basp, tasp] = map_padmar(padding, margin, iasp);
         aspect = flex ? null : (aspect ?? tasp);
 
@@ -791,7 +790,7 @@ class Frame extends Container {
         let rect = shape(rargs);
 
         // gather children
-        let children = [[child, crect]];
+        let children = [[child, {rect: crect, rotate, shrink}]];
         if (border != 0) {
             children.unshift([rect, brect]);
         }
@@ -1366,28 +1365,16 @@ function radial_move(point, theta, size) {
 // unary | aspect | graphable
 class Arrowhead extends Polygon {
     constructor(p, args) {
-        let {size, rot, arc, ...attr} = args ?? {};
+        let {size, arc, ...attr} = args ?? {};
         size = size ?? 0.02;
         arc = arc ?? 50;
-        rot = (rot ?? 0) - 180;
 
+        // generate points around head
         let points = [
-            p, radial_move(p, rot-arc/2, size), radial_move(p, rot+arc/2, size)
+            p, radial_move(p, -arc/2, -size), radial_move(p, arc/2, -size)
         ];
 
-        let attr1 = {fill: 'black', ...attr};
-        super(points, attr1);
-        this.points0 = points;
-        this.stroke = attr.stroke ?? 1;
-        this.rotate = rot;
-    }
-
-    // this is hacky! shifts by stroke-width so there's no overlap on target
-    props(ctx) {
-        let size = rect_dims(ctx.prect).map(x => 0.5*this.stroke/x);
-        let poff = radial_move(this.points0[0], this.rotate, size);
-        this.points = [poff, ...this.points0.slice(1)];
-        return super.props(ctx);
+        super(points, {fill: 'black', ...attr});
     }
 }
 
@@ -1447,10 +1434,10 @@ class Text extends Element {
 
 class Tex extends Element {
     constructor(text, args) {
-        let {family, size, actual, calc_family, vshift, xover, yover, rotate, ...attr} = args ?? {};
+        let {family, size, actual, calc_family, hshift, vshift, xover, yover, ...attr} = args ?? {};
         size = size ?? font_size_latex;
-        rotate = (rotate ?? 0) % 360;
         actual = actual ?? true;
+        hshift = hshift ?? 0;
         vshift = vshift ?? 0;
         yover = yover ?? 1.0;
         xover = xover ?? 0.5;
@@ -1460,56 +1447,37 @@ class Tex extends Element {
 
         // compute text box
         let fargs = {size: size, actual: actual};
-        let [xoff, yoff, width0, height0] = sideRenderTextSizer(katex$1, fargs);
-        [xoff, yoff, size] = [xoff/width0, yoff/height0, size/height0];
-
-        // account for rotation
-        let theta = (pi/180)*rotate;
-        let width = abs(cos(theta))*width0 + abs(sin(theta))*height0;
-        let height = abs(sin(theta))*width0 + abs(cos(theta))*height0;
-        let [wfact, hfact] = [width0/width, height0/height];
+        let [xoff, yoff, width, height] = sideRenderTextSizer(katex$1, fargs);
+        [xoff, yoff, size] = [xoff/width, yoff/height, size/height];
 
         // pass to element
         let aspect = width/height;
-        let attr1 = {aspect: aspect, ...attr};
+        let attr1 = {aspect, ...attr};
         super('foreignObject', false, attr1);
 
         // store metrics
-        this.xoff = xoff;
+        this.xoff = xoff + hshift;
         this.yoff = yoff + vshift;
         this.size = size;
         this.xover = xover;
         this.yover = yover;
-        this.wfact = wfact;
-        this.hfact = hfact;
-        this.rotate = rotate;
         this.katex = katex$1;
     }
 
     props(ctx) {
-        let [x1, y1, x2, y2] = ctx.prect;
-        let [w, h] = [x2 - x1, y2 - y1];
+        // get pixel position
+        let [x0, y0] = ctx.coord_to_pixel([this.xoff, this.yoff]);
+        let [w0, h0] = ctx.coord_to_pixel_size([this.size*this.aspect, this.size]);
 
-        let w0 = this.wfact*w;
-        let h0 = this.hfact*h;
+        // get adjusted size
+        let w = (1+this.xover)*w0;
+        let h = (1+this.yover)*h0;
 
-        let w1 = w0;
-        let h1 = this.size*h0;
-        let fs = this.size*h0;
+        // get adjusted position
+        let x = x0 + this.xoff*w;
+        let y = y0 + this.yoff*h;
 
-        let w2 = (1+this.xover)*w1;
-        let h2 = (1+this.yover)*h1;
-
-        // get unrotated origin
-        let cx = x1 + 0.5*w;
-        let cy = y1 + 0.5*h;
-        let x = cx - 0.5*w0 - this.xoff*w1;
-        let y = cy - 0.5*h0 + this.yoff*h1;
-
-        let rprop = (this.rotate != 0) ? {transform: `rotate(${this.rotate} ${cx} ${cy})`} : {};
-        let base = {
-            x: x, y: y, width: w2, height: h2, font_size: `${fs}px`, ...rprop
-        };
+        let base = {x, y, width: w, height: h, font_size: `${h0}px`};
         return {...base, ...this.attr};
     }
 
@@ -1520,16 +1488,18 @@ class Tex extends Element {
 
 class Node extends Frame {
     constructor(text, args) {
-        let {padding, border, spacing, align, ...attr0} = args ?? {};
+        let {padding, border, spacing, align, latex, ...attr0} = args ?? {};
         let [text_attr, attr] = prefix_split(['text'], attr0);
         padding = padding ?? 0.1;
         spacing = spacing ?? 0.02;
         border = border ?? 1;
+        latex = latex ?? false;
 
         // generate core elements
         let child;
         if (is_string(text)) {
-            child = new Text(text, text_attr);
+            let Maker = latex ? Tex : Text;
+            child = new Maker(text, text_attr);
         } else if (is_array(text)) {
             let lines = text.map(s => new Text(s, text_attr));
             child = new VStack(lines, {expand: false, align, spacing});
@@ -1948,12 +1918,9 @@ class VBars extends Bars {
  ** plotting elements
  **/
 
-function make_ticklabel(s, prec) {
-    return new Text(rounder(s, prec), {vshift: -0.15});
-}
-
-function make_axislabel(s, attr) {
-    return new Text(s, attr);
+function make_ticklabel(s, prec, attr) {
+    let attr1 = {border: 0, padding: 0, text_vshift: -0.15, ...attr};
+    return new Node(rounder(s, prec), attr1);
 }
 
 function ensure_tick(t, prec) {
@@ -2176,24 +2143,24 @@ class Axes extends Container {
     }
 }
 
-class XLabel extends Container {
+class XLabel extends Frame {
     constructor(text, attr) {
-        let label = is_element(text) ? text : make_axislabel(text);
-        super(label, attr);
+        let label = is_element(text) ? text : new Text(text, attr);
+        super(label);
     }
 }
 
-class YLabel extends Container {
+class YLabel extends Frame {
     constructor(text, attr) {
-        let label = is_element(text) ? text : make_axislabel(text, {rotate: -90});
-        super(label, attr);
+        let label = is_element(text) ? text : new Text(text, attr);
+        super(label, {rotate: -90});
     }
 }
 
-class Title extends Container {
+class Title extends Frame {
     constructor(text, attr) {
-        let label = is_element(text) ? text : make_axislabel(text);
-        super(label, attr);
+        let label = is_element(text) ? text : new Text(text, attr);
+        super(label);
     }
 }
 
