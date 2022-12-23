@@ -945,7 +945,8 @@ class HStack extends Stack {
 // non-unary | variable-aspect | graphable
 class Place extends Container {
     constructor(child, pos, rad, args) {
-        let {...attr} = args ?? {};
+        let {rotate, shrink, ...attr} = args ?? {};
+        shrink = shrink ?? false;
 
         if (is_scalar(rad)) {
             rad = aspect_invariant(rad, child.aspect);
@@ -954,23 +955,26 @@ class Place extends Container {
         let [[x, y], [rx, ry]] = [pos, rad];
         let rect = [x-rx, y-ry, x+rx, y+ry];
 
+        let spec = [child, {rect, rotate, shrink}];
         let attr1 = {clip: false, ...attr};
-        super([[child, rect]], attr1);
+        super([spec], attr1);
     }
 }
 
 // non-unary | variable-aspect | graphable
 class Scatter extends Container {
     constructor(points, args) {
-        let {shape, radius, xlim, ylim, ...attr} = args ?? {};
-        shape = shape ?? black_dot();
-        radius = radius ?? 0.05;
+        let {shape, radius, color, xlim, ylim, ...attr} = args ?? {};
+        shape = shape ?? new Dot({color});
+        radius = radius ?? 0.01;
 
         // handle different forms
-        points = points.map(p => is_element(p[0]) ? p : [shape, p]);
+        points = points.map(p => is_scalar(p[0]) ? [p] : p);
+        points = points.map(p => is_element(p[0]) ? p : [shape, ...p]);
+        points = points.map(p => (p.length >= 3) ? p : [...p, radius]);
 
         // pass to container
-        let children = points.map(([s, p]) => [s, rad_rect(p, radius)]);
+        let children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
     }
@@ -1076,12 +1080,13 @@ class Rect extends Element {
 // unary | unit-aspect | graphable
 class Square extends Rect {
     constructor(args) {
-        let {p, s, ...attr} = args ?? {};
-        p = p ?? [0, 0];
-        s = s ?? 1;
+        let {pos, rad, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? 0.5;
 
-        let p2 = p.map(z => z + s);
-        let base = {p1: p, p2, aspect: 1};
+        let p1 = pos.map(z => z - rad);
+        let p2 = pos.map(z => z + rad);
+        let base = {p1, p2, aspect: 1};
         super({...base, ...attr});
     }
 }
@@ -1089,23 +1094,23 @@ class Square extends Rect {
 // unary | null-aspect | graphable
 class Ellipse extends Element {
     constructor(args) {
-        let {c, r, ...attr} = args ?? {};
-        c = c ?? [0.5, 0.5];
-        r = r ?? [0.5, 0.5];
+        let {pos, rad, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? [0.5, 0.5];
 
         super('ellipse', true, attr);
-        this.c = c;
-        this.r = r;
+        this.pos = pos;
+        this.rad = rad;
 
-        let [cx, cy] = c;
-        let [rx, ry] = r;
-        this.xlim = [cx - rx, cx + rx];
-        this.ylim = [cy - ry, cy + ry];
+        let [px, py] = pos;
+        let [rx, ry] = rad;
+        this.xlim = [px - rx, px + rx];
+        this.ylim = [py - ry, py + ry];
     }
 
     props(ctx) {
-        let [cx, cy] = ctx.coord_to_pixel(this.c);
-        let [rx, ry] = ctx.coord_to_pixel_size(this.r);
+        let [cx, cy] = ctx.coord_to_pixel(this.pos);
+        let [rx, ry] = ctx.coord_to_pixel_size(this.rad);
         let base = {cx, cy, rx, ry};
         return {...base, ...this.attr};
     }
@@ -1114,17 +1119,23 @@ class Ellipse extends Element {
 // unary | unit-aspect | graphable
 class Circle extends Ellipse {
     constructor(args) {
-        let {c, r, ...attr} = args ?? {};
-        c = c ?? [0.5, 0.5];
-        r = r ?? 0.5;
+        let {pos, rad, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? 0.5;
 
-        let r2 = [r, r];
-        let base = {c, r: r2, aspect: 1};
+        let rad2 = [rad, rad];
+        let base = {pos, rad: rad2, aspect: 1};
         super({...base, ...attr});
     }
 }
 
-let black_dot = () => new Circle({fill: 'black'});
+class Dot extends Circle {
+    constructor(args) {
+        let {color, ...attr} = args ?? {};
+        color = color ?? 'black';
+        super({stroke: color, fill: color, ...attr});
+    }
+}
 
 // unary | aspect | non-graphable
 class Ray extends Element {
@@ -1324,7 +1335,7 @@ class Bezier2PathDebug extends Container {
         let [nodes, arrows] = zip(...bezs);
         nodes.unshift(start);
 
-        let red = new Circle({stroke: 'red', fill: 'red'});
+        let red = new Dot({color: 'red'});
         let scatter1 = new Scatter(nodes, {radius: 0.01});
         let scatter2 = new Scatter(arrows, {radius: 0.007, shape: red});
         let lines = zip(nodes.slice(0, -1), arrows).map(([n, a]) =>
@@ -1363,18 +1374,20 @@ function radial_move(point, theta, size) {
 }
 
 // unary | aspect | graphable
-class Arrowhead extends Polygon {
-    constructor(p, args) {
-        let {size, arc, ...attr} = args ?? {};
+class Arrowhead extends Group {
+    constructor(pos, args) {
+        let {direc, size, arc, ...attr} = args ?? {};
+        direc = direc ?? 0;
         size = size ?? 0.02;
         arc = arc ?? 50;
 
-        // generate points around head
-        let points = [
-            p, radial_move(p, -arc/2, -size), radial_move(p, arc/2, -size)
-        ];
+        // generate arrowhead polygon
+        let points = [pos, radial_move(pos, -arc/2, -size), radial_move(pos, arc/2, -size)];
+        let poly = new Polygon(points, {fill: 'black', ...attr});
 
-        super(points, {fill: 'black', ...attr});
+        // pass to group for rotate
+        let child = [poly, {rotate: -direc, shrink: false}];
+        super([child]);
     }
 }
 
@@ -1385,7 +1398,7 @@ class Arrowhead extends Polygon {
 class Text extends Element {
     constructor(text, args) {
         let {
-            family, weight, size, actual, calc_family, calc_weight, calc_size, hshift, vshift, ...attr
+            font_family, font_weight, size, actual, calc_family, calc_weight, calc_size, hshift, vshift, ...attr
         } = args ?? {};
         size = size ?? font_size_base;
         actual = actual ?? false;
@@ -1393,8 +1406,8 @@ class Text extends Element {
         vshift = vshift ?? -0.13;
 
         // select calculated fonts
-        calc_family = calc_family ?? family ?? font_family_base;
-        calc_weight = calc_weight ?? weight ?? font_weight_base;
+        calc_family = calc_family ?? font_family ?? font_family_base;
+        calc_weight = calc_weight ?? font_weight ?? font_weight_base;
         calc_size = calc_size ?? size;
 
         // compute text box
@@ -1404,7 +1417,7 @@ class Text extends Element {
         let aspect = width/height;
 
         // pass to element
-        let attr1 = {aspect: aspect, font_family: family, font_weight: weight, fill: 'black', ...attr};
+        let attr1 = {aspect, font_family, font_weight, fill: 'black', ...attr};
         super('text', false, attr1);
 
         // store metrics
@@ -1434,7 +1447,7 @@ class Text extends Element {
 
 class Tex extends Element {
     constructor(text, args) {
-        let {family, size, actual, calc_family, hshift, vshift, xover, yover, ...attr} = args ?? {};
+        let {size, actual, hshift, vshift, xover, yover, ...attr} = args ?? {};
         size = size ?? font_size_latex;
         actual = actual ?? true;
         hshift = hshift ?? 0;
@@ -1791,8 +1804,8 @@ class SymPoly extends Polygon {
 class SymPoints extends Container {
     constructor(args) {
         let {fx, fy, fs, fr, radius, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
-        shape = shape ?? black_dot();
-        radius = radius ?? 0.05;
+        shape = shape ?? new Dot();
+        radius = radius ?? 0.01;
         fr = fr ?? (() => radius);
         fs = fs ?? (() => shape);
 
@@ -2232,12 +2245,13 @@ class Legend extends Place {
 
 class Note extends Place {
     constructor(text, pos, size, args) {
-        let {font_family, font_weight, latex, ...attr} = args ?? {};
+        let {latex, ...attr0} = args ?? {};
         latex = latex ?? false;
+        let [text_attr, attr] = prefix_split(['text'], attr0);
 
         let Maker = latex ? Tex : Text;
-        let label = new Maker(text, attr);
-        super(label, pos, size);
+        let label = new Maker(text, text_attr);
+        super(label, pos, size, attr);
     }
 }
 
@@ -2765,7 +2779,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, black_dot, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2869,4 +2883,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, black_dot, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, rgb2hsl, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, rgb2hsl, round, rounder, sin, sqrt, zip };
