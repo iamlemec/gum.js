@@ -17,9 +17,12 @@
         "Circle",
         "SymPath"
     ],
-    "complex": [
+    "plotting": [
         "Axis",
-        "Plot",
-        "Node"
+        "Plot"
+    ],
+    "networks": [
+        "Node",
+        "Network"
     ]
 }

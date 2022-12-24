@@ -641,10 +641,16 @@ class Element {
     svg(ctx) {
         ctx = ctx ?? new Context(rect_base);
 
-        let pvals = {transform: ctx.trans, ...this.props(ctx)};
+        // collect all properties
+        let pvals = this.props(ctx);
+        let trans = `${pvals.transform ?? ''} ${ctx.trans ?? ''}`.trim();
+        if (trans.length > 0) { pvals.transform = trans; }
+
+        // convert to strings
         let props = props_repr(pvals, ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
 
+        // return final svg
         if (this.unary) {
             return `<${this.tag}${pre}${props} />`;
         } else {
@@ -1393,35 +1399,6 @@ class Bezier3Line extends Path {
 }
 
 /**
- ** advanced shapes
- **/
-
-function radial_move(point, theta, size) {
-    size = ensure_vector(size ?? 1, 2);
-    let rads = (pi/180)*theta;
-    let vec = [cos(rads), sin(rads)];
-    return zip(point, size, vec).map(([p, s, v]) => p + s*v);
-}
-
-// unary | aspect | graphable
-class Arrowhead extends Group {
-    constructor(pos, args) {
-        let {direc, size, arc, ...attr} = args ?? {};
-        direc = direc ?? 0;
-        size = size ?? 0.02;
-        arc = arc ?? 50;
-
-        // generate arrowhead polygon
-        let points = [pos, radial_move(pos, -arc/2, -size), radial_move(pos, arc/2, -size)];
-        let poly = new Polygon(points, {fill: 'black', ...attr});
-
-        // pass to group for rotate
-        let child = [poly, {rotate: -direc, shrink: false}];
-        super([child]);
-    }
-}
-
-/**
  ** text elements
  **/
 
@@ -1617,7 +1594,30 @@ function norm_direc(direc) {
     }
 }
 
-let arrow_dir = {'n': 90, 's': -90, 'e': 180, 'w': 0};
+// unary | aspect | graphable
+class Arrowhead extends Group {
+    constructor(args) {
+        let {direc, pos, size, stroke_width, ...attr} = args ?? {};
+        direc = direc ?? 0;
+        pos = pos ?? [0.5, 0.5];
+        size = size ?? [0.5, 0.5];
+        stroke_width = stroke_width ?? 1;
+
+        // stroke_width translate hack (this needs to be size aspect adjusted)
+        let transform = `translate(${-stroke_width}, 0)`;
+
+        // generate arrowhead polygon
+        let pattr = {fill: 'black', stroke_width, transform, ...attr};
+        let poly = new Polygon([[0.5, 0.5], [0, 0], [0, 1]], pattr);
+
+        // pass to group for rotate
+        let rect = rad_rect(pos, size);
+        let child = [poly, {rect, rotate: -direc, shrink: false}];
+        super([child]);
+    }
+}
+
+let arrow_dir = {'n': -90, 's': 90, 'e': 180, 'w': 0};
 class Edge extends Container {
     constructor(pd1, pd2, args) {
         let {curve, arrow, debug, ...attr0} = args ?? {};
@@ -1636,10 +1636,11 @@ class Edge extends Container {
         let wide = abs(dx) > abs(dy);
 
         let ahead = null;
-        if (arrow > 0) {
+        if (arrow != null) {
             let rot = arrow_dir[d2];
-            let arrow_attr1 = {size: arrow, rot, ...arrow_attr};
-            ahead = new Arrowhead(p2, arrow_attr1);
+            let size2 = ensure_vector(arrow, 2);
+            let arrow_attr1 = {pos: p2, direc: rot, size: size2, ...arrow_attr};
+            ahead = new Arrowhead(arrow_attr1);
         }
 
         // reorient so that when non-aliged:
@@ -1700,11 +1701,15 @@ class Edge extends Container {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {radius, arrow, debug, ...attr0} = args ?? {};
+        let {radius, arrow, aspect, debug, ...attr0} = args ?? {};
         let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
-        edge_attr = {arrow, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
         radius = radius ?? 0.1;
 
+        // sort out final edge attributes
+        arrow = aspect_invariant(arrow, 1/aspect);
+        edge_attr = {arrow, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
+
+        // collect node boxes
         let make_node = b => new Node(b, {flex: true, ...node_attr});
         let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
             let [s, b] = is_string(n) ? [n, n] : n;
@@ -1714,6 +1719,7 @@ class Network extends Container {
         let boxes = Object.values(bmap);
         let cont1 = new Container(boxes);
 
+        // collect edge paths
         let lines = edges.map(([na1, na2, eattr]) => {
             eattr = eattr ?? {};
 
@@ -1729,10 +1735,13 @@ class Network extends Container {
         });
         let cont2 = new Container(lines);
 
+        // find total limits
         let [xmins, xmaxs] = zip(...boxes.map(b => b.xlim));
         let [ymins, ymaxs] = zip(...boxes.map(b => b.ylim));
 
-        super([cont1, cont2], attr);
+        // combine into container
+        let attr1 = {aspect, ...attr};
+        super([cont1, cont2], attr1);
         this.xlim = [min(...xmins), max(...xmaxs)];
         this.ylim = [min(...ymins), max(...ymaxs)];
         this.bmap = bmap;

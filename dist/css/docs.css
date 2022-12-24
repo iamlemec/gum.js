@@ -80,6 +80,7 @@ body {
 
 #list {
     display: flex;
+    position: relative;
     flex-direction: column;
     background-color: #EEE;
 }
@@ -111,6 +112,12 @@ body {
 }
 
 #list .item:first-child {
+}
+
+#list #logo {
+    position: absolute;
+    left: 8px;
+    bottom: 5px;
 }
 
 /* document viewer */
