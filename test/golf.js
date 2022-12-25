@@ -344,7 +344,7 @@ let points = SymPoints({
   fs: (x, y) => Circle({fill: pal((1+y)/2), r: (1+abs(y))/2})
 });
 let plot = Plot([line, points], {
-  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
+  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_pos: 'both',
   xticks, yticks: 5, xgrid: true, ygrid: true, xlabel_offset: 0.1,
   xlabel: 'phase', ylabel: 'amplitude', title: 'Inverted Sine Wave',
   xgrid_stroke_dasharray: 3, ygrid_stroke_dasharray: 3
@@ -393,8 +393,7 @@ fill = Group([
   SymPath({fy: func, xlim, stroke_width: 1.5, N: 200})
 ], {opacity: 0.8});
 plot = Plot(fill, {
-  aspect: 1.5, xlim, ylim, xticks: 5, yticks: 3, xgrid: true, ygrid: true,
-  xaxis_tick_lim: 'inner', yaxis_tick_lim: 'inner'
+  aspect: 1.5, xlim, ylim, xticks: 5, yticks: 3, xgrid: true, ygrid: true
 });
 frame = Frame(plot, {margin: 0.1});
 return frame;
@@ -412,8 +411,7 @@ offsets = linspace(0, 3, 5);
 kdes = Group(offsets.map(fill_func).reverse());
 let lines = Group([HLine(ylim[1], {lim: xlim}), VLine(xlim[1], {lim: ylim})]);
 let plot = Plot([lines, kdes], {
-  aspect: 0.7, xticks: linspace(0, 4, 5), xlim: xlim, ylim, xaxis_tick_lim: [0.5, 1],
-  yaxis_tick_lim: [0.5, 1], xgrid: true, ygrid: true,
+  aspect: 0.7, xticks: linspace(0, 4, 5), xlim: xlim, ylim, xgrid: true, ygrid: true,
   yticks: zip(offsets, ['A', 'B', 'C', 'D', 'E'])
 });
 return Frame(plot, {margin: 0.1});

@@ -213,7 +213,7 @@ let s = SymPoints({
   fs: (x, y) => Circle({fill: pal((1+y)/2)})
 });
 let p = Plot([f, s], {
-  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_lim: 'both',
+  xlim, ylim, xanchor: 0, aspect: 1.5, xaxis_tick_pos: 'both',
   xticks: xt, yticks: 5, ygrid: true, xlabel_offset: 0.1,
   xlabel: 'time', ylabel: 'amplitude', title: 'Inverted Sine Wave' 
 });

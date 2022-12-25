@@ -19,10 +19,12 @@
     ],
     "plotting": [
         "Axis",
+        "Graph",
         "Plot"
     ],
     "networks": [
         "Node",
+        "Edge",
         "Network"
     ]
 }

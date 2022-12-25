@@ -574,7 +574,7 @@ class Context {
         if (asp0 >= asp1) { // too tall
             ph1 = ph0/(rasp*sin(theta)+cos(theta));
             pw1 = rasp*ph1;
-        } else if (asp0 < asp1) { // too wide
+        } else { // too wide
             pw1 = pw0/(cos(theta)+sin(theta)/rasp);
             ph1 = pw1/rasp;
         }
@@ -952,6 +952,8 @@ class HStack extends Stack {
 class Place extends Container {
     constructor(child, args) {
         let {rect, pos, rad, rotate, shrink, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? [0.5, 0.5];
         shrink = shrink ?? false;
 
         // ensure vector radius
@@ -2020,9 +2022,9 @@ class HTicks extends Ticks {
 }
 
 function get_ticklim(lim) {
-    if (lim == null || lim == 'inner') {
+    if (lim == null || lim == 'up' || lim == 'right') {
         return [0.5, 1];
-    } else if (lim == 'outer') {
+    } else if (lim == 'down' || lim == 'left') {
         return [0, 0.5];
     } else if (lim == 'both') {
         return [0, 1];
@@ -2033,23 +2035,25 @@ function get_ticklim(lim) {
 
 class Axis extends Container {
     constructor(direc, ticks, args) {
-        let {label_size, label_inner, label_align, tick_lim, lim, ...attr0} = args ?? {};
+        let {label_size, label_flip, label_align, tick_pos, lim, prec, ...attr0} = args ?? {};
         let [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
         label_size = label_size ?? tick_label_size_base;
         lim = lim ?? limit_base;
-        tick_lim = get_ticklim(tick_lim);
         direc = get_orient(direc);
 
         // get default label alignment
-        let align0 = (direc == 'v') ? (label_inner ? 0 : 1) : 0.5;
+        let align0 = (direc == 'v') ? (label_flip ? 0 : 1) : 0.5;
         label_align = label_align ?? align0;
 
         // invert ytick limits (since higher y means up here)
+        let tick_lim = get_ticklim(tick_pos);
         tick_lim = (direc == 'v') ? tick_lim : tick_lim.map(x => 1 - x);
 
         // extract information
-        let locs = ticks.map(([t, x]) => t);
         let [lo, hi] = lim;
+        ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks;
+        ticks = ticks.map(t => ensure_tick(t, prec));
+        let locs = ticks.map(([t, x]) => t);
 
         // accumulate children
         let cline = new UnitLine(direc, 0.5, {lim, ...line_attr});
@@ -2058,14 +2062,14 @@ class Axis extends Container {
             size: label_size, lim: lim, align: label_align, ...label_attr
         });
 
-        // position children
+        // position children (main direction has data coordinates)
         let lbox, tcoord;
         if (direc == 'v') {
-            let lbase = label_inner ? 1 : -1;
+            let lbase = (label_flip === true) ? 1 : -1;
             lbox = [lbase, 0, lbase + 1, 1];
             tcoord = [0, hi, 1, lo];
         } else {
-            let lbase = label_inner ? -label_size : 1;
+            let lbase = (label_flip === true) ? -label_size : 1;
             lbox = [0, lbase, 1, lbase + label_size];
             tcoord = [lo, 0, hi, 1];
         }
@@ -2073,6 +2077,7 @@ class Axis extends Container {
         // pass to container
         let children = [cline, scale, [label, lbox]];
         super(children, {coord: tcoord, ...attr});
+        this.ticks = ticks;
     }
 }
 
@@ -2108,44 +2113,33 @@ class Axes extends Container {
         yticks = yticks ?? num_ticks_base;
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
+        tick_size = tick_size ?? tick_size_base;
+        label_size = label_size ?? tick_label_size_base;
 
         // handle tick_size cases
-        tick_size = tick_size ?? tick_size_base;
         let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
         xaxis_tick_size = xaxis_tick_size ?? xtick_size;
         yaxis_tick_size = yaxis_tick_size ?? ytick_size;
 
         // handle label_size cases
-        label_size = label_size ?? tick_label_size_base;
         let [xlabel_size, ylabel_size] = maybe_two(label_size);
         xaxis_label_size = xaxis_label_size ?? xlabel_size;
         yaxis_label_size = yaxis_label_size ?? ylabel_size;
 
-        // collect limits
+        // get default positions
         let [xmin, xmax] = xlim;
         let [ymin, ymax] = ylim;
-
-        // determine axis locations
         xanchor = xanchor ?? ymin;
         yanchor = yanchor ?? xmin;
-        xanchor = (xanchor-ymax)/(ymin-ymax);
-        yanchor = (yanchor-xmin)/(xmax-xmin);
-
-        // get xaxis ticks
-        xticks = is_scalar(xticks) ? linspace(xmin, xmax, xticks) : xticks;
-        xticks = (xticks != null) ? xticks.map(t => ensure_tick(t, prec)) : [];
-
-        // get yaxis ticks
-        yticks = is_scalar(yticks) ? linspace(ymin, ymax, yticks) : yticks;
-        yticks = (yticks != null) ? yticks.map(t => ensure_tick(t, prec)) : [];
-        yticks.map(([y, t]) => y);
 
         // collect children
         let children = [];
 
         // make the xaxis
         if (xticks != null) {
+            xanchor = (xanchor-ymax)/(ymin-ymax);
             let xaxis = new HAxis(xticks, {lim: xlim, label_size: xaxis_label_size, ...xaxis_attr});
+            xticks = xaxis.ticks;
             children.push([
                 xaxis, [0, xanchor-xaxis_tick_size/2, 1, xanchor+xaxis_tick_size/2]
             ]);
@@ -2153,7 +2147,9 @@ class Axes extends Container {
 
         // make the yaxis
         if (yticks != null) {
+            yanchor = (yanchor-xmin)/(xmax-xmin);
             let yaxis = new VAxis(yticks, {lim: ylim, label_size: yaxis_label_size, ...yaxis_attr});
+            yticks = yaxis.ticks;
             children.push([
                 yaxis, [yanchor-yaxis_tick_size/2, 0, yanchor+yaxis_tick_size/2, 1]
             ]);
@@ -2316,8 +2312,8 @@ class Graph extends Container {
 class Plot extends Container {
     constructor(elems, args) {
         let {
-            xlim, ylim, xticks, yticks, xanchor, yanchor, xgrid, ygrid, xlabel, ylabel, title,
-            tick_size, label_size, label_offset, tick_label_size, title_size, title_offset,
+            xlim, ylim, xticks, yticks, xanchor, yanchor, grid, xgrid, ygrid, xlabel, ylabel,
+            title, tick_size, label_size, label_offset, tick_label_size, title_size, title_offset,
             xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, padding, prec, aspect, ...attr0
         } = args ?? {};
 
@@ -2348,16 +2344,18 @@ class Plot extends Container {
         let children = [axes, graph];
 
         // create gridlines
-        if (xgrid != null || ygrid != null) {
+        if (grid === true || xgrid != null || ygrid != null) {
             let xtick_locs = axes.xticks.map(([x, t]) => x);
             let ytick_locs = axes.yticks.map(([y, t]) => y);
+            xgrid = (grid === true && xgrid == null) ? true : xgrid;
+            ygrid = (grid === true && ygrid == null) ? true : ygrid;
             xgrid = (xgrid === true) ? xtick_locs : xgrid;
             ygrid = (ygrid === true) ? ytick_locs : ygrid;
-            let grid = new Grid({
-                xgrid, ygrid, xlim: graph.xlim,
-                ylim: graph.ylim, aspect: graph.aspect, ...grid_attr
+            let fgrid = new Grid({
+                xgrid, ygrid, xlim: graph.xlim, ylim: graph.ylim,
+                aspect: graph.aspect, ...grid_attr
             });
-            children.unshift(grid);
+            children.unshift(fgrid);
         }
 
         // sort out label size and offset
@@ -2792,7 +2790,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, zip, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2896,4 +2894,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, rgb2hsl, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, rgb2hsl, round, rounder, sin, sqrt, zip };

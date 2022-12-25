@@ -11,7 +11,7 @@ Positional arguments:
 Keyword arguments:
 - `label_size` = `1.5` — label size in the vertical dimensions relative to tick size
 - `lim` = `[0, 1]` — the extent of the element along the main axis
-- `tick_lim` = `'inner'` — the extent of the ticks along the perpendicular axis. One of `'inner'`, `'outer'`, `'both'`, or a pair representing a numerical range in `[0, 1]`, where zero is oriented outwards in either orientation
+- `tick_pos` = `'right'`/`'up'` — the extent of the ticks along the perpendicular axis. One of `'up'`, `'down'`, `'left'`, `'right'`, or `'both'`, or a pair representing a numerical range in `[0, 1]`, where zero is oriented up/right depending on the orientation 
 
 Subunit names:
 - `line`: the central line along the main axis
