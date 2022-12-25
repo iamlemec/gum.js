@@ -950,18 +950,20 @@ class HStack extends Stack {
 
 // non-unary | variable-aspect | graphable
 class Place extends Container {
-    constructor(child, pos, rad, args) {
-        let {rotate, shrink, ...attr} = args ?? {};
+    constructor(child, args) {
+        let {rect, pos, rad, rotate, shrink, ...attr} = args ?? {};
         shrink = shrink ?? false;
 
+        // ensure vector radius
         if (is_scalar(rad)) {
             rad = aspect_invariant(rad, child.aspect);
         }
 
-        let [[x, y], [rx, ry]] = [pos, rad];
-        let rect = [x-rx, y-ry, x+rx, y+ry];
-
+        // find child position
+        rect = rect ?? rad_rect(pos, rad);
         let spec = [child, {rect, rotate, shrink}];
+
+        // pass to container
         let attr1 = {clip: false, ...attr};
         super([spec], attr1);
     }
@@ -1684,7 +1686,7 @@ class Network extends Container {
         let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
             let [s, b] = is_string(n) ? [n, n] : n;
             b = (is_string(b) || is_array(b)) ? make_node(b) : b;
-            return [s, new Place(b, p, r ?? radius)];
+            return [s, new Place(b, {pos: p, rad: r ?? radius})];
         }));
         let boxes = Object.values(bmap);
         let cont1 = new Container(boxes);
@@ -2233,8 +2235,8 @@ function make_legendlabel(s) {
 }
 
 class Legend extends Place {
-    constructor(data, pos, size, args) {
-        let {badgewidth, vspacing, hspacing, ...attr} = args ?? {};
+    constructor(data, args) {
+        let {badgewidth, vspacing, hspacing, rect, pos, rad, ...attr} = args ?? {};
         badgewidth = badgewidth ?? 0.1;
         hspacing = hspacing ?? 0.025;
         vspacing = vspacing ?? 0.1;
@@ -2248,19 +2250,19 @@ class Legend extends Place {
 
         let fr = new Frame(vs, attr);
 
-        super(fr, pos, size);
+        super(fr, {rect, pos, rad});
     }
 }
 
 class Note extends Place {
-    constructor(text, pos, size, args) {
+    constructor(text, args) {
         let {latex, ...attr0} = args ?? {};
         latex = latex ?? false;
         let [text_attr, attr] = prefix_split(['text'], attr0);
 
         let Maker = latex ? Tex : Text;
         let label = new Maker(text, text_attr);
-        super(label, pos, size, attr);
+        super(label, attr);
     }
 }
 
@@ -2314,20 +2316,19 @@ class Graph extends Container {
 class Plot extends Container {
     constructor(elems, args) {
         let {
-            xlim, ylim, xticks, yticks, xanchor, yanchor, xgrid, ygrid, grid_color,
-            xlabel, ylabel, title, tick_size, label_size, label_offset, tick_label_size,
-            title_size, title_offset, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset,
-            padding, margin, prec, aspect, ...attr0
+            xlim, ylim, xticks, yticks, xanchor, yanchor, xgrid, ygrid, xlabel, ylabel, title,
+            tick_size, label_size, label_offset, tick_label_size, title_size, title_offset,
+            xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, padding, prec, aspect, ...attr0
         } = args ?? {};
-        title_size = title_size ?? title_size_base;
-        title_offset = title_offset ?? title_offset_base;
 
         // some advanced piping
         let [
-            xaxis_attr, yaxis_attr, axis_attr, xgrid_attr, ygrid_attr, grid_attr, xlabel_attr, ylabel_attr, label_attr, title_attr, attr
-        ] = prefix_split(
-            ['xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label', 'title'], attr0
-        );
+            xaxis_attr, yaxis_attr, axis_attr, xgrid_attr, ygrid_attr, grid_attr, xlabel_attr,
+            ylabel_attr, label_attr, title_attr, attr
+        ] = prefix_split([
+            'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label',
+            'title'
+        ], attr0);
         [xaxis_attr, yaxis_attr] = [{...axis_attr, ...xaxis_attr}, {...axis_attr, ...yaxis_attr}];
         [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
         [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
@@ -2350,26 +2351,27 @@ class Plot extends Container {
         if (xgrid != null || ygrid != null) {
             let xtick_locs = axes.xticks.map(([x, t]) => x);
             let ytick_locs = axes.yticks.map(([y, t]) => y);
-            xgrid = (xgrid == true) ? xtick_locs : xgrid;
-            ygrid = (ygrid == true) ? ytick_locs : ygrid;
+            xgrid = (xgrid === true) ? xtick_locs : xgrid;
+            ygrid = (ygrid === true) ? ytick_locs : ygrid;
             let grid = new Grid({
-                xgrid, ygrid, grid_color, xlim: graph.xlim,
+                xgrid, ygrid, xlim: graph.xlim,
                 ylim: graph.ylim, aspect: graph.aspect, ...grid_attr
             });
             children.unshift(grid);
         }
 
-        // sort out label size
-        label_size = label_size ?? label_size_base;
-        let [xlabelsize, ylabelsize] = aspect_invariant(label_size, graph.aspect);
-        xlabel_size = xlabel_size ?? xlabelsize;
-        ylabel_size = ylabel_size ?? ylabelsize;
+        // sort out label size and offset
+        if (xlabel != null || ylabel != null) {
+            label_size = label_size ?? label_size_base;
+            let [xlabelsize, ylabelsize] = aspect_invariant(label_size, graph.aspect);
+            xlabel_size = xlabel_size ?? xlabelsize;
+            ylabel_size = ylabel_size ?? ylabelsize;
 
-        // sort out label offset
-        label_offset = label_offset ?? label_offset_base;
-        let [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, graph.aspect);
-        xlabel_offset = xlabel_offset ?? xlabeloffset;
-        ylabel_offset = ylabel_offset ?? ylabeloffset;
+            label_offset = label_offset ?? label_offset_base;
+            let [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, graph.aspect);
+            xlabel_offset = xlabel_offset ?? xlabeloffset;
+            ylabel_offset = ylabel_offset ?? ylabeloffset;
+        }
 
         // optional axis labels
         if (xlabel != null) {
@@ -2385,6 +2387,8 @@ class Plot extends Container {
 
         // optional plot title
         if (title != null) {
+            title_size = title_size ?? title_size_base;
+            title_offset = title_offset ?? title_offset_base;
             title = new Title(title, title_attr);
             let title_rect = [0, -title_offset-title_size, 1, -title_offset];
             children.push([title, title_rect]);
