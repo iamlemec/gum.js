@@ -604,12 +604,10 @@ class Context {
         let [pw1, ph1] = (expand ^ (asp0 >= asp1)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
         let [rw1, rh1] = [pw1*tw, ph1*th];
 
-        // get unrotated pixel rect
+        // get rotated/unrotated pixel rect
         let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
         let cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
         let prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
-
-        // get rotate bounding rect
         let rrect = invar ? prect : [cx-0.5*rw1, cy-0.5*rh1, cx+0.5*rw1, cy+0.5*rh1];
 
         // get transform string
@@ -961,10 +959,9 @@ class HStack extends Stack {
 // non-unary | variable-aspect | graphable
 class Place extends Container {
     constructor(child, args) {
-        let {rect, pos, rad, rotate, shrink, ...attr} = args ?? {};
+        let {rect, pos, rad, rotate, expand, invar, align, ...attr} = args ?? {};
         pos = pos ?? [0.5, 0.5];
         rad = rad ?? [0.5, 0.5];
-        shrink = shrink ?? false;
 
         // ensure vector radius
         if (is_scalar(rad)) {
@@ -973,7 +970,7 @@ class Place extends Container {
 
         // find child position
         rect = rect ?? rad_rect(pos, rad);
-        let spec = [child, {rect, rotate, shrink}];
+        let spec = [child, {rect, rotate, expand, invar, align}];
 
         // pass to container
         let attr1 = {clip: false, ...attr};
@@ -2103,14 +2100,6 @@ class HAxis extends Axis {
     }
 }
 
-function maybe_two(x) {
-    if (is_scalar(x)) {
-        return [x, x];
-    } else {
-        return x;
-    }
-}
-
 class Axes extends Container {
     constructor(args) {
         let {
@@ -2132,7 +2121,7 @@ class Axes extends Container {
         yaxis_tick_size = yaxis_tick_size ?? ytick_size;
 
         // handle label_size cases
-        let [xlabel_size, ylabel_size] = maybe_two(label_size);
+        let [xlabel_size, ylabel_size] = ensure_vector(label_size, 2);
         xaxis_label_size = xaxis_label_size ?? xlabel_size;
         yaxis_label_size = yaxis_label_size ?? ylabel_size;
 
@@ -2298,7 +2287,7 @@ class Graph extends Container {
         );
 
         // determine coordinate limits
-        let [xpad, ypad] = maybe_two(padding);
+        let [xpad, ypad] = ensure_vector(padding, 2);
         xlim = xlim ?? expand_limits([min(...xmins), max(...xmaxs)], xpad);
         ylim = ylim ?? expand_limits([min(...ymins), max(...ymaxs)], ypad);
         let [xmin, xmax] = xlim;
