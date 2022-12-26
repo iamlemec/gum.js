@@ -187,7 +187,7 @@ function repeat(x, n) {
 }
 
 function ensure_vector(x, n) {
-    if (typeof(x) == 'number') {
+    if (!is_array(x)) {
         return range(n).map(i => x);
     } else {
         return x;
@@ -513,6 +513,20 @@ function rotate_aspect_radians(aspect, theta) {
     return (aspect*cos(theta)+sin(theta))/(aspect*sin(theta)+cos(theta));
 }
 
+function align_frac(align) {
+    if (is_scalar(align)) {
+        return align;
+    } else if (align == 'left' || align == 'top') {
+        return 0;
+    } else if (align == 'center' || align == 'middle') {
+        return 0.5;
+    } else if (align == 'right' || align == 'bottom') {
+        return 1;
+    } else {
+        throw new Error(`Unrecognized alignment specification: ${align}`);
+    }
+}
+
 class Context {
     constructor(prect, args) {
         let {coord, rrect, trans, prec} = args ?? {};
@@ -558,16 +572,22 @@ class Context {
     
     // project coordinates
     map(args) {
-        let {rect, aspect, rotate, expand, invar, coord} = args ?? {};
+        let {rect, aspect, rotate, expand, invar, align, coord} = args ?? {};
         rect = rect ?? coord_base;
         rotate = rotate ?? 0;
         expand = expand ?? false;
         invar = invar ?? false;
+        align = align ?? 'center';
 
         // remap rotation angle
         let degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
         let theta0 = abs(degrees)*(pi/180); // in radians
         let theta = invar ? 0 : theta0; // account for rotate?
+
+        // sort out alignment
+        let [halign, valign] = ensure_vector(align, 2);
+        halign = 1 - align_frac(halign);
+        valign = align_frac(valign);
 
         // get true pixel rect
         let [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
@@ -579,18 +599,18 @@ class Context {
         let asp1 = rotate_aspect_radians(rasp, theta);
 
         // shink down if aspect mismatch
-        let rw0 = pw0/(cos(theta)+sin(theta)/rasp);
-        let rh0 = ph0/(rasp*sin(theta)+cos(theta));
+        let [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
+        let [rw0, rh0] = [pw0/tw, ph0/th];
         let [pw1, ph1] = (expand ^ (asp0 >= asp1)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
+        let [rw1, rh1] = [pw1*tw, ph1*th];
 
         // get unrotated pixel rect
-        let [cx, cy] = [0.5*(px1+px2), 0.5*(py1+py2)];
+        let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
+        let cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
         let prect = [cx-0.5*pw1, cy-0.5*ph1, cx+0.5*pw1, cy+0.5*ph1];
 
         // get rotate bounding rect
-        let rw = pw1*(cos(theta)+sin(theta)/rasp);
-        let rh = ph1*(rasp*sin(theta)+cos(theta));
-        let rrect = invar ? prect : [cx-0.5*rw, cy-0.5*rh, cx+0.5*rw, cy+0.5*rh];
+        let rrect = invar ? prect : [cx-0.5*rw1, cy-0.5*rh1, cx+0.5*rw1, cy+0.5*rh1];
 
         // get transform string
         let [sx, sy] = [cx, cy].map(z => rounder(z, this.prec));
@@ -821,20 +841,6 @@ function get_orient(direc) {
     }
 }
 
-function align_frac(align, direc) {
-    if (is_scalar(align)) {
-        return align;
-    } else if ((direc == 'v' && align == 'left') || (direc == 'h' && align == 'top')) {
-        return 0;
-    } else if (align == 'center' || align == 'middle') {
-        return 0.5;
-    } else if ((direc == 'v' && align == 'right') || (direc == 'h' && align == 'bottom')) {
-        return 1;
-    } else {
-        throw new Error(`Unrecognized alignment specification: ${align}`);
-    }
-}
-
 // expects list of Element or [Element, height]
 // this is written as vertical, horizonal swaps dimensions and inverts aspects
 class Stack extends Container {
@@ -898,7 +904,7 @@ class Stack extends Container {
             aspect_ideal = wmax;
 
             // set wlims according to alignment
-            let afrac = align_frac(align, direc);
+            let afrac = align_frac(align);
             wlims = widths.map(w => (w != null) ? [afrac*(1-w), afrac+(1-afrac)*w] : [0, 1]);
         }
 
