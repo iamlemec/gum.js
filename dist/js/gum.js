@@ -42,6 +42,9 @@ let svg_props_base = {
 
 // text sizer
 let textSizer = null;
+function setTextSizer(sizer) {
+    textSizer = sizer;
+}
 
 // use canvas sizer
 function canvasTextSizer(ctx, text, args) {
@@ -177,6 +180,10 @@ function enumerate(x) {
     let n = x.length;
     let idx = range(n);
     return zip(idx, x);
+}
+
+function repeat(x, n) {
+    return Array(n).fill(x);
 }
 
 function ensure_vector(x, n) {
@@ -550,15 +557,17 @@ class Context {
     }
     
     // project coordinates
-    map(rect, args) {
-        let {aspect, rotate, shrink, coord} = args ?? {};
+    map(args) {
+        let {rect, aspect, rotate, expand, invar, coord} = args ?? {};
+        rect = rect ?? coord_base;
         rotate = rotate ?? 0;
-        shrink = shrink ?? true;
+        expand = expand ?? false;
+        invar = invar ?? false;
 
         // remap rotation angle
         let degrees = degree_mod(rotate, -90, 90); // map to [-90, 90]
         let theta0 = abs(degrees)*(pi/180); // in radians
-        let theta = shrink ? theta0 : 0; // account for rotate?
+        let theta = invar ? 0 : theta0; // account for rotate?
 
         // get true pixel rect
         let [px1, py1, px2, py2] = this.coord_to_pixel_rect(rect);
@@ -570,14 +579,9 @@ class Context {
         let asp1 = rotate_aspect_radians(rasp, theta);
 
         // shink down if aspect mismatch
-        let pw1, ph1;
-        if (asp0 >= asp1) { // too tall
-            ph1 = ph0/(rasp*sin(theta)+cos(theta));
-            pw1 = rasp*ph1;
-        } else { // too wide
-            pw1 = pw0/(cos(theta)+sin(theta)/rasp);
-            ph1 = pw1/rasp;
-        }
+        let rw0 = pw0/(cos(theta)+sin(theta)/rasp);
+        let rh0 = ph0/(rasp*sin(theta)+cos(theta));
+        let [pw1, ph1] = (expand ^ (asp0 >= asp1)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
 
         // get unrotated pixel rect
         let [cx, cy] = [0.5*(px1+px2), 0.5*(py1+py2)];
@@ -586,7 +590,7 @@ class Context {
         // get rotate bounding rect
         let rw = pw1*(cos(theta)+sin(theta)/rasp);
         let rh = ph1*(rasp*sin(theta)+cos(theta));
-        let rrect = shrink ? [cx-0.5*rw, cy-0.5*rh, cx+0.5*rw, cy+0.5*rh] : prect;
+        let rrect = invar ? prect : [cx-0.5*rw, cy-0.5*rh, cx+0.5*rw, cy+0.5*rh];
 
         // get transform string
         let [sx, sy] = [cx, cy].map(z => rounder(z, this.prec));
@@ -679,7 +683,7 @@ class Container extends Element {
             let ctx = new Context(coord_base);
             let rects = children
                 .filter(([c, a]) => c.aspect != null)
-                .map(([c, a]) => ctx.map(a.rect, {aspect: c.aspect, rotate: a.rotate, shrink: a.shrink}).rrect);
+                .map(([c, a]) => ctx.map({aspect: c.aspect, ...a}).rrect);
             if (rects.length > 0) {
                 let total = merge_rects(rects);
                 aspect = rect_aspect(total);
@@ -704,8 +708,8 @@ class Container extends Element {
         // map to new contexts and render
         let inside = this.children
             .map(([c, a]) => c.svg(
-                ctx.map(a.rect, {aspect: c.aspect, rotate: a.rotate, shrink: a.shrink, coord: this.coord}))
-            )
+                ctx.map({aspect: c.aspect, coord: this.coord, ...a})
+            ))
             .filter(s => s.length > 0)
             .join('\n');
 
@@ -2790,7 +2794,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Ticks, VTicks, HTicks, Axis, VAxis, HAxis, Axes, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
 ];
 
 // detect object types
@@ -2894,4 +2898,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, rgb2hex, rgb2hsl, round, rounder, sin, sqrt, zip };
+export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HScale, HStack, HTicks, InterActive, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Ticks, Toggle, VAxis, VBar, VBars, VScale, VStack, VTicks, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, sqrt, zip };

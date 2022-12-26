@@ -416,6 +416,20 @@ let plot = Plot([lines, kdes], {
 });
 return Frame(plot, {margin: 0.1});
 
+// container args  demo
+let crect = c => Rect({aspect: 1.5, stroke: c});
+let rect = rad_rect([0.5, 0.5], 0.25);
+let rotate = 15;
+let cont = Container([
+  [crect('black'), {rect}],
+  [crect('black'), {rect, expand: true}],
+  [crect('red'), {rect, rotate}],
+  [crect('green'), {rect, rotate, invar: true}],
+  [crect('blue'), {rect, rotate, expand: true}],
+  [crect('orange'), {rect, rotate, expand: true, invar: true}],
+], {clip: false});
+return cont;
+
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {
