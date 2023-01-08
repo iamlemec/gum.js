@@ -430,6 +430,17 @@ let cont = Container([
 ], {clip: false});
 return cont;
 
+// split axis example
+let locs = range(50).map(i => random_gaussian(0, 1.5));
+let dots = Scatter(locs, {radius: 0.1, opacity: 0.25});
+let hline = HLine(0, {lim: [-4, 4], stroke_dasharray: 4, opacity: 0.5});
+let vline = VLine(0, {lim: [-4, 4], stroke_dasharray: 4, opacity: 0.5});
+let plot = Plot([hline, vline, dots], {
+  xlim: [-5, 4], ylim: [-5, 4], xaxis_lim: [-4, 4], yaxis_lim: [-4, 4]
+});
+let frame = Frame(plot, {margin: 0.15});
+return frame;
+
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {
