@@ -23,7 +23,7 @@ let font_size_latex = 14;
 
 // plot defaults
 let num_ticks_base = 5;
-let tick_size_base = 0.03;
+let tick_size_base = 0.025;
 let tick_label_size_base = 2.0;
 let label_size_base = 0.06;
 let label_offset_base = 0.15;
@@ -348,7 +348,7 @@ function merge_rects(rects) {
 function rect_dims(rect) {
     let [xa, ya, xb, yb] = rect;
     let [w, h] = [xb - xa, yb - ya];
-    return [w, h];
+    return [abs(w), abs(h)];
 }
 
 function rect_aspect(rect) {
@@ -630,12 +630,12 @@ class Context {
         // get rotated/unrotated pixel rect
         let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
         let cy = (1-valign)*py1 + valign*py2 + (0.5-valign)*rh1;
-        let prect = [cx-0.5*abs(pw1), cy-0.5*aph1, cx+0.5*apw1, cy+0.5*aph1];
+        let prect = [cx-0.5*apw1, cy-0.5*aph1, cx+0.5*apw1, cy+0.5*aph1];
         let rrect = invar ? prect : [cx-0.5*arw1, cy-0.5*arh1, cx+0.5*arw1, cy+0.5*arh1];
 
         // get transform string
-        let vx = (1-hpivot)*px1 + hpivot*px2 + (0.5-hpivot)*rw1;
-        let vy = (1-vpivot)*py1 + vpivot*py2 + (0.5-vpivot)*rh1;
+        let vx = (1-hpivot)*px1 + hpivot*px2;
+        let vy = (1-vpivot)*py1 + vpivot*py2;
         let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
         let trans = (rotate != 0) ? `rotate(${rotate} ${sx} ${sy})` : null;
 
@@ -1035,6 +1035,23 @@ class Rotate extends Container {
         let spec = [child, {rotate, expand, invar, align, pivot}];
         let attr1 = {clip: true, ...attr};
         super([spec], attr1);
+    }
+}
+
+class Anchor extends Container {
+    constructor(child, args) {
+        let {aspect, align, ...attr} = args ?? {};
+        aspect = aspect ?? 1;
+        align = align ?? 'left';
+
+        let rmap = {
+            'left': [1, 0, 1, 1], 'right': [0, 0, 0, 1],
+            'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
+        };
+        let rect = rmap[align];
+
+        let spec = {rect, expand: true, align};
+        super([[child, spec]], {aspect, ...attr});
     }
 }
 
@@ -2011,7 +2028,7 @@ class VBars extends Bars {
  **/
 
 function make_ticklabel(s, prec, attr) {
-    let attr1 = {border: 0, padding: 0, text_vshift: -0.2, ...attr};
+    let attr1 = {border: 0, padding: 0, text_vshift: -0.13, ...attr};
     let text = rounder(s, prec);
     let node = new Node(text, attr1);
     return node;
@@ -2065,20 +2082,17 @@ class Labels extends Container {
         let {align, prec, ...attr} = args ?? {};
         direc = get_orient(direc);
         ticks = ticks.map(x => ensure_tick(x, prec));
+        align = align ?? 'left';
 
-        // get tick alignment
-        let align0 = (direc == 'v') ? 'right' : 'center';
-        align = align ?? align0;
-
-        // pre-rotate for vertical ticks
+        // anchor vertical ticks to unit-aspect boxes
         if (direc == 'v') {
-            ticks = ticks.map(([t, c]) => [t, new Rotate(c, {rotate: 90})]);
+            ticks = ticks.map(([t, c]) => [t, new Anchor(c, {align})]);
         }
 
-        // find tick locations
-        let rect = (t, c) => (direc == 'v') ?
-            {pos: [1, t], rad: [0.5, 0], expand: true, align, invar: true, rotate: -90} :
-            {pos: [t, 0.5], rad: [0, 0.5], expand: true, align};
+        // place tick boxes using expanded lines
+        let rect = t => (direc == 'v') ?
+            {pos: [0.5, t], rad: [0.5, 0], expand: true} :
+            {pos: [t, 0.5], rad: [0, 0.5], expand: true};
         let children = ticks.map(([t, c]) => [c, rect(t)]);
 
         super(children, {clip: false, ...attr});
@@ -2113,22 +2127,28 @@ function get_ticklim(lim) {
 class Axis extends Container {
     constructor(direc, ticks, args) {
         let {
-            pos, lim, tick_size, tick_lim, label_size, label_flip, prec, ...attr0
+            pos, lim, tick_size, tick_pos, label_size, label_pos, prec, ...attr0
         } = args ?? {};
         let [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
+        direc = get_orient(direc);
         label_size = label_size ?? tick_label_size_base;
         tick_size = tick_size ?? tick_size_base;
-        pos = pos ?? 0;
+        pos = pos ?? 0.5;
         lim = lim ?? limit_base;
-        direc = get_orient(direc);
-        let [lo, hi] = lim;
 
-        // invert ytick limits (since higher y means up here)
-        tick_lim = get_ticklim(tick_lim);
+        // get numerical tick limits
+        let tick_lim = get_ticklim(tick_pos);
         let tick_half = 0.5*tick_size;
-        let lab_size = label_size*tick_size;
 
-        // extract information
+        // sort out label position
+        let label_pos0 = (direc == 'v') ? 'left' : 'bottom';
+        label_pos = label_pos ?? label_pos0;
+        let lab_size = label_size*tick_size;
+        let lab_outer = label_pos == 'left' || label_pos == 'bottom';
+        let lab_base = lab_outer ? (-tick_half-lab_size) : tick_half;
+
+        // extract tick information
+        let [lo, hi] = lim;
         ticks = is_scalar(ticks) ? linspace(lo, hi, ticks) : ticks;
         ticks = ticks.map(t => ensure_tick(t, prec));
         let locs = ticks.map(([t, x]) => t);
@@ -2136,16 +2156,16 @@ class Axis extends Container {
         // accumulate children
         let cline = new UnitLine(direc, 0.5, {lim, ...line_attr});
         let scale = new Scale(direc, locs, {lim: tick_lim, ...tick_attr});
-        let label = new Labels(direc, ticks, {...label_attr});
+        let label = new Labels(direc, ticks, {align: label_pos, ...label_attr});
  
         // position children (main direction has data coordinates)
         let lbox, sbox;
         if (direc == 'v') {
             sbox = [pos-tick_half, lo, pos+tick_half, hi];
-            lbox = [pos-tick_half-lab_size, lo, pos-tick_half, hi];
+            lbox = [pos+lab_base, lo, pos+lab_base+lab_size, hi];
         } else {
             sbox = [lo, pos-tick_half, hi, pos+tick_half];
-            lbox = [lo, pos-tick_half-lab_size, hi, pos-tick_half];
+            lbox = [lo, pos+lab_base, hi, pos+lab_base+lab_size];
         }
 
         // pass to container
@@ -2153,6 +2173,15 @@ class Axis extends Container {
         let children = [[cline, sbox], [scale, sbox], [label, lbox]];
         super(children, {coord: tcoord, ...attr});
         this.ticks = ticks;
+
+        // set limits
+        if (direc == 'v') {
+            this.xlim = [pos, pos];
+            this.ylim = lim; 
+        } else {
+            this.xlim = lim;
+            this.ylim = [pos, pos];
+        }
     }
 }
 
@@ -2165,68 +2194,6 @@ class HAxis extends Axis {
 class VAxis extends Axis {
     constructor(ticks, args) {
         super('v', ticks, args);
-    }
-}
-
-class Axes extends Container {
-    constructor(args) {
-        let {
-            xticks, yticks, xlim, ylim, xanchor, yanchor, tick_size, label_size,
-            xaxis_tick_size, yaxis_tick_size, xaxis_label_size, yaxis_label_size,
-            aspect, prec, ...attr0
-        } = args ?? {};
-        let [xaxis_attr, yaxis_attr, attr] = prefix_split(['xaxis', 'yaxis'], attr0);
-        xticks = xticks ?? num_ticks_base;
-        yticks = yticks ?? num_ticks_base;
-        xlim = xlim ?? limit_base;
-        ylim = ylim ?? limit_base;
-        tick_size = tick_size ?? tick_size_base;
-        label_size = label_size ?? tick_label_size_base;
-
-        // handle tick_size cases
-        let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
-        xaxis_tick_size = xaxis_tick_size ?? xtick_size;
-        yaxis_tick_size = yaxis_tick_size ?? ytick_size;
-
-        // handle label_size cases
-        let [xlabel_size, ylabel_size] = ensure_vector(label_size, 2);
-        xaxis_label_size = xaxis_label_size ?? xlabel_size;
-        yaxis_label_size = yaxis_label_size ?? ylabel_size;
-
-        // get default positions
-        let [xmin, xmax] = xlim;
-        let [ymin, ymax] = ylim;
-        xanchor = xanchor ?? ymin;
-        yanchor = yanchor ?? xmin;
-
-        // collect children
-        let children = [];
-
-        // make the xaxis
-        if (xticks != null) {
-            xanchor = (xanchor-ymax)/(ymin-ymax);
-            let xaxis = new HAxis(xticks, {lim: xlim, label_size: xaxis_label_size, ...xaxis_attr});
-            xticks = xaxis.ticks;
-            children.push([
-                xaxis, [0, xanchor-xaxis_tick_size/2, 1, xanchor+xaxis_tick_size/2]
-            ]);
-        }
-
-        // make the yaxis
-        if (yticks != null) {
-            yanchor = (yanchor-xmin)/(xmax-xmin);
-            let yaxis = new VAxis(yticks, {lim: ylim, label_size: yaxis_label_size, ...yaxis_attr});
-            yticks = yaxis.ticks;
-            children.push([
-                yaxis, [yanchor-yaxis_tick_size/2, 0, yanchor+yaxis_tick_size/2, 1]
-            ]);
-        }
-
-        // pass to container
-        let attr1 = {aspect: aspect, ...attr};
-        super(children, attr1);
-        this.xticks = xticks;
-        this.yticks = yticks;
     }
 }
 
@@ -2251,32 +2218,24 @@ class Title extends Frame {
     }
 }
 
-class Grid extends Container {
-    constructor(args) {
-        let {xgrid, ygrid, xlim, ylim, opacity, ...attr0} = args ?? {};
-        let [xgrid_attr, ygrid_attr, attr] = prefix_split(['xgrid', 'ygrid'], attr0);
-        xlim = xlim ?? limit_base;
-        ylim = ylim ?? limit_base;
+class Grid extends Scale {
+    constructor(direc, locs, args) {
+        let {lim, opacity, ...attr} = args ?? {};
+        lim = lim ?? limit_base;
         opacity = opacity ?? 0.2;
+        super(direc, locs, {lim, opacity, ...attr});
+    }
+}
 
-        let [xmin, xmax] = xlim;
-        let [ymin, ymax] = ylim;
-        let grids = [];
+class HGrid extends Grid {
+    constructor(locs, args) {
+        super('h', locs, args);
+    }
+}
 
-        if (xgrid != null && xgrid !== false) {
-            let xgridlines = new HScale(xgrid, {lim: ylim, opacity, ...ygrid_attr});
-            grids.push(xgridlines);
-        }
-        if (ygrid != null && ygrid !== false) {
-            let ygridlines = new VScale(ygrid, {lim: xlim, opacity, ...xgrid_attr});
-            grids.push(ygridlines);
-        }
-
-        let coord = [xmin, ymax, xmax, ymin];
-        let attr1 = {coord, ...attr};
-        super(grids, attr1);
-        this.xlim = xlim;
-        this.ylim = ylim;
+class VGrid extends Grid {
+    constructor(locs, args) {
+        super('v', locs, args);
     }
 }
 
@@ -2329,6 +2288,20 @@ class Note extends Place {
     }
 }
 
+// find minimal containing limits
+function outer_limits(elems, padding) {
+    padding = padding ?? 0;
+    let [xpad, ypad] = ensure_vector(padding, 2);
+
+    let [xmins, xmaxs] = zip(...elems.map(c => c.xlim).filter(z => z != null));
+    let [ymins, ymaxs] = zip(...elems.map(c => c.ylim).filter(z => z != null));
+
+    let xlim = expand_limits([min(...xmins), max(...xmaxs)], xpad);
+    let ylim = expand_limits([min(...ymins), max(...ymaxs)], ypad);
+
+    return [xlim, ylim];
+}
+
 function expand_limits(lim, fact) {
     let [lo, hi] = lim;
     let ex = fact*(hi-lo);
@@ -2346,29 +2319,20 @@ class Graph extends Container {
             elems = [elems];
         }
 
-        // collect line ranges
-        let [xmins, xmaxs] = zip(...elems
-            .filter(c => 'xlim' in c).map(c => c.xlim)
-        );
-        let [ymins, ymaxs] = zip(...elems
-            .filter(c => 'ylim' in c).map(c => c.ylim)
-        );
-
         // determine coordinate limits
-        let [xpad, ypad] = ensure_vector(padding, 2);
-        xlim = xlim ?? expand_limits([min(...xmins), max(...xmaxs)], xpad);
-        ylim = ylim ?? expand_limits([min(...ymins), max(...ymaxs)], ypad);
+        let [xlim0, ylim0] = outer_limits(elems, padding);
+        xlim = xlim ?? xlim0;
+        ylim = ylim ?? ylim0;
+
+        // make coordinate box
         let [xmin, xmax] = xlim;
         let [ymin, ymax] = ylim;
+        let coord = [xmin, ymax, xmax, ymin];
 
-        // get scale and aspect
-        if (aspect == 'auto') {
-            let [xrange, yrange] = [abs(xmax-xmin), abs(ymax-ymin)];
-            aspect = xrange/yrange;
-        }
+        // get automatic aspect
+        aspect = (aspect == 'auto') ? rect_aspect(coord) : aspect;
 
         // pass to container
-        let coord = [xmin, ymax, xmax, ymin];
         let attr1 = {aspect, coord, ...attr};
         super(elems, attr1);
         this.xlim = xlim;
@@ -2379,13 +2343,16 @@ class Graph extends Container {
 class Plot extends Container {
     constructor(elems, args) {
         let {
-            xlim, ylim, xaxis, yaxis, xticks, yticks, xanchor, yanchor, grid, xgrid, ygrid,
-            xlabel, ylabel, title, tick_size, label_size, label_offset, tick_label_size,
-            title_size, title_offset, xlabel_size, ylabel_size, xlabel_offset, ylabel_offset,
-            padding, prec, aspect, ...attr0
+            xlim, ylim, xaxis, yaxis, xticks, yticks, grid, xgrid, ygrid, xlabel, ylabel,
+            title, tick_size, label_size, label_offset, title_size, title_offset, xlabel_size,
+            ylabel_size, xlabel_offset, ylabel_offset, padding, prec, aspect, ...attr0
         } = args ?? {};
         xaxis = xaxis ?? true;
         yaxis = yaxis ?? true;
+        xticks = xticks ?? num_ticks_base;
+        yticks = yticks ?? num_ticks_base;
+        tick_size = tick_size ?? tick_size_base;
+        aspect = aspect ?? 'auto';
 
         // some advanced piping
         let [
@@ -2398,67 +2365,67 @@ class Plot extends Container {
         [xaxis_attr, yaxis_attr] = [{...axis_attr, ...xaxis_attr}, {...axis_attr, ...yaxis_attr}];
         [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
         [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
-        axis_attr = {...prefix_add('xaxis', xaxis_attr), ...prefix_add('yaxis', yaxis_attr)};
-        grid_attr = {...prefix_add('xgrid', xgrid_attr), ...prefix_add('ygrid', ygrid_attr)};
 
-        // create graph from elements
-        let graph = new Graph(elems, {xlim, ylim, aspect, padding});
+        // handle singleton line
+        if (elems instanceof Element) {
+            elems = [elems];
+        }
+
+        // determine coordinate limits
+        let [xlim0, ylim0] = outer_limits(elems, padding);
+        [xlim, ylim] = [xlim ?? xlim0, ylim ?? ylim0];
+        let [[xlo, xhi], [ylo, yhi]] = [xlim, ylim];
+        let [xrange, yrange] = [abs(xhi-xlo), abs(yhi-ylo)];
+
+        // ensure consistent apparent tick size
+        aspect = (aspect == 'auto') ? xrange/yrange : aspect;
+        let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
+        [xtick_size, ytick_size] = [yrange*xtick_size, xrange*ytick_size];
+
+        // default xaxis generation
+        if (xaxis === true) {
+            xaxis = new HAxis(xticks, {
+                pos: ylo, lim: xlim, tick_size, tick_size: xtick_size, ...xaxis_attr
+            });
+        }
+
+        // default yaxis generation
+        if (yaxis === true) {
+            yaxis = new VAxis(yticks, {
+                pos: xlo, lim: ylim, tick_size, tick_size: ytick_size, ...yaxis_attr
+            });
+        }
+
+        // automatic grid path
+        if (grid === true || xgrid === true) {
+            xgrid = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
+        }
+        if (grid === true || ygrid === true) {
+            ygrid = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
+        }
+        if (is_array(xgrid)) {
+            xgrid = new HGrid(xgrid, {lim: ylim, ...xgrid_attr});
+        }
+        if (is_array(ygrid)) {
+            ygrid = new VGrid(ygrid, {lim: xlim, ...ygrid_attr});
+        }
+
+        // create graph from core elements
+        let elems1 = [xaxis, yaxis, xgrid, ygrid, ...elems].filter(z => z != null);
+        let graph = new Graph(elems1, {xlim, ylim, aspect, padding});
 
         // create base layout
         let children = [graph];
 
-        /*
-        // create axes to match
-        let axes = new Axes({
-            xticks, yticks, xanchor, yanchor, tick_size, label_size: tick_label_size,
-            xlim: graph.xlim, ylim: graph.ylim, aspect: graph.aspect, prec, ...axis_attr
-        });
-        */
-
-        if (xaxis) {
-            let [xlo, xhi] = graph.xlim;
-            xanchor = xanchor ?? xlo;
-            xaxis = new HAxis(xticks, {
-                pos: xanchor, lim: graph.xlim, ...xaxis_attr
-            });
-            children.unshift(
-                new Graph(xaxis, {xlim: graph.xlim, ylim: graph.ylim, aspect: graph.aspect, padding})
-            );
-        }
-
-        if (yaxis) {
-            let [ylo, yhi] = graph.ylim;
-            yanchor = yanchor ?? ylo;
-            yaxis = new VAxis(yticks, {
-                pos: yanchor, lim: graph.ylim, ...yaxis_attr
-            });
-            children.unshift(yaxis);
-        }
-
-        // create gridlines
-        if (grid === true || xgrid != null || ygrid != null) {
-            let xtick_locs = axes.xticks.map(([x, t]) => x);
-            let ytick_locs = axes.yticks.map(([y, t]) => y);
-            xgrid = (grid === true && xgrid == null) ? true : xgrid;
-            ygrid = (grid === true && ygrid == null) ? true : ygrid;
-            xgrid = (xgrid === true) ? xtick_locs : xgrid;
-            ygrid = (ygrid === true) ? ytick_locs : ygrid;
-            let fgrid = new Grid({
-                xgrid, ygrid, xlim: graph.xlim, ylim: graph.ylim,
-                aspect: graph.aspect, ...grid_attr
-            });
-            children.unshift(fgrid);
-        }
-
         // sort out label size and offset
         if (xlabel != null || ylabel != null) {
             label_size = label_size ?? label_size_base;
-            let [xlabelsize, ylabelsize] = aspect_invariant(label_size, graph.aspect);
+            let [xlabelsize, ylabelsize] = aspect_invariant(label_size, aspect);
             xlabel_size = xlabel_size ?? xlabelsize;
             ylabel_size = ylabel_size ?? ylabelsize;
 
             label_offset = label_offset ?? label_offset_base;
-            let [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, graph.aspect);
+            let [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, aspect);
             xlabel_offset = xlabel_offset ?? xlabeloffset;
             ylabel_offset = ylabel_offset ?? ylabeloffset;
         }
@@ -2485,7 +2452,7 @@ class Plot extends Container {
         }
 
         // pass to container
-        let attr1 = {aspect: graph.aspect, ...attr};
+        let attr1 = {aspect, ...attr};
         super(children, attr1);
     }
 }
@@ -2882,7 +2849,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Axes, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, aspect_invariant
 ];
 
 // detect object types
@@ -2986,4 +2953,4 @@ function injectImages(elem) {
     });
 }
 
-export { Animation, Arc, Arrowhead, Axes, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HLabels, HScale, HStack, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VScale, VStack, Variable, abs, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, Arc, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HLabels, HScale, HStack, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VScale, VStack, Variable, abs, aspect_invariant, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, rad_rect, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
