@@ -1556,13 +1556,11 @@ class Text extends Element {
 
 class Tex extends Element {
     constructor(text, args) {
-        let {size, actual, hshift, vshift, xover, yover, ...attr} = args ?? {};
+        let {size, actual, xover, yover, ...attr} = args ?? {};
         size = size ?? font_size_latex;
         actual = actual ?? true;
-        hshift = hshift ?? 0;
-        vshift = vshift ?? 0;
         yover = yover ?? 1.0;
-        xover = xover ?? 0.5;
+        xover = xover ?? 2.0;
 
         // render with katex
         let katex = render.renderToString(text, {output: 'html', trust: true});
@@ -1578,8 +1576,8 @@ class Tex extends Element {
         super('foreignObject', false, attr1);
 
         // store metrics
-        this.xoff = xoff + hshift;
-        this.yoff = yoff + vshift;
+        this.xoff = xoff;
+        this.yoff = yoff;
         this.size = size;
         this.xover = xover;
         this.yover = yover;
