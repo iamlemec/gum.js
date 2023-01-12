@@ -293,6 +293,7 @@ function max(...vals) {
 // constants
 let pi = new NamedNumber('pi', Math.PI);
 let phi = new NamedNumber('phi', (1+sqrt(5))/2);
+let r2d = new NamedNumber('r2d', 180/Math.PI);
 
 /**
  ** random number generation
@@ -737,7 +738,6 @@ function parse_bounds(bnd) {
     }
 }
 
-// non-unary | variable-aspect | graphable
 class Container extends Element {
     constructor(children, args) {
         let {tag, aspect, coord, clip, debug, ...attr0} = args ?? {};
@@ -1066,8 +1066,8 @@ class Place extends Container {
 }
 
 class Rotate extends Container {
-    constructor(child, args) {
-        let {rotate, expand, invar, align, pivot, ...attr} = args ?? {};
+    constructor(child, rotate, args) {
+        let {expand, invar, align, pivot, ...attr} = args ?? {};
         let spec = [child, {rotate, expand, invar, align, pivot}];
         let attr1 = {clip: true, ...attr};
         super([spec], attr1);
@@ -1125,7 +1125,6 @@ class Spacer extends Element {
 }
 let spacer = new Spacer();
 
-// unary | null-aspect | graphable
 class Line extends Element {
     constructor(p1, p2, args) {
         let attr = args ?? {};
@@ -1141,7 +1140,6 @@ class Line extends Element {
     }
 }
 
-// unary | null-aspect | graphable
 class UnitLine extends Line {
     constructor(direc, pos, args) {
         let {lim, ...attr} = args ?? {};
@@ -1152,21 +1150,18 @@ class UnitLine extends Line {
     }
 }
 
-// unary | null-aspect | graphable
 class VLine extends UnitLine {
     constructor(pos, args) {
         super('v', pos, args);
     }
 }
 
-// unary | null-aspect | graphable
 class HLine extends UnitLine {
     constructor(pos, args) {
         super('h', pos, args);
     }
 }
 
-// unary | null-aspect | graphable
 class Rect extends Element {
     constructor(args) {
         let {p1, p2, radius, ...attr} = args ?? {};
@@ -1206,7 +1201,6 @@ class Rect extends Element {
     }
 }
 
-// unary | unit-aspect | graphable
 class Square extends Rect {
     constructor(args) {
         let {pos, rad, ...attr} = args ?? {};
@@ -1220,7 +1214,6 @@ class Square extends Rect {
     }
 }
 
-// unary | null-aspect | graphable
 class Ellipse extends Element {
     constructor(args) {
         let {pos, rad, ...attr} = args ?? {};
@@ -1245,7 +1238,6 @@ class Ellipse extends Element {
     }
 }
 
-// unary | unit-aspect | graphable
 class Circle extends Ellipse {
     constructor(args) {
         let {pos, rad, ...attr} = args ?? {};
@@ -1266,7 +1258,6 @@ class Dot extends Circle {
     }
 }
 
-// unary | aspect | non-graphable
 class Ray extends Element {
     constructor(theta, args) {
         let {aspect, ...attr} = args ?? {};
@@ -1694,8 +1685,7 @@ function norm_direc(direc) {
     }
 }
 
-// unary | aspect | graphable
-class Arrowhead extends Group {
+class Arrowhead extends Container {
     constructor(args) {
         let {direc, pos, size, stroke_width, ...attr} = args ?? {};
         direc = direc ?? 0;
@@ -1710,38 +1700,54 @@ class Arrowhead extends Group {
         let pattr = {fill: 'black', stroke_width, transform, ...attr};
         let poly = new Polygon([[0.5, 0.5], [0, 0], [0, 1]], pattr);
 
+        // calculate size
+        let size2 = ensure_vector(size, 2);
+        let rect = rad_rect(pos, size2);
+
         // pass to group for rotate
-        let rect = rad_rect(pos, size);
-        let child = [poly, {rect, rotate: -direc, shrink: false}];
+        let child = [poly, {rect, rotate: -direc, invar: true}];
         super([child]);
     }
 }
 
-let arrow_dir = {'n': -90, 's': 90, 'e': 180, 'w': 0};
 class Edge extends Container {
-    constructor(pd1, pd2, args) {
-        let {curve, arrow, debug, ...attr0} = args ?? {};
-        let [arrow_attr, attr] = prefix_split(['arrow'], attr0);
+    constructor(beg, end, args) {
+        let {curve, arrow, arrow_beg, arrow_end, arrow_size, debug, ...attr0} = args ?? {};
+        let [arrow_beg_attr, arrow_end_attr, arrow_attr, line_attr, attr] = prefix_split(
+            ['arrow_beg', 'arrow_end', 'arrow', 'line'], attr0
+        );
         curve = curve ?? 0.3;
-        arrow = arrow ?? 0;
+        arrow_size = arrow_size ?? [0.02, 0.015];
         debug = debug ?? false;
 
-        let [[p1, d1], [p2, d2]] = [pd1, pd2];
+        // accumulate arguments
+        arrow_beg_attr = {size: arrow_size, ...arrow_attr, ...arrow_beg_attr};
+        arrow_end_attr = {size: arrow_size, ...arrow_attr, ...arrow_end_attr};
+
+        // final arrowheads
+        arrow = arrow ?? false;
+        arrow_beg = arrow || (arrow_beg ?? false);
+        arrow_end = arrow || (arrow_end ?? false);
+
+        // determine directions
+        let [[p1, d1], [p2, d2]] = [beg, end].map(pd => is_array(pd[0]) ? pd : [pd, null]);
+        [d1, d2] = [d1 ?? get_direction(p1, p2), d2 ?? get_direction(p2, p1)];
+
+        // unpack positions
         let [[x1, y1], [x2, y2]] = [p1, p2];
         let [dx, dy] = [x2 - x1, y2 - y1];
 
+        // sort out directions
         [d1, d2] = [norm_direc(d1), norm_direc(d2)];
         let vert1 = d1 == 'n' || d1 == 's';
         let vert2 = d2 == 'n' || d2 == 's';
         let wide = abs(dx) > abs(dy);
 
-        let ahead = null;
-        if (arrow != null) {
-            let rot = arrow_dir[d2];
-            let size2 = ensure_vector(arrow, 2);
-            let arrow_attr1 = {pos: p2, direc: rot, size: size2, ...arrow_attr};
-            ahead = new Arrowhead(arrow_attr1);
-        }
+        // optional arrowheads
+        let arrow_dir = {'n': -90, 's': 90, 'e': 180, 'w': 0};
+        let [rot1, rot2] = [arrow_dir[d1], arrow_dir[d2]];
+        let ahead_beg = arrow_beg ? new Arrowhead({pos: p1, direc: rot1, ...arrow_beg_attr}) : null;
+        let ahead_end = arrow_end ? new Arrowhead({pos: p2, direc: rot2, ...arrow_end_attr}) : null;
 
         // reorient so that when non-aliged:
         // (1) when wide, we go vertical first
@@ -1755,6 +1761,7 @@ class Edge extends Container {
             }
         }
 
+        // curve levels by direction
         let curve1, curve2;
         if (vert1 == vert2) {
             [curve1, curve2] = [curve, curve];
@@ -1762,6 +1769,7 @@ class Edge extends Container {
             [curve1, curve2] = [1.0, curve];
         }
 
+        // anchor point 1
         let px1;
         if (vert1) {
             px1 = [x1, y1 + curve1*dy];
@@ -1769,6 +1777,7 @@ class Edge extends Container {
             px1 = [x1 + curve1*dx, y1];
         }
 
+        // anchor point 2
         let px2;
         if (vert2) {
             px2 = [x2, y2 - curve2*dy];
@@ -1788,14 +1797,13 @@ class Edge extends Container {
             }
         }
 
+        // create bezier curves
         let BezClass = debug ? Bezier2PathDebug : Bezier2Path;
-        let line = new BezClass(p1, [[pc, px1], [p2, px2]], attr);
-        let children = [line];
-        if (ahead != null) {
-            children.push(ahead);
-        }
+        let line = new BezClass(p1, [[pc, px1], [p2, px2]], line_attr);
 
-        super(children);
+        // pass to container
+        let children = [line, ahead_beg, ahead_end].filter(x => x != null);
+        super(children, attr);
     }
 }
 
@@ -1996,7 +2004,6 @@ class VBar extends Bar {
     }
 }
 
-// non-unary | variable-aspect | graphable
 // custom bars must have a ylim and optionally a width
 class Bars extends Container {
     constructor(direc, bars, args) {
@@ -2892,7 +2899,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
 ];
 
 // detect object types
@@ -3001,5 +3008,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian
 };
