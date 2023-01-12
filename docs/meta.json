@@ -21,7 +21,8 @@
     "plotting": [
         "Axis",
         "Graph",
-        "Plot"
+        "Plot",
+        "BarPlot"
     ],
     "networks": [
         "Node",

@@ -2482,7 +2482,8 @@ class Plot extends Container {
 
 class BarPlot extends Plot {
     constructor(data, args) {
-        let {direc, aspect, width, shrink, padding, color, ...attr} = args ?? {};
+        let {direc, aspect, shrink, padding, color, ...attr0} = args ?? {};
+        let [bars_attr, attr] = prefix_split(['bars'], attr0);
         direc = direc ?? 'v';
         aspect = aspect ?? phi;
         shrink = shrink ?? 0.2;
@@ -2499,7 +2500,7 @@ class BarPlot extends Plot {
 
         // generate actual bars
         let [labs, bars] = zip(...data);
-        let bars1 = new Bars(direc, bars, {width, shrink, color});
+        let bars1 = new Bars(direc, bars, {shrink, color, ...bars_attr});
         let ticks = zip(bars1.vals, labs);
 
         // send to general plot
