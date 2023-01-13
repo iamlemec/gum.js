@@ -8,5 +8,5 @@ Positional arguments:
 - `points` — a list of `[child, position]` pairs, where `position` can be either an `[x,y]` pair or a `[x,y,r]`/`[x,y,rx,ry]` list to override the `radius`
 
 Keyword arguments:
-- `radius` = `0.05` — the default radius to use for children
+- `size` = `0.05` — the default radius to use for children
 - `shape` = `black_dot()` — the default shape to use for children

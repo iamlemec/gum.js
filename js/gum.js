@@ -1093,14 +1093,14 @@ class Anchor extends Container {
 
 class Scatter extends Container {
     constructor(points, args) {
-        let {shape, radius, color, xlim, ylim, ...attr} = args ?? {};
+        let {size, shape, color, xlim, ylim, ...attr} = args ?? {};
         shape = shape ?? new Dot({color});
-        radius = radius ?? 0.01;
+        size = size ?? 0.01;
 
         // handle different forms
         points = points.map(p => is_scalar(p[0]) ? [p] : p);
         points = points.map(p => is_element(p[0]) ? p : [shape, ...p]);
-        points = points.map(p => (p.length >= 3) ? p : [...p, radius]);
+        points = points.map(p => (p.length >= 3) ? p : [...p, size]);
 
         // pass to container
         let children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
@@ -1184,6 +1184,7 @@ class Rect extends Element {
         if (w < 0) { x += w; w *= -1; }
         if (h < 0) { y += h; h *= -1; }
 
+        // scale border radius
         let rx, ry;
         if (this.radius != null) {
             if (is_scalar(this.radius)) {
@@ -1195,6 +1196,7 @@ class Rect extends Element {
             }
         }
 
+        // output properties
         let base = {x, y, width: w, height: h, rx, ry};
         return {...base, ...this.attr};
     }
@@ -1464,8 +1466,8 @@ class Bezier2PathDebug extends Container {
         nodes.unshift(start);
 
         let red = new Dot({color: 'red'});
-        let scatter1 = new Scatter(nodes, {radius: 0.01});
-        let scatter2 = new Scatter(arrows, {radius: 0.007, shape: red});
+        let scatter1 = new Scatter(nodes, {size: 0.01});
+        let scatter2 = new Scatter(arrows, {size: 0.007, shape: red});
         let lines = zip(nodes.slice(0, -1), arrows).map(([n, a]) =>
             new Line(n, a, {stroke: 'blue', stroke_dasharray: 2, opacity: 0.7})
         );
@@ -1808,9 +1810,9 @@ class Edge extends Container {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {radius, arrow, aspect, debug, ...attr0} = args ?? {};
+        let {size, arrow, aspect, debug, ...attr0} = args ?? {};
         let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
-        radius = radius ?? 0.1;
+        size = size ?? 0.1;
 
         // sort out final edge attributes
         arrow = aspect_invariant(arrow, 1/aspect);
@@ -1821,7 +1823,7 @@ class Network extends Container {
         let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
             let [s, b] = is_string(n) ? [n, n] : n;
             b = (is_string(b) || is_array(b)) ? make_node(b) : b;
-            return [s, new Place(b, {pos: p, rad: r ?? radius})];
+            return [s, new Place(b, {pos: p, rad: r ?? size})];
         }));
         let boxes = Object.values(bmap);
         let cont1 = new Container(boxes);
@@ -1949,10 +1951,10 @@ class SymPoly extends Polygon {
 
 class SymPoints extends Container {
     constructor(args) {
-        let {fx, fy, fs, fr, radius, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+        let {fx, fy, fs, fr, size, shape, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+        size = size ?? 0.01;
         shape = shape ?? new Dot();
-        radius = radius ?? 0.01;
-        fr = fr ?? (() => radius);
+        fr = fr ?? (() => size);
         fs = fs ?? (() => shape);
 
         // compute point values
@@ -2315,12 +2317,12 @@ class Legend extends Place {
         let [badges, labels] = zip(...data);
         badges = badges.map(b => is_element(b) ? b : make_legendbadge(b));
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
+
         let bs = new VStack(badges, {spacing: vspacing});
         let ls = new VStack(labels, {expand: false, align: 'left', spacing: vspacing});
         let vs = new HStack([bs, ls], {spacing: hspacing});
 
         let fr = new Frame(vs, attr);
-
         super(fr, {rect, pos, rad});
     }
 }
