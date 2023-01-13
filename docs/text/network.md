@@ -9,8 +9,8 @@ Positional arguments:
 - `edges` — a list of edge specifications denoted by either a `[key1, key2]` pair or a `[key1, key2, attr]` triplet when passing edge specific arguments to [Edge](#Edge)
 
 Keyword arguments:
-- `radius` = `0.1` — the default node size, which can be overriden by adding a third element to a node specification
-- `arrow` = `0` — the default arrow size, which can be overriden with edge attributes
+- `size` = `0.1` — the default node size, which can be overriden by adding a third element to a node specification
+- `directed` = `false` — whether to include arrowheads at the terminus of edges
 
 Subunit names:
 - `node` — attributes that are used for the default `Node` constructor

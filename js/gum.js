@@ -1718,7 +1718,7 @@ class Edge extends Container {
             ['arrow_beg', 'arrow_end', 'arrow', 'line'], attr0
         );
         curve = curve ?? 0.3;
-        arrow_size = arrow_size ?? [0.02, 0.015];
+        arrow_size = arrow_size ?? 0.02;
         debug = debug ?? false;
 
         // accumulate arguments
@@ -1727,7 +1727,6 @@ class Edge extends Container {
 
         // final arrowheads
         arrow = arrow ?? false;
-        arrow_beg = arrow || (arrow_beg ?? false);
         arrow_end = arrow || (arrow_end ?? false);
 
         // determine directions
@@ -1810,13 +1809,17 @@ class Edge extends Container {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {size, arrow, aspect, debug, ...attr0} = args ?? {};
+        let {size, directed, aspect, debug, arrow_size, ...attr0} = args ?? {};
         let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
         size = size ?? 0.1;
+        directed = directed ?? false;
+        arrow_size = arrow_size ?? [0.02, 0.015];
 
         // sort out final edge attributes
-        arrow = aspect_invariant(arrow, 1/aspect);
-        edge_attr = {arrow, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)};
+        arrow_size = aspect_invariant(arrow_size, 1/aspect);
+        edge_attr = {
+            arrow_end: directed, arrow_size, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)
+        };
 
         // collect node boxes
         let make_node = b => new Node(b, {flex: true, ...node_attr});
