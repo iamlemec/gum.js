@@ -1964,9 +1964,10 @@ class Bar extends Stack {
 
         // get standardized direction
         direc = get_orient(direc);
+        lengths = is_scalar(lengths) ? [lengths] : lengths;
+        if (direc == 'v') { lengths = lengths.reverse(); }
 
         // normalize section specs
-        lengths = is_scalar(lengths) ? [lengths] : lengths;
         let boxes = lengths.map(lc => is_scalar(lc) ? [lc, null] : lc);
         let length = sum(boxes.map(([l, c]) => l));
         let children = boxes.map(([l, c]) => [new Rect({fill: c}), l/length]);
@@ -1980,6 +1981,12 @@ class Bar extends Stack {
 class VBar extends Bar {
     constructor(lengths, args) {
         super('v', lengths, args);
+    }
+}
+
+class HBar extends Bar {
+    constructor(lengths, args) {
+        super('h', lengths, args);
     }
 }
 
@@ -2278,11 +2285,11 @@ function make_legendbadge(c) {
         throw new Error(`Unrecognized legend badge specification: ${c}`);
     }
     let attr1 = {aspect: 1, ...attr};
-    return new HLine(attr1);
+    return new HLine(0.5, attr1);
 }
 
 function make_legendlabel(s) {
-    return new Text(s, {vshift: -0.12});
+    return new Text(s);
 }
 
 class Legend extends Place {
@@ -2879,7 +2886,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
 ];
 
 // detect object types
@@ -2983,4 +2990,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, Arc, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HLabels, HScale, HStack, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VScale, VStack, Variable, abs, aspect_invariant, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, Arc, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HLabels, HScale, HStack, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VScale, VStack, Variable, abs, aspect_invariant, ceil, cos, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, linspace, log, make_ticklabel, mako, max, min, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
