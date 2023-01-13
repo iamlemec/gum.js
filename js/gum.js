@@ -1123,7 +1123,6 @@ class Spacer extends Element {
         return '';
     }
 }
-let spacer = new Spacer();
 
 class Line extends Element {
     constructor(p1, p2, args) {

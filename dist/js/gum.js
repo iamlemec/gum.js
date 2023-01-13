@@ -1105,7 +1105,6 @@ class Spacer extends Element {
         return '';
     }
 }
-new Spacer();
 
 class Line extends Element {
     constructor(p1, p2, args) {
