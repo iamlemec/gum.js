@@ -19,20 +19,21 @@ def value_to_expr(x, prec=prec0):
         return str(x)
 
 def data_to_js(x, prec=prec0):
+    expr = lambda z: value_to_expr(z, prec=prec)
     if type(x) is dict:
-        vals = ', '.join(f'{value_to_expr(k)}: {value_to_expr(v)}' for k, v in x.items())
+        vals = ', '.join(f'{expr(k)}: {expr(v)}' for k, v in x.items())
         code = f'{{{vals}}}'
     elif is_iterable(x):
-        vals = ', '.join(value_to_expr(z) for z in x)
+        vals = ', '.join(expr(z) for z in x)
         code = f'[{vals}]'
     else:
-        code = value_to_expr(x)
+        code = expr(x)
 
     return code
 
-def assign_js(d):
-    return '\n'.join(f'let {k} = {data_to_js(v)};' for k, v in d.items())
+def assign_js(d, prec=prec0):
+    return '\n'.join(f'let {k} = {data_to_js(v, prec=prec)};' for k, v in d.items())
 
-def gum(code, vals=None):
-    assign = assign_js(vals) if vals is not None else ''
+def gum(code, vals=None, prec=prec0):
+    assign = assign_js(vals, prec=prec) if vals is not None else ''
     return f'{assign}\n{code}'.strip()
