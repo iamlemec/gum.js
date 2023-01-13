@@ -1667,8 +1667,10 @@ class Arrowhead extends Container {
         size = size ?? [0.5, 0.5];
         stroke_width = stroke_width ?? 1;
 
-        // stroke_width translate hack (this needs to be size aspect adjusted)
-        let transform = `translate(${-stroke_width}, 0)`;
+        // stroke_width translate hack
+        let theta = direc/r2d;
+        let [offx, offy] = [cos(theta)*stroke_width, sin(theta)*stroke_width];
+        let transform = `translate(${-0.5*offx}, ${0.5*offy})`;
 
         // generate arrowhead polygon
         let pattr = {fill: 'black', stroke_width, transform, ...attr};

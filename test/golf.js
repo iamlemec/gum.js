@@ -441,6 +441,16 @@ let plot = Plot([hline, vline, dots], {
 let frame = Frame(plot, {margin: 0.15});
 return frame;
 
+// arrowhead alignment test
+let vline = VLine(0.5);
+let hline = HLine(0.5);
+let farrow = d => Arrowhead({
+  direc: d, size: 0.3, fill: 'none', stroke_width: 10, opacity: 0.5
+});
+let arrows = [0, 90, 180, 270].map(farrow);
+let group = Group([vline, hline, ...arrows]);
+return group;
+
 ////// INTERACTIBFG VECTOR FIELD
 
 function guu(vars) {
