@@ -1825,9 +1825,8 @@ class Network extends Container {
 
         // collect node boxes
         let make_node = b => new Node(b, {flex: true, ...node_attr});
-        let bmap = Object.fromEntries(nodes.map(([n, p, r]) => {
-            let [s, b] = is_string(n) ? [n, n] : n;
-            b = (is_string(b) || is_array(b)) ? make_node(b) : b;
+        let bmap = Object.fromEntries(nodes.map(([s, b, p, r]) => {
+            b = is_element(b) ? b : make_node(b);
             return [s, new Place(b, {pos: p, rad: r ?? size})];
         }));
         let boxes = Object.values(bmap);
