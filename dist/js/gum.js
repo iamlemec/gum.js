@@ -2274,17 +2274,17 @@ class VGrid extends Grid {
     }
 }
 
-function make_legendbadge(c) {
+function make_legendbadge(c, attr0) {
+    attr0 = attr0 ?? {};
     let attr;
     if (is_string(c)) {
-        attr = {stroke: c};
+        attr = {stroke: c, ...attr0};
     } else if (is_object(c)) {
-        attr = c;
+        attr = {...c, ...attr0};
     } else {
         throw new Error(`Unrecognized legend badge specification: ${c}`);
     }
-    let attr1 = {aspect: 1, ...attr};
-    return new HLine(0.5, attr1);
+    return new HLine(0.5, {aspect: 1, ...attr});
 }
 
 function make_legendlabel(s) {
@@ -2293,13 +2293,14 @@ function make_legendlabel(s) {
 
 class Legend extends Place {
     constructor(data, args) {
-        let {badgewidth, vspacing, hspacing, rect, pos, rad, ...attr} = args ?? {};
+        let {badgewidth, vspacing, hspacing, rect, pos, rad, ...attr0} = args ?? {};
+        let [badge_attr, attr] = prefix_split(['badge'], attr0);
         badgewidth = badgewidth ?? 0.1;
         hspacing = hspacing ?? 0.025;
         vspacing = vspacing ?? 0.1;
 
         let [badges, labels] = zip(...data);
-        badges = badges.map(b => is_element(b) ? b : make_legendbadge(b));
+        badges = badges.map(b => is_element(b) ? b : make_legendbadge(b, badge_attr));
         labels = labels.map(t => is_element(t) ? t : make_legendlabel(t));
 
         let bs = new VStack(badges, {spacing: vspacing});

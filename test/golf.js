@@ -203,11 +203,11 @@ return Frame(b, {margin: [0.15, 0.1]});
 
 // legend example
 let args2 = {stroke: 'red', stroke_dasharray: [4, 4], stroke_width: 2};
-let leg = Legend([['blue', 'Hello World'], [args2, 'Testing Longer String']]);
-let leg1 = Place(leg, [1.4, 1.9], 0.25);
+let info = [['blue', 'Hello World'], [args2, 'Testing Longer String']];
+let leg = Legend(info, {pos: [1.4, 1.8], rad: 0.25, vspacing: 0.3});
 let line1 = SymPath({fy: x => 1.5*x*(2-x), xlim: [0, 2], stroke: 'blue'});
 let line2 = SymPath({fy: x => x*(2-x), xlim: [0, 2], ...args2});
-let plot = Plot([line1, line2, leg1], {ylim: [0, 2]});
+let plot = Plot([line1, line2, leg], {ylim: [0, 2]});
 let frame = Frame(plot, {margin: 0.15});
 return frame;
 
@@ -450,6 +450,22 @@ let farrow = d => Arrowhead({
 let arrows = [0, 90, 180, 270].map(farrow);
 let group = Group([vline, hline, ...arrows]);
 return group;
+
+// table (make this real at some point)
+let data = [
+    ['ID', 'Name', 'Code'],
+    ['B', 'batch size', 'batch_size'],
+    ['L', 'sequence length', 'block_size'],
+    ['V', 'vocabulary size', 'vocab_size'],
+    ['E', 'embedding size', 'n_embd']
+];
+let [ls, ns, cs] = zip(...data);
+ls = ls.map(x => Text(x, {font_weight: 'bold'}));
+ns = ns.map(x => Text(x));
+cs = cs.map(x => Text(x, {font_family: 'monospace', stroke: '#1e88e5', fill: '#1e88e5'}));
+let make_col = c => VStack(c, {expand: false, align: 'left', spacing: 0.1});
+let table = HStack([ls, ns, cs].map(make_col), {spacing: 0.1});
+return table;
 
 ////// INTERACTIBFG VECTOR FIELD
 
