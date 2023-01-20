@@ -1548,18 +1548,19 @@ class Text extends Element {
 
 class Tex extends Element {
     constructor(text, args) {
-        let {size, actual, xover, yover, ...attr} = args ?? {};
+        let {size, actual, xover, yover, hshift, vshift, ...attr} = args ?? {};
         size = size ?? font_size_latex;
-        actual = actual ?? true;
+        actual = actual ?? false;
         yover = yover ?? 1.0;
-        xover = xover ?? 2.0;
+        xover = xover ?? 1.0;
+        hshift = hshift ?? -0.05;
+        vshift = vshift ?? -0.05;
 
         // render with katex
         let katex = render.renderToString(text, {output: 'html', trust: true});
 
         // compute text box
-        let fargs = {size: size, actual: actual};
-        let [xoff, yoff, width, height] = sideRenderTextSizer(katex, fargs);
+        let [xoff, yoff, width, height] = sideRenderTextSizer(katex, {size, actual});
         [xoff, yoff, size] = [xoff/width, yoff/height, size/height];
 
         // pass to element
@@ -1568,8 +1569,8 @@ class Tex extends Element {
         super('foreignObject', false, attr1);
 
         // store metrics
-        this.xoff = xoff;
-        this.yoff = yoff;
+        this.xoff = xoff + hshift;
+        this.yoff = yoff + vshift;
         this.size = size;
         this.xover = xover;
         this.yover = yover;
@@ -2019,7 +2020,8 @@ class HBar extends Bar {
 // custom bars must have a ylim and optionally a width
 class Bars extends Container {
     constructor(direc, bars, args) {
-        let {lim, zero, shrink, size, color, integer, ...attr} = args ?? {};
+        let {lim, zero, shrink, size, color, integer, ...attr0} = args ?? {};
+        let [bar_attr, attr] = prefix_split(['bar'], attr0);
         zero = zero ?? 0;
         integer = integer ?? false;
         shrink = shrink ?? 0;
@@ -2053,7 +2055,7 @@ class Bars extends Container {
 
         // handle scalar and custom bars
         bars = bars.map(b =>
-            is_scalar(b) ? new Bar(direc, [[b, color]], {zero, size}) : b
+            is_scalar(b) ? new Bar(direc, [[b, color]], {zero, size, ...bar_attr}) : b
         );
 
         // aggregate lengths
@@ -2082,6 +2084,12 @@ class Bars extends Container {
 class VBars extends Bars {
     constructor(bars, args) {
         super('v', bars, args);
+    }
+}
+
+class HBars extends Bars {
+    constructor(bars, args) {
+        super('h', bars, args);
     }
 }
 
@@ -2450,13 +2458,18 @@ class Plot extends Container {
             xaxis = new HAxis(xticks, {
                 pos: ylo, lim: xlim, tick_size, tick_size: xtick_size, ...xaxis_attr
             });
+        } else if (xaxis === false) {
+            xaxis = null;
         }
+
 
         // default yaxis generation
         if (yaxis === true) {
             yaxis = new VAxis(yticks, {
                 pos: xlo, lim: ylim, tick_size, tick_size: ytick_size, ...yaxis_attr
             });
+        } else if (yaxis === false) {
+            yaxis = null;
         }
 
         // automatic grid path
@@ -2474,7 +2487,7 @@ class Plot extends Container {
         }
 
         // create graph from core elements
-        let elems1 = [xaxis, yaxis, xgrid, ygrid, ...elems].filter(z => z != null);
+        let elems1 = [xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
         let graph = new Graph(elems1, {xlim, ylim, aspect, padding});
 
         // create base layout
@@ -2913,7 +2926,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
 ];
 
 // detect object types
@@ -3022,5 +3035,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian
 };

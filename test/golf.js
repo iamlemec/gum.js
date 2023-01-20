@@ -211,6 +211,23 @@ let plot = Plot([line1, line2, leg], {ylim: [0, 2]});
 let frame = Frame(plot, {margin: 0.15});
 return frame;
 
+// the economist style
+let n = 41;
+let c = 'rgb(30,92,153)';
+let vals = range(n).map(x => 50*random(x));
+let bars = VBars(vals, {
+  integer: true, bar_fill: c, bar_stroke: c
+});
+let labs = Scatter([0, 25, 50, 75].map(
+  x => [Anchor(Text(x)), [n+3, x+4]]
+), {size: 1});
+let plot = Plot([bars, labs], {
+  aspect: phi, xlim: [-1, n+4], ylim: [0, 80], xticks: range(0, n+10, 10), yticks: 4,
+  xaxis_tick_pos: 'down', yaxis: false, ygrid: linspace(0, 100, 5)
+});
+let frame = Frame(plot, {margin: 0.15});
+return frame;
+
 /// Expected Utility indiff curves
 
 function guu(vars) {
