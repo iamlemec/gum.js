@@ -1251,11 +1251,12 @@ class Circle extends Ellipse {
     }
 }
 
-class Dot extends Circle {
+class Dot extends Ellipse {
     constructor(args) {
-        let {color, ...attr} = args ?? {};
+        let {color, rad, ...attr} = args ?? {};
         color = color ?? 'black';
-        super({stroke: color, fill: color, ...attr});
+        rad = ensure_vector(rad, 2);
+        super({stroke: color, fill: color, rad, ...attr});
     }
 }
 
@@ -1557,7 +1558,7 @@ class Tex extends Element {
         vshift = vshift ?? -0.05;
 
         // render with katex
-        let katex = render.renderToString(text, {output: 'html', trust: true});
+        let katex = render.renderToString(text);
 
         // compute text box
         let [xoff, yoff, width, height] = sideRenderTextSizer(katex, {size, actual});
@@ -2926,7 +2927,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 ];
 
 // detect object types
@@ -3035,5 +3036,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 };
