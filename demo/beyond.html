@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<title>Beyond GDP</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link rel="stylesheet" href="/gum.js/dist/css/fonts.css">
+
+<style>
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Montserrat;
+}
+
+#main {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    margin: auto;
+}
+
+#left {
+    width: 20%;
+    border-right: 1px solid #ccc;
+    overflow-y: scroll;
+}
+
+#left::-webkit-scrollbar {
+    width: 0;
+}
+
+#right {
+    width: 80%;
+}
+
+#disp {
+    width: 80%;
+    height: 100%;
+    margin: auto;
+}
+
+#left .item {
+    padding: 0.5em;
+    border-bottom: 1px solid #ccc;
+    border-left: 4px solid white;
+    cursor: default;
+}
+
+#left .item:hover {
+    background-color: #eee;
+}
+
+#left .item.selected {
+    border-left: 4px solid #1e88e5;
+    background-color: #eee;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="main">
+
+<div id="left"></div>
+
+<div id="right">
+
+<div id="disp"></div>
+
+</div>
+
+</div>
+
+<script type="module">
+
+// import gum.js
+import {
+    min, max, zip, range, enumerate, linspace, cumsum, VBar, VBars, HLine, Node, Plot, Frame, SVG
+} from '/gum.js/dist/js/gum.js';
+
+// get country names
+let resp0 = await fetch('country_names.json');
+let names = await resp0.json();
+delete names.USA;
+
+// get welfare data
+let resp1 = await fetch('beyond.json');
+let data = await resp1.json();
+delete data.USA;
+
+// display specific country
+function displayCountry(code) {
+    let country = {...data[code]};
+
+    // flatten data
+    let n = Object.values(country).length;
+    let lambda = country.lambda; delete country.lambda;
+    let values = Object.values(country); let cvals = cumsum(values);
+
+    // figure out data range
+    let [vmin, vmax] = [min(...cvals), max(...cvals)];
+    let vrange = vmax - vmin;
+    let vdel = (vrange < 100) ? 10 : 50;
+    vmin = Math.floor((vmin-0.1*vrange)/vdel)*vdel;
+    vmax = Math.ceil((vmax+0.1*vrange)/vdel)*vdel;
+
+    // make bars
+    let vbars = zip(cvals, values).map(([z, s]) => {
+    let color = (s < 0) ? '#ff0d57' : '#1e88e5';
+    return new VBar(s, {zero: z, size: 0.75, fill: color})
+    });
+    vbars.push(new VBar(lambda, {size: 0.75, fill: '#CCC'}));
+    let bars = new VBars(enumerate(vbars));
+
+    // make lines
+    let zero = new HLine(0, {
+        lim: [-1, n], stroke_dasharray: 3, stroke: '#777'
+    });
+    let lines = enumerate(cvals).slice(1).map(
+    ([i, x]) => new HLine(x, {lim: [i-1, i], stroke: '#777'})
+    );
+
+    // axis labels
+    let xlabs = [
+        ['Prod', '(gdp/hrs)'], ['Hours', '(hrs/emp)'], ['Employ', '(emp/pop)'],
+        ['Cons', '(con/gdp)'], ['Leisure', ''], ['Life Exp', ''], ['Inequal', ''],
+        ['Welfare', '']
+    ];
+    let xticks = enumerate(xlabs.map(t => new Node(t, {border: 0})));
+    let yticks = range(vmin, vmax+vdel, vdel).map(x => [x, `${x}%`]);
+
+    // make plot
+    let plot = new Plot([...lines, zero, bars], {
+    xlim: [-1, n], ylim: [vmin, vmax], aspect: 2.5,
+    xticks, yticks, xaxis_label_size: 4,
+    title: `Welfare Levels (${names[code]}, 2005)`
+    });
+
+    // frame it and output
+    let frame = new Frame(plot, {margin: 0.2});
+    let svg = new SVG(frame, {size: 700}).svg();
+
+    // inject svg
+    let disp = document.getElementById('disp');
+    disp.innerHTML = svg;
+}
+
+// select on left panel
+function selectItem(item) {
+    let items = document.getElementsByClassName('item');
+    for (let i of items) i.classList.remove('selected');
+    item.classList.add('selected');
+}
+
+// populate left panel
+let left = document.getElementById('left');
+let codes = Object.keys(data).sort(
+    (a, b) => names[a].localeCompare(names[b])
+);
+codes.forEach(c => {
+    let div = document.createElement('div');
+    div.innerHTML = `${names[c]} (${c})`;
+    div.classList += 'item';
+    div.setAttribute('code', c);
+    div.onclick = () => {
+        displayCountry(c);
+        selectItem(div);
+    }
+    left.appendChild(div);
+});
+
+// initialize
+let init = 'AUS';
+let item = document.querySelector(`[code="${init}"]`);
+selectItem(item);
+displayCountry('AUS');
+
+</script>
+
+</body>
+
+</html>
