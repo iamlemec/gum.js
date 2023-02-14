@@ -174,8 +174,8 @@ codes.forEach(c => {
     div.classList += 'item';
     div.setAttribute('code', c);
     div.onclick = () => {
-        displayCountry(c);
         selectItem(div);
+        displayCountry(c);
     }
     left.appendChild(div);
 });
