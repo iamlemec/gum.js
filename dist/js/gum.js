@@ -1533,7 +1533,7 @@ class Tex extends Element {
         actual = actual ?? false;
         yover = yover ?? 1.0;
         xover = xover ?? 1.0;
-        hshift = hshift ?? -0.05;
+        hshift = hshift ?? 0.0;
         vshift = vshift ?? -0.05;
 
         // render with katex
