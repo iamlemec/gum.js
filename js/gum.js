@@ -1251,11 +1251,10 @@ class Circle extends Ellipse {
     }
 }
 
-class Dot extends Ellipse {
+class Dot extends Circle {
     constructor(args) {
         let {color, rad, ...attr} = args ?? {};
         color = color ?? 'black';
-        rad = ensure_vector(rad, 2);
         super({stroke: color, fill: color, rad, ...attr});
     }
 }
