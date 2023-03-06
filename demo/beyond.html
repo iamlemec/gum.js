@@ -40,12 +40,20 @@ html, body {
 
 #right {
     width: 80%;
+    height: 100%;
+    overflow-y: scroll;
 }
 
-#disp {
+#beyond {
     width: 80%;
-    height: 100%;
     margin: auto;
+    margin-top: 50px;
+}
+
+#pwt {
+    width: 80%;
+    margin: auto;
+    margin-bottom: 100px;
 }
 
 #left .item {
@@ -76,7 +84,9 @@ html, body {
 
 <div id="right">
 
-<div id="disp"></div>
+<div id="beyond"></div>
+
+<div id="pwt"></div>
 
 </div>
 
@@ -96,17 +106,19 @@ delete names.USA;
 
 // get welfare data
 let resp1 = await fetch('beyond.json');
-let data = await resp1.json();
-delete data.USA;
+let beyond = await resp1.json();
+delete beyond.USA;
 
-// display specific country
-function displayCountry(code) {
-    let country = {...data[code]};
+// get pwt data
+let resp2 = await fetch('pwt.json');
+let pwt = await resp2.json();
+delete pwt.USA;
 
+// general bars functions
+function generateBars(title, total, values, labels) {
     // flatten data
-    let n = Object.values(country).length;
-    let lambda = country.lambda; delete country.lambda;
-    let values = Object.values(country); let cvals = cumsum(values);
+    let n = 1 + values.length;
+    let cvals = cumsum(values);
 
     // figure out data range
     let [vmin, vmax] = [min(...cvals), max(...cvals)];
@@ -117,10 +129,10 @@ function displayCountry(code) {
 
     // make bars
     let vbars = zip(cvals, values).map(([z, s]) => {
-    let color = (s < 0) ? '#ff0d57' : '#1e88e5';
-    return new VBar(s, {zero: z, size: 0.75, fill: color})
+        let color = (s < 0) ? '#ff0d57' : '#1e88e5';
+        return new VBar(s, {zero: z, size: 0.75, fill: color})
     });
-    vbars.push(new VBar(lambda, {size: 0.75, fill: '#CCC'}));
+    vbars.push(new VBar(total, {size: 0.75, fill: '#CCC'}));
     let bars = new VBars(enumerate(vbars));
 
     // make lines
@@ -132,28 +144,78 @@ function displayCountry(code) {
     );
 
     // axis labels
-    let xlabs = [
-        ['Prod', '(gdp/hrs)'], ['Hours', '(hrs/emp)'], ['Employ', '(emp/pop)'],
-        ['Cons', '(con/gdp)'], ['Leisure', ''], ['Life Exp', ''], ['Inequal', ''],
-        ['Welfare', '']
-    ];
-    let xticks = enumerate(xlabs.map(t => new Node(t, {border: 0})));
+    let xticks = enumerate(labels.map(t => new Node(t, {border: 0})));
     let yticks = range(vmin, vmax+vdel, vdel).map(x => [x, `${x}%`]);
 
     // make plot
     let plot = new Plot([...lines, zero, bars], {
-    xlim: [-1, n], ylim: [vmin, vmax], aspect: 2.5,
-    xticks, yticks, xaxis_label_size: 4,
-    title: `Welfare Levels (${names[code]}, 2005)`
+        xlim: [-1, n], ylim: [vmin, vmax], aspect: 2.5,
+        title, xticks, yticks, xaxis_label_size: 4
     });
 
     // frame it and output
     let frame = new Frame(plot, {margin: 0.2});
-    let svg = new SVG(frame, {size: 700}).svg();
+    let svg = new SVG(frame, {size: 700});
+    return svg.svg();
+}
 
-    // inject svg
-    let disp = document.getElementById('disp');
-    disp.innerHTML = svg;
+// beyond gdp displayer
+let beyond_disp = document.getElementById('beyond');
+let beyond_total = 'lambda';
+let beyond_values = [
+    'gdp_per_hour', 'hours_per_worker', 'emp_pop',
+    'c_over_y', 'lam_leisure', 'lam_life_exp', 'lam_inequality'
+];
+let beyond_labels = [
+        ['Prod', '(gdp/hrs)'], ['Hours', '(hrs/emp)'], ['Employ', '(emp/pop)'],
+        ['Cons', '(con/gdp)'], ['Leisure', ''], ['Life Exp', ''], ['Inequal', ''],
+        ['Welfare', '']
+    ];
+function displayBeyond(code) {
+    if (!(code in beyond)) {
+        beyond_disp.innerHTML = '';
+        return;
+    }
+    let name = names[code];
+    let data = beyond[code];
+    let title = `Welfare Levels (${name}, 2005)`;
+    let total = data[beyond_total];
+    let values = beyond_values.map(v => data[v]);
+    beyond_disp.innerHTML = generateBars(
+        title, total, values, beyond_labels
+    );
+}
+
+// pwt displayer
+let pwt_disp = document.getElementById('pwt');
+let pwt_total = 'rel_gdpper';
+let pwt_values = [
+    'rel_capper', 'rel_epop', 'rel_hours',
+    'rel_humcap', 'rel_tfp'
+];
+let pwt_labels = [
+    ['Capital', '(cap/pop)'], ['Employ', '(emp/pop)'], ['Hours', '(hrs/emp)'],
+    ['HumCap', '(hc/emp)'], ['TFP', ''], ['GDP', 'gdp/pop']
+];
+function displayPwt(code) {
+    if (!(code in pwt)) {
+        pwt_disp.innerHTML = '';
+        return;
+    }
+    let name = names[code];
+    let data = pwt[code];
+    let title = `GDP Levels (${name}, 2020)`;
+    let total = data[pwt_total];
+    let values = pwt_values.map(v => data[v]);
+    pwt_disp.innerHTML = generateBars(
+        title, total, values, pwt_labels
+    );
+}
+
+// display country
+function displayCountry(code) {
+    displayBeyond(code);
+    displayPwt(code);
 }
 
 // select on left panel
@@ -165,7 +227,7 @@ function selectItem(item) {
 
 // populate left panel
 let left = document.getElementById('left');
-let codes = Object.keys(data).sort(
+let codes = Object.keys(beyond).sort(
     (a, b) => names[a].localeCompare(names[b])
 );
 codes.forEach(c => {
