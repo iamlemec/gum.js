@@ -25,6 +25,7 @@ let font_size_latex = 14;
 let num_ticks_base = 5;
 let tick_size_base = 0.025;
 let tick_label_size_base = 2.0;
+let tick_label_offset_base = 0.5;
 let label_size_base = 0.06;
 let label_offset_base = 0.15;
 let title_size_base = 0.1;
@@ -2176,11 +2177,12 @@ function get_ticklim(lim) {
 class Axis extends Container {
     constructor(direc, ticks, args) {
         let {
-            pos, lim, tick_size, tick_pos, label_size, label_pos, prec, ...attr0
+            pos, lim, tick_size, tick_pos, label_size, label_offset, label_pos, prec, ...attr0
         } = args ?? {};
         let [label_attr, tick_attr, line_attr, attr] = prefix_split(['label', 'tick', 'line'], attr0);
         direc = get_orient(direc);
         label_size = label_size ?? tick_label_size_base;
+        label_offset = label_offset ?? tick_label_offset_base;
         tick_size = tick_size ?? tick_size_base;
         pos = pos ?? 0.5;
         lim = lim ?? limit_base;
@@ -2193,8 +2195,9 @@ class Axis extends Container {
         let label_pos0 = (direc == 'v') ? 'left' : 'bottom';
         label_pos = label_pos ?? label_pos0;
         let lab_size = label_size*tick_size;
+        let lab_off = label_offset*tick_size;
         let lab_outer = label_pos == 'left' || label_pos == 'bottom';
-        let lab_base = lab_outer ? (-tick_half-lab_size) : tick_half;
+        let lab_base = lab_outer ? (-tick_half-lab_off-lab_size) : tick_half+lab_off;
 
         // extract tick information
         let [lo, hi] = lim;
