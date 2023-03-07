@@ -1303,8 +1303,8 @@ class Ray extends Element {
         } else {
             [p1, p2] = [[0, 1], [1, 0]];
         }
-        let [x1, y1] = ctx.coord_to_pixel(this.p1);
-        let [x2, y2] = ctx.coord_to_pixel(this.p2);
+        let [x1, y1] = ctx.coord_to_pixel(p1);
+        let [x2, y2] = ctx.coord_to_pixel(p2);
         let base = {x1, y1, x2, y2};
         return {...base, ...this.attr};
     }
