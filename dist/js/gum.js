@@ -2,6 +2,7 @@ import katex from '../node_modules/katex/dist/katex.js';
 
 // gum.js
 
+
 /**
  ** defaults
  **/

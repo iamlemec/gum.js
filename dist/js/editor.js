@@ -1,7 +1,7 @@
 import { EditorView, drawSelection, lineNumbers, keymap } from '../node_modules/@codemirror/view/dist/index.js';
 import { EditorState } from '../node_modules/@codemirror/state/dist/index.js';
 import { history, indentWithTab, defaultKeymap, historyKeymap } from '../node_modules/@codemirror/commands/dist/index.js';
-import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '../node_modules/@codemirror/language/dist/index.js';
+import { syntaxHighlighting, bracketMatching, defaultHighlightStyle } from '../node_modules/@codemirror/language/dist/index.js';
 import { javascript } from '../node_modules/@codemirror/lang-javascript/dist/index.js';
 import { xml } from '../node_modules/@codemirror/lang-xml/dist/index.js';
 import { InterActive, Animation, Element, SVG, parseGum } from './gum.js';
