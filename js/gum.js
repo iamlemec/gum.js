@@ -161,6 +161,10 @@ function any(arr) {
     return arr.reduce((a, b) => a || b);
 }
 
+function add(arr1, arr2) {
+    return zip(arr1, arr2).map(([a, b]) => a + b);
+}
+
 function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
@@ -176,10 +180,10 @@ function distribute_extra(vals, target) {
     return vals.map(v => v ?? fill);
 }
 
-function normalize(vals, target) {
-    target = target ?? 1;
-    let norm = target/sum(vals);
-    return vals.map(v => norm*v);
+function normalize(vals, degree) {
+    degree = degree ?? 1;
+    let norm = sum(vals.map(v => v**degree))**(1/degree);
+    return vals.map(v => v/norm);
 }
 
 function range(i0, i1, step) {
@@ -203,6 +207,17 @@ function enumerate(x) {
 
 function repeat(x, n) {
     return Array(n).fill(x);
+}
+
+function grid(x, y) {
+    return x.flatMap(xi => y.map(yi => [xi, yi]));
+}
+
+function lingrid(xlim, ylim, N) {
+    let [Nx, Ny] = ensure_vector(N, 2);
+    let xgrid = linspace(...xlim, N);
+    let ygrid = linspace(...ylim, N);
+    return grid(xgrid, ygrid);
 }
 
 function split(x, n, pad) {
@@ -398,8 +413,8 @@ function aspect_invariant(value, aspect, alpha) {
     aspect = aspect ?? 1;
     alpha = alpha ?? 0.5;
 
-    let wfact = pow(aspect, alpha);
-    let hfact = pow(aspect, 1-alpha);
+    let wfact = aspect**alpha;
+    let hfact = aspect**(1-alpha);
 
     if (is_scalar(value)) {
         value = [value, value];
@@ -1624,6 +1639,50 @@ class Node extends Frame {
         // pass to container
         let attr1 = {padding, border, ...attr};
         super(child, attr1);
+    }
+}
+
+/**
+ ** fields
+ **/
+
+class Tadpole extends Container {
+    constructor(direc, args) {
+        let {pos, head, tail, graph, ...attr0} = args ?? {};
+        let [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
+        pos = pos ?? [0.5, 0.5];
+        head = head ?? 0.3;
+        tail = tail ?? 2.0;
+        graph = graph ?? true;
+
+        console.log(tail_attr);
+
+        // ensure vector direction
+        if (is_scalar(direc)) {
+            direc = [cos(direc), sin(direc)];
+        } else {
+            direc = normalize(direc, 2);
+        }
+
+        // sort out graph direction
+        direc = direc.map(z => -tail*z);
+        direc = graph ? [direc[0], -direc[1]] : direc;
+
+        // set up layout
+        let head_elem = new Circle({pos, rad: head, fill: 'black', ...head_attr});
+        let tail_elem = new Line(pos, add(pos, direc), tail_attr);
+
+        super([head_elem, tail_elem], attr);
+    }
+}
+
+class Field extends Scatter {
+    constructor(points, direc, args) {
+        let {shape, ...attr0} = args ?? {};
+        let [marker_attr, attr] = prefix_split(['marker'], attr0);
+        shape = shape ?? ((p, attr) => new Tadpole(p, attr));
+        let field = points.map(p => [shape(direc(p), marker_attr), p]);
+        super(field, attr);
     }
 }
 
@@ -2929,7 +2988,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Tadpole, Field, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 ];
 
 // detect object types
@@ -3038,5 +3097,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Tadpole, Field, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 };

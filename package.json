@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "npx gulp build",
-    "dev": "npx gulp dev"
+    "devel": "npx gulp devel",
+    "serve": "npx gulp serve"
   },
   "dependencies": {
     "@codemirror/commands": "^6.1.2",

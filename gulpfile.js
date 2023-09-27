@@ -82,13 +82,24 @@ gulp.task('assets', gulp.parallel('images'));
 // full build
 gulp.task('build', gulp.parallel('js', 'css', 'fonts', 'assets'));
 
+// watch files
+gulp.task('watch', () => {
+    gulp.watch(['js/*.js'], gulp.series('js'));
+    gulp.watch(['css/*.css'], gulp.series('css'));
+    gulp.watch(['css/fonts/*'], gulp.series('fonts'));
+    gulp.watch(['css/*.svg'], gulp.series('assets'));
+});
+
+// devel watch
+gulp.task('devel', gulp.series('build', 'watch'));
+
 // reload index
 gulp.task('reload', () => gulp.src(['index.html'])
     .pipe(connect.reload())
 );
 
 // development mode
-gulp.task('dev', () => {
+gulp.task('serve-watch', () => {
     connect.server({
         root: '.',
         port: 8000,
@@ -102,3 +113,6 @@ gulp.task('dev', () => {
     gulp.watch(['css/fonts/*'], gulp.series('fonts', 'reload'));
     gulp.watch(['css/*.svg'], gulp.series('assets', 'reload'));
 });
+
+// development mode
+gulp.task('serve', gulp.series('build', 'serve-watch'));
