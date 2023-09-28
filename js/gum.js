@@ -165,6 +165,10 @@ function add(arr1, arr2) {
     return zip(arr1, arr2).map(([a, b]) => a + b);
 }
 
+function mul(arr1, arr2) {
+    return zip(arr1, arr2).map(([a, b]) => a * b);
+}
+
 function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
@@ -188,7 +192,7 @@ function norm(vals, degree) {
 function normalize(vals, degree) {
     degree = degree ?? 1;
     let mag = norm(vals, degree);
-    return vals.map(v => v/mag);
+    return (mag == 0) ? vals.map(v => 0) : vals.map(v => v/mag);
 }
 
 function range(i0, i1, step) {
@@ -219,9 +223,10 @@ function grid(x, y) {
 }
 
 function lingrid(xlim, ylim, N) {
+    if (N >= 100) throw new Error('N is restricted to be less than 100');
     let [Nx, Ny] = ensure_vector(N, 2);
-    let xgrid = linspace(...xlim, N);
-    let ygrid = linspace(...ylim, N);
+    let xgrid = linspace(...xlim, Nx);
+    let ygrid = linspace(...ylim, Ny);
     return grid(xgrid, ygrid);
 }
 
@@ -315,6 +320,7 @@ function max(...vals) {
 let pi = new NamedNumber('pi', Math.PI);
 let phi = new NamedNumber('phi', (1+sqrt(5))/2);
 let r2d = new NamedNumber('r2d', 180/Math.PI);
+let d2r = new NamedNumber('d2r', Math.PI/180);
 
 /**
  ** random number generation
@@ -1651,28 +1657,48 @@ class Node extends Frame {
  ** fields
  **/
 
-class Tadpole extends Container {
+class Arrow extends Container {
     constructor(direc, args) {
-        let {pos, head, tail, graph, ...attr0} = args ?? {};
+        let {pos, head, tail, shape, graph, ...attr0} = args ?? {};
         let [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
         pos = pos ?? [0.5, 0.5];
         head = head ?? 0.3;
         tail = tail ?? 2.0;
+        shape = shape ?? 'arrow';
         graph = graph ?? true;
 
-        // ensure vector direction
-        if (is_scalar(direc)) {
-            direc = [cos(direc), sin(direc)];
+        // baked in shapes
+        console.log(shape);
+        if (shape == 'circle') {
+            shape = (_, attr) => new Dot(attr);
+        } else if (shape == 'arrow') {
+            shape = (theta, attr) => new Arrowhead(theta, attr);
         } else {
+            throw new Error(`Unrecognized arrow shape: ${shape}`);
+        }
+
+        // ensure vector direction
+        let theta;
+        if (is_scalar(direc)) {
+            theta = direc;
+            let radians = d2r*direc;
+            direc = [cos(radians), sin(radians)];
+        } else {
+            theta = r2d*Math.atan2(direc[1], direc[0]);
             direc = normalize(direc, 2);
         }
 
         // sort out graph direction
         direc = direc.map(z => -tail*z);
-        direc = graph ? [direc[0], -direc[1]] : direc;
+        direc = graph ? mul(direc, [1, -1]) : direc;
 
-        // set up layout
-        let head_elem = new Circle({pos, rad: head, fill: 'black', ...head_attr});
+        // set up layout (override with null direction)
+        let head_elem;
+        if (norm(direc, 2) == 0) {
+            head_elem = new Dot({pos, rad: head, ...head_attr});
+        } else {
+            head_elem = shape(theta, {pos, rad: head, ...head_attr});
+        }
         let tail_elem = new Line(pos, add(pos, direc), tail_attr);
 
         super([head_elem, tail_elem], attr);
@@ -1680,12 +1706,25 @@ class Tadpole extends Container {
 }
 
 class Field extends Scatter {
-    constructor(points, direc, args) {
-        let {shape, ...attr0} = args ?? {};
+    constructor(points, direcs, args) {
+        let {marker, ...attr0} = args ?? {};
         let [marker_attr, attr] = prefix_split(['marker'], attr0);
-        shape = shape ?? ((p, attr) => new Tadpole(p, attr));
-        let field = points.map(p => [shape(direc(p), marker_attr), p]);
+        marker = marker ?? ((p, d, attr) => new Arrow(d, attr));
+        let field = zip(points, direcs).map(([p, d]) => [marker(p, d, marker_attr), p]);
         super(field, attr);
+    }
+}
+
+class SymField extends Field {
+    constructor(func, args) {
+        let {xlim, ylim, N, ...attr} = args ?? {};
+        xlim = xlim ?? limit_base;
+        ylim = ylim ?? limit_base;
+        N = N ?? N_base;
+
+        let points = lingrid(xlim, ylim, N);
+        let direcs = points.map(func);
+        super(points, direcs, attr);
     }
 }
 
@@ -1751,15 +1790,14 @@ function norm_direc(direc) {
 }
 
 class Arrowhead extends Container {
-    constructor(args) {
-        let {direc, pos, size, stroke_width, ...attr} = args ?? {};
-        direc = direc ?? 0;
+    constructor(direc, args) {
+        let {pos, size, stroke_width, ...attr} = args ?? {};
         pos = pos ?? [0.5, 0.5];
         size = size ?? [0.5, 0.5];
         stroke_width = stroke_width ?? 1;
 
         // stroke_width translate hack
-        let theta = direc/r2d;
+        let theta = d2r*direc;
         let [offx, offy] = [cos(theta)*stroke_width, sin(theta)*stroke_width];
         let transform = `translate(${-0.5*offx}, ${0.5*offy})`;
 
@@ -1812,8 +1850,8 @@ class Edge extends Container {
         // optional arrowheads
         let arrow_dir = {'n': -90, 's': 90, 'e': 180, 'w': 0};
         let [rot1, rot2] = [arrow_dir[d1], arrow_dir[d2]];
-        let ahead_beg = arrow_beg ? new Arrowhead({pos: p1, direc: rot1, ...arrow_beg_attr}) : null;
-        let ahead_end = arrow_end ? new Arrowhead({pos: p2, direc: rot2, ...arrow_end_attr}) : null;
+        let ahead_beg = arrow_beg ? new Arrowhead(rot1, {pos: p1, ...arrow_beg_attr}) : null;
+        let ahead_end = arrow_end ? new Arrowhead(rot2, {pos: p2, ...arrow_end_attr}) : null;
 
         // reorient so that when non-aliged:
         // (1) when wide, we go vertical first
@@ -2991,7 +3029,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Tadpole, Field, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 ];
 
 // detect object types
@@ -3100,5 +3138,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Tadpole, Field, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 };
