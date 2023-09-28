@@ -1136,6 +1136,15 @@ class Scatter extends Container {
     }
 }
 
+class Point extends Place {
+    constructor(pos, args) {
+        let {size, shape, ...attr} = args ?? {};
+        shape = shape ?? new Dot(attr);
+        size = size ?? 0.01;
+        super(shape, {pos, rad: size});
+    }
+}
+
 /**
  ** basic geometry
  **/
