@@ -1684,17 +1684,19 @@ class Arrow extends Container {
         }
 
         // sort out graph direction
-        direc = direc.map(z => -tail*z);
         direc = graph ? mul(direc, [1, -1]) : direc;
 
-        // set up layout (override with null direction)
+        // create head (override with null direction)
         let head_elem;
         if (norm(direc, 2) == 0) {
             head_elem = new Dot({pos, rad: head, ...head_attr});
         } else {
             head_elem = shape(theta, {pos, rad: head, ...head_attr});
         }
-        let tail_elem = new Line(pos, add(pos, direc), tail_attr);
+
+        // create tail
+        let tail_direc = direc.map(z => -tail*z);
+        let tail_elem = new Line(pos, add(pos, tail_direc), tail_attr);
 
         super([head_elem, tail_elem], attr);
     }
@@ -1715,7 +1717,7 @@ class SymField extends Field {
         let {xlim, ylim, N, ...attr} = args ?? {};
         xlim = xlim ?? limit_base;
         ylim = ylim ?? limit_base;
-        N = N ?? N_base;
+        N = N ?? 10;
 
         let points = lingrid(xlim, ylim, N);
         let direcs = points.map(func);
@@ -1786,9 +1788,9 @@ function norm_direc(direc) {
 
 class Arrowhead extends Container {
     constructor(direc, args) {
-        let {pos, size, stroke_width, ...attr} = args ?? {};
+        let {pos, rad, stroke_width, ...attr} = args ?? {};
         pos = pos ?? [0.5, 0.5];
-        size = size ?? [0.5, 0.5];
+        rad = rad ?? [0.5, 0.5];
         stroke_width = stroke_width ?? 1;
 
         // stroke_width translate hack
@@ -1801,8 +1803,8 @@ class Arrowhead extends Container {
         let poly = new Polygon([[0.5, 0.5], [0, 0], [0, 1]], pattr);
 
         // calculate size
-        let size2 = ensure_vector(size, 2);
-        let rect = rad_rect(pos, size2);
+        let rad2 = ensure_vector(rad, 2);
+        let rect = rad_rect(pos, rad2);
 
         // pass to group for rotate
         let child = [poly, {rect, rotate: -direc, invar: true}];
