@@ -55,7 +55,7 @@ gulp.task('core-fonts-data', () => gulp.src(['./css/fonts/*'])
 gulp.task('core-fonts', gulp.parallel('core-fonts-css', 'core-fonts-data'));
 
 // katex fonts css
-gulp.task('katex-fonts-css', () => gulp.src(['./node_modules/katex/dist/katex.min.css'])
+gulp.task('katex-fonts-css', () => gulp.src(['./node_modules/katex/dist/katex.css'])
     .pipe(rename('katex.css'))
     .pipe(gulp.dest('./dist/css'))
 );
