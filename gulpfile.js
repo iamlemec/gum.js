@@ -3,6 +3,18 @@ import resolve from '@rollup/plugin-node-resolve'
 import gulp from 'gulp'
 import connect from 'gulp-connect'
 import rename from 'gulp-rename'
+import { parseArgs } from 'node:util';
+
+// parse arguments
+const {
+    values: { host, port },
+} = parseArgs({
+    args: process.argv.slice(3),
+    options: {
+        host: { type: 'string', default: 'localhost' },
+        port: { type: 'string', default: '8000'},
+    },
+});
 
 // store values globally
 let cache = {};
@@ -102,8 +114,8 @@ gulp.task('reload', () => gulp.src(['index.html'])
 gulp.task('serve-watch', () => {
     connect.server({
         root: '.',
-        port: 8000,
-        host: 'localhost',
+        host: host,
+        port: parseInt(port),
         livereload: true
     });
 

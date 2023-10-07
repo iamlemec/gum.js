@@ -1185,14 +1185,14 @@ class HLine extends UnitLine {
 
 class Rect extends Element {
     constructor(args) {
-        let {p1, p2, radius, ...attr} = args ?? {};
+        let {p1, p2, round, ...attr} = args ?? {};
         p1 = p1 ?? [0, 0];
         p2 = p2 ?? [1, 1];
 
         super('rect', true, attr);
         this.p1 = p1;
         this.p2 = p2;
-        this.radius = radius;
+        this.round = round;
         [this.xlim, this.ylim] = zip(p1, p2);
     }
 
@@ -1208,12 +1208,12 @@ class Rect extends Element {
 
         // scale border radius
         let rx, ry;
-        if (this.radius != null) {
-            if (is_scalar(this.radius)) {
+        if (this.round != null) {
+            if (is_scalar(this.round)) {
                 let s = 0.5*(w+h);
-                rx = s*this.radius;
+                rx = s*this.round;
             } else {
-                let [rx0, ry0] = this.radius;
+                let [rx0, ry0] = this.round;
                 [rx, ry] = [w*rx0, h*ry0];
             }
         }
@@ -1372,6 +1372,15 @@ function arg(s, d, ctx) {
     if (s == 'xy') {
         let [x, y] = ctx.coord_to_pixel(d);
         return `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`;
+    } else if (s == 'wh') {
+        let [w, h] = ctx.coord_to_pixel_size(d);
+        return `${rounder(w, ctx.prec)},${rounder(h, ctx.prec)}`;
+    } else if (s == 'w') {
+        let [w, _] = ctx.coord_to_pixel_size([d, 0]);
+        return `${rounder(w, ctx.prec)}`;
+    } else if (s == 'h') {
+        let [_, h] = ctx.coord_to_pixel_size([0, d]);
+        return `${rounder(h, ctx.prec)}`;
     } else {
         return `${d}`;
     }
@@ -1399,10 +1408,63 @@ class MoveTo extends Command {
     }
 }
 
-class LineTo extends Command {
+class MoveDel extends Command {
     constructor(p) {
-        super('L', ['xy'], [p]);
+        super('m', ['wh'], [p]);
+    }
+}
+
+class LineCmd extends Command {
+    constructor(p, d) {
+        let cmd = d ? 'l' : 'L';
+        super(cmd, ['xy'], [p]);
+    }
+}
+
+class LineTo extends LineCmd {
+    constructor(p) {
+        super(p, false);
         this.point = p;
+    }
+}
+
+class VerticalCmd extends Command {
+    constructor(y, d) {
+        let cmd = d ? 'v' : 'V';
+        super(cmd, ['h'], [y]);
+    }
+}
+
+class VerticalTo extends VerticalCmd {
+    constructor(y) {
+        super(y, false);
+        this.point = [null, y];
+    }
+}
+
+class VerticalDel extends VerticalCmd {
+    constructor(y) {
+        super(y, true);
+    }
+}
+
+class HorizontalCmd extends Command {
+    constructor(x, d) {
+        let cmd = d ? 'h' : 'H';
+        super(cmd, ['w'], [x]);
+    }
+}
+
+class HorizontalTo extends HorizontalCmd {
+    constructor(x) {
+        super(x, false);
+        this.point = [x, null];
+    }
+}
+
+class HorizontalDel extends HorizontalCmd {
+    constructor(x) {
+        super(x, true);
     }
 }
 
@@ -1428,17 +1490,33 @@ class Bezier3 extends Command {
     }
 }
 
-class Arc extends Command {
+class ArcTo extends Command {
     constructor(p, r, args) {
         let {angle, large, sweep} = args ?? {};
         angle = angle ?? 0;
-        large = large ?? 1;
-        sweep = sweep ?? 1;
-        super('A', ['xy', '', '', '', 'xy'], [r, angle, large, sweep, p]);
+        large = large ?? true;
+        sweep = sweep ?? true;
+
+        large = large ? 1 : 0;
+        sweep = sweep ? 1 : 0;
+        super('A', ['wh', '', '', '', 'xy'], [r, angle, large, sweep, p]);
     }
 }
 
-class Close extends Command {
+class ArcDel extends Command {
+    constructor(p, r, args) {
+        let {angle, large, sweep} = args ?? {};
+        angle = angle ?? 0;
+        large = large ?? true;
+        sweep = sweep ?? true;
+
+        large = large ? 1 : 0;
+        sweep = sweep ? 1 : 0;
+        super('a', ['wh', '', '', '', 'wh'], [r, angle, large, sweep, p]);
+    }
+}
+
+class ClosePath extends Command {
     constructor() {
         super('Z', [], []);
     }
@@ -1511,6 +1589,48 @@ class Bezier3Line extends Path {
         let start = new MoveTo(p0);
         let bezer = new Bezier3(p1, px0, px1);
         super([start, bezer], args); 
+    }
+}
+
+class RoundedRect extends Path {
+    constructor(args) {
+        let {p1, p2, round, ...attr} = args ?? {};
+        p1 = p1 ?? [0, 0];
+        p2 = p2 ?? [1, 1];
+        round = round ?? 0.05;
+
+        // parse radius numbrers
+        let rtl, rtr, rbr, rbl;
+        if (is_scalar(round)) {
+            rtl = rtr = rbr = rbl = round;
+        } else {
+            [rtl, rtr, rbr, rbl] = round;
+        }
+
+        // get rect bounds
+        let [x1, y1] = p1;
+        let [x2, y2] = p2;
+        let width = x2 - x1;
+        let height = y2 - y1;
+
+        // construct commands
+        let commands = [
+            new MoveTo([x1, y1]),
+            new MoveDel([0, rtl]),
+            new ArcDel([rtl, -rtl], [rtl, -rtl], {large: false}),
+            new HorizontalDel(width - rtl - rtr),
+            new ArcDel([rtr, rtr], [rtr, rtr], {large: false}),
+            new VerticalDel(height - rtr - rbr),
+            new ArcDel([-rbr, rbr], [-rbr, rbr], {large: false}),
+            new HorizontalDel(rbr + rbl - width),
+            new ArcDel([-rbl, -rbl], [-rbl, -rbl], {large: false}),
+            new VerticalDel(rbl + rtl - height),
+            new ClosePath()
+        ];
+
+        // pass to path
+        super(commands, attr);
+        [this.xlim, this.ylim] = zip(p1, p2);
     }
 }
 
@@ -2081,37 +2201,34 @@ class SymPoints extends Container {
  ** bar components
  **/
 
-// no aspect, but has a ylim and optional width that is used by Bars
-class Bar extends Stack {
-    constructor(direc, lengths, args) {
-        let {zero, size, ...attr} = args ?? {};
+class Bar extends Container {
+    constructor(direc, length, args) {
+        let {shape, zero, size, color, ...attr} = args ?? {};
+        shape = shape ?? (a => new Rect(a));
         zero = zero ?? 0;
 
         // get standardized direction
         direc = get_orient(direc);
-        lengths = is_scalar(lengths) ? [lengths] : lengths;
-        if (direc == 'v') { lengths = lengths.reverse(); }
 
-        // normalize section specs
-        let boxes = lengths.map(lc => is_scalar(lc) ? [lc, null] : lc);
-        let length = sum(boxes.map(([l, c]) => l));
-        let children = boxes.map(([l, c]) => [new Rect({fill: c}), l/length]);
+        // make shape
+        let child = shape({stroke: color, fill: color, ...attr});
 
-        super(direc, children, attr);
+        // call constructor
+        super([child]);
         this.lim = [zero, zero + length];
         this.size = size;
     }
 }
 
 class VBar extends Bar {
-    constructor(lengths, args) {
-        super('v', lengths, args);
+    constructor(length, args) {
+        super('v', length, args);
     }
 }
 
 class HBar extends Bar {
-    constructor(lengths, args) {
-        super('h', lengths, args);
+    constructor(length, args) {
+        super('h', length, args);
     }
 }
 
@@ -2153,7 +2270,7 @@ class Bars extends Container {
 
         // handle scalar and custom bars
         bars = bars.map(b =>
-            is_scalar(b) ? new Bar(direc, [[b, color]], {zero, size, ...bar_attr}) : b
+            is_scalar(b) ? new Bar(direc, b, {zero, size, color, ...bar_attr}) : b
         );
 
         // aggregate lengths
@@ -3026,7 +3143,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, Bezier2, Bezier3, Arc, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, Close, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, RoundedRect, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 ];
 
 // detect object types
@@ -3130,4 +3247,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, Arc, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, Close, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HScale, HStack, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VScale, VStack, Variable, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, grid, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HScale, HStack, HorizontalDel, HorizontalTo, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, RoundedRect, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, grid, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
