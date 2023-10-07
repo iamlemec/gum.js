@@ -2239,7 +2239,7 @@ class SymPoints extends Container {
 
 class Bar extends Container {
     constructor(direc, length, args) {
-        let {shape, zero, size, color, ...attr} = args ?? {};
+        let {zero, size, color, shape, ...attr} = args ?? {};
         shape = shape ?? (a => new Rect(a));
         zero = zero ?? 0;
 
@@ -2307,9 +2307,8 @@ class HMultiBar extends MultiBar {
 // custom bars must have a ylim and optionally a width
 class Bars extends Container {
     constructor(direc, bars, args) {
-        let {lim, zero, shrink, size, color, integer, ...attr0} = args ?? {};
+        let {lim, shrink, size, integer, ...attr0} = args ?? {};
         let [bar_attr, attr] = prefix_split(['bar'], attr0);
-        zero = zero ?? 0;
         integer = integer ?? false;
         shrink = shrink ?? 0;
         let n = bars.length;
@@ -2342,7 +2341,7 @@ class Bars extends Container {
 
         // handle scalar and custom bars
         bars = bars.map(b =>
-            is_scalar(b) ? new Bar(direc, b, {zero, size, color, ...bar_attr}) : b
+            is_scalar(b) ? new Bar(direc, b, {size, ...bar_attr}) : b
         );
 
         // aggregate lengths
@@ -2475,6 +2474,8 @@ function get_ticklim(lim) {
         return [0, 0.5];
     } else if (lim == 'both') {
         return [0, 1];
+    } else if (lim == 'none') {
+        return [0.5, 0.5];
     } else {
         return lim;
     }
@@ -2825,7 +2826,8 @@ class Plot extends Container {
 class BarPlot extends Plot {
     constructor(data, args) {
         let {direc, aspect, shrink, padding, color, ...attr0} = args ?? {};
-        let [bars_attr, attr] = prefix_split(['bars'], attr0);
+        let [bars_attr, bar_attr, attr] = prefix_split(['bars', 'bar'], attr0);
+        bars_attr = {...bars_attr, ...prefix_add('bar', bar_attr)};
         direc = direc ?? 'v';
         aspect = aspect ?? phi;
         shrink = shrink ?? 0.2;
@@ -2842,7 +2844,7 @@ class BarPlot extends Plot {
 
         // generate actual bars
         let [labs, bars] = zip(...data);
-        let bars1 = new Bars(direc, bars, {shrink, color, ...bars_attr});
+        let bars1 = new Bars(direc, bars, {shrink, ...bars_attr});
         let ticks = zip(bars1.vals, labs);
 
         // send to general plot
@@ -3215,7 +3217,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, RoundedRect, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, RoundedRect, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 ];
 
 // detect object types
@@ -3324,5 +3326,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, RoundedRect, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, RoundedRect, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, gzip, zip, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 };
