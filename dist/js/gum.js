@@ -1427,12 +1427,6 @@ class MoveTo extends Command {
     }
 }
 
-class MoveDel extends Command {
-    constructor(p) {
-        super('m', ['wh'], [p]);
-    }
-}
-
 class LineTo extends Command {
     constructor(p) {
         super('L', ['xy'], [p]);
@@ -1590,7 +1584,8 @@ class Bezier3Line extends Path {
     }
 }
 
-class RoundedRect extends Path {
+// this is a hack, but there doesn't seem to be any other way to get the corners true round
+class RoundedRect extends Element {
     constructor(args) {
         let {p1, p2, round, ...attr} = args ?? {};
         p1 = p1 ?? [0, 0];
@@ -1605,30 +1600,46 @@ class RoundedRect extends Path {
             [rtl, rtr, rbr, rbl] = round;
         }
 
-        // get rect bounds
-        let [x1, y1] = p1;
-        let [x2, y2] = p2;
-        let width = x2 - x1;
-        let height = y2 - y1;
+        super('path', true, attr);
+        [this.p1, this.p2] = [p1, p2];
+        [this.rtl, this.rtr, this.rbr, this.rbl] = [rtl, rtr, rbr, rbl];
+        [this.xlim, this.ylim] = zip(p1, p2);
+    }
 
-        // construct commands
-        let commands = [
-            new MoveTo([x1, y1]),
-            new MoveDel([0, rtl]),
-            new ArcDel([rtl, -rtl], [rtl, -rtl], {large: false}),
-            new HorizontalDel(width - rtl - rtr),
-            new ArcDel([rtr, rtr], [rtr, rtr], {large: false}),
-            new VerticalDel(height - rtr - rbr),
-            new ArcDel([-rbr, rbr], [-rbr, rbr], {large: false}),
-            new HorizontalDel(rbr + rbl - width),
-            new ArcDel([-rbl, -rbl], [-rbl, -rbl], {large: false}),
-            new VerticalDel(rbl + rtl - height),
-            new ClosePath()
-        ];
+    props(ctx) {
+        // get rect bounds
+        let [x1, y1] = ctx.coord_to_pixel(this.p1);
+        let [x2, y2] = ctx.coord_to_pixel(this.p2);
+        let [width, height] = [x2 - x1, y2 - y1];
+
+        // get base radii
+        let [rtlx, rtly] = ctx.coord_to_pixel_size([this.rtl, this.rtl]);
+        let [rtrx, rtry] = ctx.coord_to_pixel_size([this.rtr, this.rtr]);
+        let [rbrx, rbry] = ctx.coord_to_pixel_size([this.rbr, this.rbr]);
+        let [rblx, rbly] = ctx.coord_to_pixel_size([this.rbl, this.rbl]);
+
+        // adjust to circular
+        [rtlx, rtly] = aspect_invariant([rtlx, rtly], 1/ctx.aspec);
+        [rtrx, rtry] = aspect_invariant([rtrx, rtry], 1/ctx.aspec);
+        [rbrx, rbry] = aspect_invariant([rbrx, rbry], 1/ctx.aspec);
+        [rblx, rbly] = aspect_invariant([rblx, rbly], 1/ctx.aspec);
+
+        let d = [
+            `M ${x1},${y1}`,
+            `m 0,${rtly}`,
+            `a ${rtlx},${rtly} 0 0 1 ${rtlx},-${rtly}`,
+            `h ${width-rtlx-rtrx}`,
+            `a ${rtrx},${rtry} 0 0 1 ${rtrx},${rtry}`,
+            `v ${height-rtry-rbry}`,
+            `a ${rbrx},${rbry} 0 0 1 -${rbrx},${rbry}`,
+            `h ${rbrx+rblx-width}`,
+            `a ${rblx},${rbly} 0 0 1 -${rblx},-${rbly}`,
+            `v ${rbly+rtly-height}`,
+            `z`,
+        ].join(' ');
 
         // pass to path
-        super(commands, attr);
-        [this.xlim, this.ylim] = zip(p1, p2);
+        return {d, ...this.attr};
     }
 }
 
