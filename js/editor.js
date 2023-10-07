@@ -28,30 +28,6 @@ function readOnlyEditor(parent) {
     });
 }
 
-// primarily for gum input
-function readWriteEditor(parent, update) {
-    return new EditorView({
-        state: EditorState.create({
-            doc: '',
-            extensions: [
-                javascript(),
-                history(),
-                drawSelection(),
-                lineNumbers(),
-                bracketMatching(),
-                keymap.of([
-                    indentWithTab,
-                    ...defaultKeymap,
-                    ...historyKeymap,
-                ]),
-                syntaxHighlighting(defaultHighlightStyle),
-                EditorView.updateListener.of(update),
-            ],
-        }),
-        parent: parent,
-    });
-}
-
 function getText(state) {
     return state.doc.toString();
 }
@@ -84,12 +60,35 @@ class GumEditor {
         }
 
         // init editor
-        this.edit_text = readWriteEditor(code, upd => {
-            if (upd.docChanged) {
-                let text = getText(upd.state);
-                this.setCookie(text);
-                this.updateView(text);
-            }
+        this.edit_text = new EditorView({
+            state: this.createEditState(''),
+            parent: code,
+        });
+    }
+
+    createEditState(doc) {
+        return EditorState.create({
+            doc: doc,
+            extensions: [
+                javascript(),
+                history(),
+                drawSelection(),
+                lineNumbers(),
+                bracketMatching(),
+                keymap.of([
+                    indentWithTab,
+                    ...defaultKeymap,
+                    ...historyKeymap,
+                ]),
+                syntaxHighlighting(defaultHighlightStyle),
+                EditorView.updateListener.of(upd => {
+                    if (upd.docChanged) {
+                        let text = getText(upd.state);
+                        this.setCookie(text);
+                        this.updateView(text);
+                    }
+                }),
+            ],
         });
     }
 
@@ -100,7 +99,8 @@ class GumEditor {
     }
 
     setCode(src) {
-        setText(this.edit_text, src);
+        this.edit_text.setState(this.createEditState(src));
+        this.updateView(src);
     }
 
     getConvert() {

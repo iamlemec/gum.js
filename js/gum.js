@@ -302,6 +302,7 @@ let tan = Math.tan;
 let abs = Math.abs;
 let pow = Math.pow;
 let sqrt = Math.sqrt;
+let sign = Math.sign;
 let floor = Math.floor;
 let ceil = Math.ceil;
 let round = Math.round;
@@ -606,12 +607,14 @@ function align_frac(align) {
 
 class Context {
     constructor(prect, args) {
-        let {coord, rrect, trans, prec} = args ?? {};
+        let {coord, rrect, trans, aspec, prec, debug} = args ?? {};
         this.prect = prect;
         this.rrect = rrect;
         this.coord = coord;
         this.trans = trans;
+        this.aspec = aspec;
         this.prec = prec;
+        this.debug = debug ?? false;
     }
 
     // map using both domain (frac) and range (rect)
@@ -690,6 +693,7 @@ class Context {
         // get absolute sizes
         let [apw1, aph1] = [abs(pw1), abs(ph1)];
         let [arw1, arh1] = [abs(rw1), abs(rh1)];
+        let aspec = apw1/aph1;
 
         // get rotated/unrotated pixel rect
         let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
@@ -703,7 +707,9 @@ class Context {
         let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
         let trans = (rotate != 0) ? `rotate(${rotate} ${sx} ${sy})` : null;
 
-        return new Context(prect, {coord, rrect, trans, prec: this.prec});
+        return new Context(prect, {
+            coord, rrect, trans, aspec, prec: this.prec, debug: this.debug
+        });
     }
 }
 
@@ -740,11 +746,18 @@ class Element {
         let props = props_repr(pvals, ctx.prec);
         let pre = props.length > 0 ? ' ' : '';
 
+        // optional debug info
+        let debug = '';
+        if (ctx.debug) {
+            let klass = this.constructor.name;
+            debug = ` gum-class="${klass}"`;
+        }
+
         // return final svg
         if (this.unary) {
-            return `<${this.tag}${pre}${props} />`;
+            return `<${this.tag}${pre}${props}${debug} />`;
         } else {
-            return `<${this.tag}${pre}${props}>${this.inner(ctx)}</${this.tag}>`;
+            return `<${this.tag}${pre}${props}${debug}>${this.inner(ctx)}</${this.tag}>`;
         }
     }
 }
@@ -882,9 +895,10 @@ class SVG extends Container {
         return {...base, ...this.attr};
     }
 
-    svg() {
+    svg(debug) {
         let rect = [0, 0, ...this.size];
-        let ctx = new Context(rect ,{prec: this.prec});
+        let aspec = rect_aspect(rect);
+        let ctx = new Context(rect, {aspec, prec: this.prec, debug});
         return super.svg(ctx);
     }
 }
@@ -1386,6 +1400,12 @@ function arg(s, d, ctx) {
     if (s == 'xy') {
         let [x, y] = ctx.coord_to_pixel(d);
         return `${rounder(x, ctx.prec)},${rounder(y, ctx.prec)}`;
+    } else if (s == 'x') {
+        let [x, _] = ctx.coord_to_pixel([d, 0]);
+        return `${rounder(x, ctx.prec)}`;
+    } else if (s == 'y') {
+        let [_, y] = ctx.coord_to_pixel([0, d]);
+        return `${rounder(y, ctx.prec)}`;
     } else if (s == 'wh') {
         let [w, h] = ctx.coord_to_pixel_size(d);
         return `${rounder(w, ctx.prec)},${rounder(h, ctx.prec)}`;
@@ -1428,63 +1448,42 @@ class MoveDel extends Command {
     }
 }
 
-class LineCmd extends Command {
-    constructor(p, d) {
-        let cmd = d ? 'l' : 'L';
-        super(cmd, ['xy'], [p]);
-    }
-}
-
-class LineTo extends LineCmd {
+class LineTo extends Command {
     constructor(p) {
-        super(p, false);
+        super('L', ['xy'], [p]);
         this.point = p;
     }
 }
 
-class LineDel extends LineCmd {
+class LineDel extends Command {
     constructor(p) {
-        super(p, true);
+        super('l', ['wh'], [p]);
     }
 }
 
-class VerticalCmd extends Command {
-    constructor(y, d) {
-        let cmd = d ? 'v' : 'V';
-        super(cmd, ['h'], [y]);
-    }
-}
-
-class VerticalTo extends VerticalCmd {
+class VerticalTo extends Command {
     constructor(y) {
-        super(y, false);
+        super('V', ['y'], [y]);
         this.point = [null, y];
     }
 }
 
-class VerticalDel extends VerticalCmd {
+class VerticalDel extends Command {
     constructor(y) {
-        super(y, true);
+        super('v', ['h'], [y]);
     }
 }
 
-class HorizontalCmd extends Command {
-    constructor(x, d) {
-        let cmd = d ? 'h' : 'H';
-        super(cmd, ['w'], [x]);
-    }
-}
-
-class HorizontalTo extends HorizontalCmd {
+class HorizontalTo extends Command {
     constructor(x) {
-        super(x, false);
+        super('H', ['x'], [x]);
         this.point = [x, null];
     }
 }
 
-class HorizontalDel extends HorizontalCmd {
+class HorizontalDel extends Command {
     constructor(x) {
-        super(x, true);
+        super('h', ['w'], [x]);
     }
 }
 
@@ -1507,20 +1506,6 @@ class Bezier3 extends Command {
             super('C', ['xy', 'xy', 'xy'], [p1, p2, p]);
         }
         this.point = p;
-    }
-}
-
-class ArcCmd extends Command {
-    constructor(p, r, del, args) {
-        let {angle, large, sweep} = args ?? {};
-        angle = angle ?? 0;
-        large = large ?? true;
-        sweep = sweep ?? true;
-
-        let cmd = del ? 'a' : 'A';
-        large = large ? 1 : 0;
-        sweep = sweep ? 1 : 0;
-        super(cmd, ['xy', '', '', '', 'xy'], [r, angle, large, sweep, p]);
     }
 }
 
@@ -1660,7 +1645,7 @@ class RoundedRect extends Path {
             new ArcDel([-rbl, -rbl], [-rbl, -rbl], {large: false}),
             new VerticalDel(rbl + rtl - height),
             new ClosePath()
-        ]
+        ];
 
         // pass to path
         super(commands, attr);
