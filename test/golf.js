@@ -368,6 +368,21 @@ let plot = Plot([line, points], {
 });
 return Frame(plot, {margin: 0.25});
 
+// rounded bar plot
+let topr = a => RoundedRect({round: [0.05, 0.05, 0, 0], ...a});
+let abar = VBar(23.2, {color: '#e855ac', shape: topr});
+let bbar = VBar(17.3, {color: '#009f9c', shape: topr});
+let cbar = VBar(25.8, {color: '#0582fc', shape: topr});
+let bars = BarPlot([
+  ['Whisper', abar], ['Whisper V2', bbar], ['SeamlessM4T', cbar]
+], {
+  ylim: [0, 30], yticks: 6, title: Text('S2ST', {font_weight: 400}),
+  xlabel: 'BLEU', ygrid: true, yticks: [0, 10, 20, 30],
+  xaxis_tick_stroke_width: 0, yaxis_tick_stroke_width: 0,
+  xaxis_line_stroke_width: 1.5, yaxis_line_stroke_width: 0,
+});
+return Frame(bars, {margin: 0.3});
+
 // bezier paths
 let p0 = [0.2, 0.8];
 let p1 = [0.8, 0.2];

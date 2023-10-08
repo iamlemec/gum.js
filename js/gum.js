@@ -1979,8 +1979,8 @@ class Edge extends Container {
         debug = debug ?? false;
 
         // accumulate arguments
-        arrow_beg_attr = {size: arrow_size, ...arrow_attr, ...arrow_beg_attr};
-        arrow_end_attr = {size: arrow_size, ...arrow_attr, ...arrow_end_attr};
+        arrow_beg_attr = {rad: arrow_size, ...arrow_attr, ...arrow_beg_attr};
+        arrow_end_attr = {rad: arrow_size, ...arrow_attr, ...arrow_end_attr};
 
         // final arrowheads
         arrow = arrow ?? false;
