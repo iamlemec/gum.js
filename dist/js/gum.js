@@ -813,7 +813,7 @@ class Container extends Element {
 
         // debug styling
         let debug_rect;
-        if (debug === true) {
+        if (debug) {
             let debug_args1 = {fill: 'none', stroke: 'red', stroke_dasharray: 5, ...debug_attr};
             debug_rect = new Rect(debug_args1);
         }
@@ -1988,7 +1988,7 @@ class Network extends Container {
         arrow_size = arrow_size ?? [0.02, 0.015];
 
         // sort out final edge attributes
-        arrow_size = aspect_invariant(arrow_size, 1/aspect);
+        arrow_size = aspect_invariant(arrow_size, 1/(aspect ?? 1));
         edge_attr = {
             arrow_end: directed, arrow_size, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)
         };
@@ -1999,8 +1999,6 @@ class Network extends Container {
             b = is_element(b) ? b : make_node(b);
             return [s, new Place(b, {pos: p, rad: r ?? size})];
         }));
-        let boxes = Object.values(bmap);
-        let cont1 = new Container(boxes);
 
         // collect edge paths
         let lines = edges.map(([na1, na2, eattr]) => {
@@ -2016,15 +2014,15 @@ class Network extends Container {
 
             return new Edge([a1, d1], [a2, d2], {...edge_attr, ...eattr});
         });
-        let cont2 = new Container(lines);
 
         // find total limits
+        let boxes = Object.values(bmap);
         let [xmins, xmaxs] = zip(...boxes.map(b => b.xlim));
         let [ymins, ymaxs] = zip(...boxes.map(b => b.ylim));
 
         // combine into container
         let attr1 = {aspect, ...attr};
-        super([cont1, cont2], attr1);
+        super([...boxes, ...lines], attr1);
         this.xlim = [min(...xmins), max(...xmaxs)];
         this.ylim = [min(...ymins), max(...ymaxs)];
         this.bmap = bmap;
