@@ -918,7 +918,7 @@ class Frame extends Container {
         margin = margin ?? 0;
         adjust = adjust ?? true;
         flex = flex ?? false;
-        shape = shape ?? (a => new Rect(a));
+        shape = shape ?? Rect;
 
         // convenience boxing
         padding = pad_rect(padding);
@@ -938,13 +938,11 @@ class Frame extends Container {
 
         // make border box
         let rargs = {stroke_width: border, ...border_attr};
-        let rect = shape(rargs);
+        let rect = new shape(rargs);
 
         // gather children
         let children = [[child, {rect: crect, rotate, shrink}]];
-        if (border != 0) {
-            children.unshift([rect, brect]);
-        }
+        children.unshift([rect, brect]);
 
         // pass to Container
         let attr1 = {aspect, clip: false, ...attr};
@@ -1198,14 +1196,14 @@ class HLine extends UnitLine {
 
 class Rect extends Element {
     constructor(args) {
-        let {p1, p2, round, ...attr} = args ?? {};
+        let {p1, p2, radius, ...attr} = args ?? {};
         p1 = p1 ?? [0, 0];
         p2 = p2 ?? [1, 1];
 
         super('rect', true, attr);
         this.p1 = p1;
         this.p2 = p2;
-        this.round = round;
+        this.radius = radius;
         [this.xlim, this.ylim] = zip(p1, p2);
     }
 
@@ -1221,12 +1219,12 @@ class Rect extends Element {
 
         // scale border radius
         let rx, ry;
-        if (this.round != null) {
-            if (is_scalar(this.round)) {
+        if (this.radius != null) {
+            if (is_scalar(this.radius)) {
                 let s = 0.5*(w+h);
-                rx = s*this.round;
+                rx = s*this.radius;
             } else {
-                let [rx0, ry0] = this.round;
+                let [rx0, ry0] = this.radius;
                 [rx, ry] = [w*rx0, h*ry0];
             }
         }
@@ -1584,65 +1582,6 @@ class Bezier3Line extends Path {
     }
 }
 
-// this is a hack, but there doesn't seem to be any other way to get the corners true round
-class RoundedRect extends Element {
-    constructor(args) {
-        let {p1, p2, round, ...attr} = args ?? {};
-        p1 = p1 ?? [0, 0];
-        p2 = p2 ?? [1, 1];
-        round = round ?? 0.05;
-
-        // parse radius numbrers
-        let rtl, rtr, rbr, rbl;
-        if (is_scalar(round)) {
-            rtl = rtr = rbr = rbl = round;
-        } else {
-            [rtl, rtr, rbr, rbl] = round;
-        }
-
-        super('path', true, attr);
-        [this.p1, this.p2] = [p1, p2];
-        [this.rtl, this.rtr, this.rbr, this.rbl] = [rtl, rtr, rbr, rbl];
-        [this.xlim, this.ylim] = zip(p1, p2);
-    }
-
-    props(ctx) {
-        // get rect bounds
-        let [x1, y1] = ctx.coord_to_pixel(this.p1);
-        let [x2, y2] = ctx.coord_to_pixel(this.p2);
-        let [width, height] = [x2 - x1, y2 - y1];
-
-        // get base radii
-        let [rtlx, rtly] = ctx.coord_to_pixel_size([this.rtl, this.rtl]);
-        let [rtrx, rtry] = ctx.coord_to_pixel_size([this.rtr, this.rtr]);
-        let [rbrx, rbry] = ctx.coord_to_pixel_size([this.rbr, this.rbr]);
-        let [rblx, rbly] = ctx.coord_to_pixel_size([this.rbl, this.rbl]);
-
-        // adjust to circular
-        [rtlx, rtly] = aspect_invariant([rtlx, rtly], 1/ctx.aspec);
-        [rtrx, rtry] = aspect_invariant([rtrx, rtry], 1/ctx.aspec);
-        [rbrx, rbry] = aspect_invariant([rbrx, rbry], 1/ctx.aspec);
-        [rblx, rbly] = aspect_invariant([rblx, rbly], 1/ctx.aspec);
-
-        let d = [
-            `M ${x1},${y1}`,
-            `m 0,${rtly}`,
-            `a ${rtlx},${rtly} 0 0 1 ${rtlx},-${rtly}`,
-            `h ${width-rtlx-rtrx}`,
-            `a ${rtrx},${rtry} 0 0 1 ${rtrx},${rtry}`,
-            `v ${height-rtry-rbry}`,
-            `a ${rbrx},${rbry} 0 0 1 -${rbrx},${rbry}`,
-            `h ${rbrx+rblx-width}`,
-            `a ${rblx},${rbly} 0 0 1 -${rblx},-${rbly}`,
-            `v ${rbly+rtly-height}`,
-            `z`,
-        ].join(' ');
-
-        // pass to path
-        return {d, ...this.attr};
-    }
-}
-
 /**
  ** text elements
  **/
@@ -1917,9 +1856,10 @@ function norm_direc(direc) {
 
 class Arrowhead extends Container {
     constructor(direc, args) {
-        let {pos, rad, stroke_width, ...attr} = args ?? {};
+        let {pos, rad, base, stroke_width, ...attr} = args ?? {};
         pos = pos ?? [0.5, 0.5];
         rad = rad ?? [0.5, 0.5];
+        base = base ?? false;
         stroke_width = stroke_width ?? 1;
 
         // stroke_width translate hack
@@ -1928,15 +1868,17 @@ class Arrowhead extends Container {
         let transform = `translate(${-0.5*offx}, ${0.5*offy})`;
 
         // generate arrowhead polygon
-        let pattr = {fill: 'black', stroke_width, transform, ...attr};
-        let poly = new Polygon([[0.5, 0.5], [0, 0], [0, 1]], pattr);
+        let pattr = {stroke_width, transform, ...attr};
+        let points = [[0, 0], [0.5, 0.5], [0, 1]];
+        let Maker = base ? Polygon : Polyline;
+        let shape = new Maker(points, pattr);
 
         // calculate size
         let rad2 = ensure_vector(rad, 2);
         let rect = rad_rect(pos, rad2);
 
         // pass to group for rotate
-        let child = [poly, {rect, rotate: -direc, invar: true}];
+        let child = [shape, {rect, rotate: -direc, invar: true}];
         super([child]);
     }
 }
@@ -3190,7 +3132,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, RoundedRect, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
 ];
 
 // detect object types
@@ -3294,4 +3236,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, RoundedRect, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, grid, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, grid, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };

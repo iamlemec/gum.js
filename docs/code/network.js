@@ -6,7 +6,6 @@ return Network([
 ], [
   ['A', 'B'], ['A', 'C']
 ], {
-  size: 0.1, aspect: phi, directed: true,
-  node_fill: '#EEE', arrow_fill: 'white',
-  node_border_radius: 0.1
+  aspect: phi, directed: true,
+  node_fill: '#EEE', node_border_radius: 0.05
 });
