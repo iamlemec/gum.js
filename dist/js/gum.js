@@ -2631,10 +2631,10 @@ class Plot extends Container {
         // some advanced piping
         let [
             xaxis_attr, yaxis_attr, axis_attr, xgrid_attr, ygrid_attr, grid_attr, xlabel_attr,
-            ylabel_attr, label_attr, title_attr, attr
+            ylabel_attr, label_attr, title_attr, graph_attr, attr
         ] = prefix_split([
             'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label',
-            'title'
+            'title', 'graph'
         ], attr0);
         [xaxis_attr, yaxis_attr] = [{...axis_attr, ...xaxis_attr}, {...axis_attr, ...yaxis_attr}];
         [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
@@ -2691,7 +2691,7 @@ class Plot extends Container {
 
         // create graph from core elements
         let elems1 = [xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
-        let graph = new Graph(elems1, {xlim, ylim, aspect, padding});
+        let graph = new Graph(elems1, {xlim, ylim, aspect, padding, ...graph_attr});
 
         // create base layout
         let children = [graph];
