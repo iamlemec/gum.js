@@ -393,7 +393,7 @@ function rad_rect(p, r0) {
         [rx, ry] = [r, r];
     } else if (p.length == 2) {
         [x, y] = p;
-        [rx, ry] = is_scalar(r0) ? [r0, r0] : r0;
+        [rx, ry] = ensure_vector(r0, 2);
     } else if (p.length == 3) {
         [x, y, r] = p;
         [rx, ry] = [r, r];
@@ -408,6 +408,16 @@ function merge_rects(rects) {
     return [
         min(...xa), min(...ya), max(...xb), max(...yb)
     ];
+}
+
+function rect_lims(rect) {
+    let [xa, ya, xb, yb] = rect;
+    return [[xa, xb], [ya, yb]];
+}
+
+function rect_bounds(rect) {
+    let [xa, ya, xb, yb] = rect;
+    return [min(xa, xb), min(ya, yb), max(xa, xb), max(ya, yb)];
 }
 
 function rect_dims(rect) {
@@ -780,8 +790,7 @@ function parse_bounds(bnd) {
 
 class Container extends Element {
     constructor(children, args) {
-        let {tag, aspect, coord, clip, debug, ...attr0} = args ?? {};
-        let [debug_attr, attr] = prefix_split(['debug'], attr0);
+        let {tag, aspect, coord, clip, debug, ...attr} = args ?? {};
         tag = tag ?? 'g';
         clip = clip ?? true;
         debug = debug ?? false;
@@ -817,22 +826,14 @@ class Container extends Element {
             }
         }
 
-        // debug styling
-        let debug_rect;
-        if (debug) {
-            let debug_args1 = {fill: 'none', stroke: 'red', stroke_dasharray: 5, ...debug_attr};
-            debug_rect = new Rect(debug_args1);
-        }
-
         // pass to Element
         let attr1 = {aspect: aspect, ...attr};
         super(tag, false, attr1);
         this.children = children;
         this.coord = coord;
+        this.debug = debug;
         this.xlim = xlim;
         this.ylim = ylim;
-        this.debug = debug;
-        this.debug_rect = debug_rect;
     }
 
     inner(ctx) {
@@ -842,20 +843,19 @@ class Container extends Element {
         }
 
         // map to new contexts and render
-        let inside = this.children
-            .map(([c, a]) => c.svg(
-                ctx.map({aspect: c.aspect, coord: this.coord, ...a})
-            ))
-            .filter(s => s.length > 0)
-            .join('\n');
+        let inside = this.children.map(([c, a]) => c.svg(
+            ctx.map({aspect: c.aspect, coord: this.coord, ...a})
+        )).filter(s => s.length > 0).join('\n');
 
         // debug rects
-        if (this.debug) {
-            let dstr = this.children
-                .map(([c, a]) => this.debug_rect.svg(
-                    ctx.map({aspect: c.aspect, coord: this.coord, ...a})
-                ))
-                .join('\n');
+        if (this.debug || ctx.debug) {
+            let dstr = this.children.map(([c, a]) => {
+                let ctx1 = ctx.map({aspect: c.aspect, coord: this.coord, ...a});
+                let ctx2 = ctx.map({coord: this.coord, ...a});
+                let rect1 = new Rect({stroke: 'red'});
+                let rect2 = new Rect({stroke_dasharray: 4, stroke: 'blue'});
+                return `${rect1.svg(ctx1)}\n${rect2.svg(ctx2)}`;
+            }).join('\n');
             inside = `${inside}\n${dstr}`;
         }
 
@@ -895,10 +895,11 @@ class SVG extends Container {
         return {...base, ...this.attr};
     }
 
-    svg(debug) {
+    svg(args) {
+        args = args ?? {};
         let rect = [0, 0, ...this.size];
         let aspec = rect_aspect(rect);
-        let ctx = new Context(rect, {aspec, prec: this.prec, debug});
+        let ctx = new Context(rect, {aspec, prec: this.prec, ...args});
         return super.svg(ctx);
     }
 }
@@ -1089,11 +1090,6 @@ class Place extends Container {
         pos = pos ?? [0.5, 0.5];
         rad = rad ?? [0.5, 0.5];
 
-        // ensure vector radius
-        if (is_scalar(rad)) {
-            rad = aspect_invariant(rad, child.aspect);
-        }
-
         // find child position
         rect = rect ?? rad_rect(pos, rad);
         let spec = [child, {rect, rotate, expand, invar, align, pivot}];
@@ -1211,20 +1207,16 @@ class HLine extends UnitLine {
 
 class Rect extends Element {
     constructor(args) {
-        let {p1, p2, radius, ...attr} = args ?? {};
-        p1 = p1 ?? [0, 0];
-        p2 = p2 ?? [1, 1];
-
+        let {rect, radius, ...attr} = args ?? {};
+        rect = rect ?? coord_base;
         super('rect', true, attr);
-        this.p1 = p1;
-        this.p2 = p2;
+        this.rect = rect;
         this.radius = radius;
-        [this.xlim, this.ylim] = zip(p1, p2);
+        [this.xlim, this.ylim] = rect_lims(rect);
     }
 
     props(ctx) {
-        let [x1, y1] = ctx.coord_to_pixel(this.p1);
-        let [x2, y2] = ctx.coord_to_pixel(this.p2);
+        let [x1, y1, x2, y2] = ctx.coord_to_pixel_rect(this.rect);
 
         // orient increasing
         let [x, y] = [x1, y1];
