@@ -230,66 +230,47 @@ return frame;
 
 /// Expected Utility indiff curves
 
-function guu(vars) {
-    let a = vars.a / 100;
-    let slope = (1-a)/a;
-    let s1 = SymPath({fy: t => 1-t, xlim: [0, 1]});
-    let s2 = SymPath({fy: t => slope*t, xlim: [0, a], stroke: 'red', stroke_width: 3});
+function update(vars) {
+  let a = vars.a / 100;
+  let slope = (1-a)/a;
+  let nlines = round(10/a)+1;
+  let offs = linspace(1, 1-1/a, nlines);
 
-    let t = 1;
-    let c = [];
-    while (t > -1/a) {
-        c.push(t);
-        t -= 0.1;
-    }
+  let s1 = SymPath({fy: t => 1-t, xlim: [0, 1]});
+  let s2 = SymPath({fy: t => slope*t, xlim: [0, a], stroke: 'red', stroke_width: 3});
+  let icurves = offs.map(x => SymPath({
+    fy: t => (slope*t) + x, xlim: [max(0,-x/slope), (1-x)*a], stroke_dasharray: 3
+  }));
 
-    indiff_curves = c.map(x => SymPath({
-        fy: t => (slope*t) + x,
-        xlim: [Math.max(0,-x/slope), (1-x)*a],
-        stroke_dasharray: 3
-    }));
-    tx = `${a}x + (1-${a})z`;
+  let scl = Note(`${a}x + (1-${a})z`, {pos: [a+0.14, 1-a+.03], rad: 0.12, stroke: 'red', fill: 'red'});
+  let sc = Dot({pos: [a, 1-a], rad: 0.012});
 
-    let scl = Scatter([[a + .05, 1 - a + .02], [5, 5]], {
-        radius: 0.015, stroke: 'red', fill: 'red', shape: new Text(tx, {font_size: 10})
-    });
+  let p = Plot([s1, s2, sc, scl, ...icurves], {
+    xlim: [0, 1], ylim: [0, 1], ticksize: 0.03
+  });
 
-    let sc = Scatter([[a, 1-a], [5, 5]], {
-        radius: 0.015, stroke: 'red', fill: 'red'
-    });
-
-    plots = indiff_curves.concat([s1, s2, sc, scl]);
-
-    let p = Plot(plots, {
-      xlim: [0, 1],
-      ylim: [0, 1],
-      ticksize: 0.03
-    });
-
-    return Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
+  return Frame(p, {padding: 0.15});
 }
 
 return InterActive({
-    a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
-}, guu);
+  a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
+}, update);
+
 
 /// CHECK MARK
 
 function guu(vars) {
-    let letter = 'U';
-    if (vars.a) {
-        letter = 'C';
-    }
-
-    let a = Node(letter);
-    let n1 = VStack([a, a]);
-    let n2 = HStack([n1, a]);
-    return Frame(n2, {margin: vars.b/1000});
+  let [check, margin] = [vars.a, vars.b];
+  let letter = check ? '🐋' : '🗻';
+  let a = Node(letter);
+  let n1 = VStack([a, a]);
+  let n2 = HStack([n1, a]);
+  return Frame(n2, {margin: margin/100});
 }
 
 return InterActive({
     a: Toggle(true, {title: 'Toggle checked/unchecked'}),
-    b: Slider(50, {min: 30, max: 60, title: 'margin'})
+    b: Slider(50, {min: 0, max: 100, title: 'Frame margin'})
 }, guu);
 
 /// colors
@@ -507,45 +488,15 @@ function guu(vars) {
   let grid0 = linspace(-1, 1, 15);
   let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
   let fshape = ([x, y]) => {
-    let z = interpolateVectors([70, 50, 50],[140, 50, 50], (x*a/2))
-    let c = `hsl(${z[0]}, ${z[1]}%, ${z[2]}%)`
-    let o = ((a*x)**2 + (b*y)**2)**(1.5)
+    let z = interpolateVectors([70, 50, 50], [140, 50, 50], (x*a/2));
+    let c = `hsl(${z[0]}, ${z[1]}%, ${z[2]}%)`;
+    let o = ((a*x)**2 + (b*y)**2)**(1.5);
     return  Group([
-    Circle({cx: 0.5+(a*x), cy: 0.5-(b*y), r: 0.1, stroke: c, fill: c, opacity: o}),
-    Line({x1: 0.5, y1: 0.5, x2: 0.5+(a*x), y2: 0.5-(b*y), stroke_width: 2, stroke: c, opacity: o})
-  ])};
-  let field = Scatter(
-    grid.map(p => [fshape(p), p]),
-    {radius: 0.04}
-  );
-  let p = Plot(field, {
-    xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
-    xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)
-  });
-  let f = Frame(p, {margin: 0.13});
-  return f;
-}
-
-return InterActive({
-  a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
-  b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
-}, guu);function guu(vars) {
-  let a = vars.a / 50;
-  let b = vars.b / 50;
-  let grid0 = linspace(-1, 1, 15);
-  let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
-  let fshape = ([x, y]) => {
-    let z = interpolateVectors([70, 50, 50],[140, 50, 50], (x*a/2))
-    let c = `hsl(${z[0]}, ${z[1]}%, ${z[2]}%)`
-    let o = ((a*x)**2 + (b*y)**2)**(1.5)
-    return  Group([
-    Circle({cx: 0.5+(a*x), cy: 0.5-(b*y), r: 0.1, stroke: c, fill: c, opacity: o}),
-    Line({x1: 0.5, y1: 0.5, x2: 0.5+(a*x), y2: 0.5-(b*y), stroke_width: 2, stroke: c, opacity: o})
-  ])};
-  let field = Scatter(
-    grid.map(p => [fshape(p), p]),
-    {radius: 0.04}
-  );
+      Circle({pos: [0.5+(a*x), 0.5-(b*y)], rad: 0.1, stroke: c, fill: c, opacity: o}),
+      Line([0.5, 0.5], [0.5+(a*x), 0.5-(b*y)], {stroke_width: 2, stroke: c, opacity: o})
+    ]);
+  };
+  let field = Scatter(grid.map(p => [fshape(p), p]), {size: 0.04});
   let p = Plot(field, {
     xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
     xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)

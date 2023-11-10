@@ -2864,25 +2864,12 @@ class Slider extends Variable {
         title.className = 'var_title';
         title.innerHTML = v.attr.title ?? `Slider: ${name}`;
 
-        let valInd = document.createElement('span');
-        valInd.id = `sliderVal_${name}`;
-        valInd.className = 'slider_label';
-        valInd.innerHTML = this.value;
-
-        let phantomTrack = document.createElement('div');
-        phantomTrack.className = 'phantom_track'
-
-        let trackWrap = document.createElement('div');
-        trackWrap.className = 'phantom_track_wrap'
-
         let min_lim = document.createElement('div');
         min_lim.innerHTML = min;
         min_lim.className = 'min_lim';
         let max_lim = document.createElement('div');
         max_lim.innerHTML = max;
         max_lim.className = 'max_lim';
-
-        trackWrap.append(min_lim, phantomTrack, max_lim);
 
         let input = document.createElement('input');
         input.type = 'range';
@@ -2893,12 +2880,10 @@ class Slider extends Variable {
         input.className = 'slider_input'; // set the CSS class
         input.id = `InterActive_${name}`;
 
-        slider.append(trackWrap, valInd, input);
+        slider.append(min_lim, input, max_lim);
         cont.append(title, slider); // slider in cont in targ!
 
-        updateSliderValue(input);
         input.addEventListener('input', function() {
-            updateSliderValue(this);
             v.updateVal(this.value, ctx, redraw);
         }, false);
 
@@ -2918,25 +2903,11 @@ class Toggle extends Variable {
     anchor(name, ctx, redraw) {
         let v = this;
 
-        let checkinner = `
-<span class="toggle-indicator">
-    <span class="checkMark">
-        <svg width="20" height="20">
-            <use xlink:href="icons.svg#svg-check"></use>
-        </svg>
-    </span>
-</span>
-`.trim();
-
         let cont = document.createElement('div');
         cont.className = 'var_cont toggle_cont';
 
         let toggle = document.createElement('label');
         toggle.className = 'toggle';
-
-        let track = document.createElement('span');
-        track.className = 'toggle-track';
-        track.innerHTML = checkinner;
 
         let title = document.createElement('div');
         title.className = 'var_title';
@@ -2944,13 +2915,12 @@ class Toggle extends Variable {
 
         let input = document.createElement('input');
         input.type = 'checkbox';
-        input.className = 'toggle__input';
         input.checked = this.value;
         input.id = `InterActive_${name}`;
 
-        toggle.append(input, track);
-        //targ.appendChild(cont).append(title, toggle); // slider in cont in targ!
+        toggle.append(input);
         cont.append(title, toggle); // slider in cont in targ!
+
         input.addEventListener('input', function() {
             v.updateVal(this.checked, ctx, redraw);
         }, false);
@@ -3030,17 +3000,6 @@ class List extends Variable {
     }
 }
 
-/// shit for making interactive bits beautiful
-
-function updateSliderValue(slider) {
-    let pos = (slider.value - slider.min) / (slider.max - slider.min);
-    let len = slider.getBoundingClientRect().width;
-    let lab = slider.parentNode.querySelector('.slider_label');
-    let lef = (100*pos*(len-30))/len;
-    lab.innerHTML = slider.value;
-    lab.style.left = `${lef}%`; //in prec for window resize events
-}
-
 //// Animation
 
 class Animation {
@@ -3048,13 +3007,12 @@ class Animation {
     constructor(vars, steps, func, fps=20) {
         this.gumify = func;
         this.steps = steps;
-        this.init = {...vars};//copy object
+        this.init = {...vars}; // copy object
         this.vals = vars;
         this.fps = fps;
-        this.pos = 0; //current frame
+        this.pos = 0; // current frame
         this.playing = false;
         this.frameList = this.createFrameList();
-
     }
 
     create(redraw) {
@@ -3076,27 +3034,25 @@ class Animation {
         cont.className = 'var_cont animate_cont';
 
         let input = document.createElement('button');
-        input.textContent = 'Play'
+        input.textContent = 'Play';
         input.className = 'animateplay__input';
 
         cont.append(input);
         input.addEventListener('click', function() {
-            i.playpause(redraw, input)
+            i.playpause(redraw, input);
         }, false);
 
-        return [cont]
+        return [cont];
     }
 
 
-    createFrameList(){
-        //list of lists, inner list [dict of vars and ranges, time]
-
-        let frameList=[]
-        this.steps.forEach((step) =>{
+    createFrameList() {
+        // list of lists, inner list [dict of vars and ranges, time]
+        let frameList= [];
+        this.steps.forEach((step) => {
             let vars = step[0];
             let time = step[1];
             let n = ceil(time * (this.fps / 1000))
-
             let stepFrames = [...Array(n+1).keys()].map((k) => {
                 let frame = {};
                 Object.entries(vars).forEach(([v,r]) => {
@@ -3105,40 +3061,38 @@ class Animation {
                 return frame;
             });
             frameList.push(...stepFrames);
-
-        })
+        });
         return frameList;
-
     }
 
-    animate(redraw, input){
+    animate(redraw, input) {
         let frameList = this.frameList;
         let stop = frameList.length;
-        this.metronome = setInterval(()=>{
-            if(this.pos < stop){
+        this.metronome = setInterval(() => {
+            if (this.pos < stop) {
             Object.entries(frameList[this.pos]).forEach(([k, v]) => {
                 this.vals[k] = v
                 this.create(redraw);
-            })
+            });
             this.pos += 1;
-            }else{
+            } else {
                 clearInterval(this.metronome);
-                this.playing = false
+                this.playing = false;
                 this.pos = 0;
-                this.vals = {...this.init}; //copy to not connect init
-                input.textContent = 'RePlay'
+                this.vals = {...this.init}; // copy to not connect init
+                input.textContent = 'RePlay';
             }
         }, 1000/this.fps);
     }
 
-    playpause(redraw, input){
-        if(this.playing){
+    playpause(redraw, input) {
+        if (this.playing) {
             clearInterval(this.metronome);
-            input.textContent = 'Play'
+            input.textContent = 'Play';
             this.playing = false;
         } else {
-            this.animate(redraw, input)
-            input.textContent = 'Pause'
+            this.animate(redraw, input);
+            input.textContent = 'Pause';
             this.playing = true;
         }
     }
