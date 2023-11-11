@@ -113,7 +113,6 @@ function sideRenderTextSizer(html, args) {
     return [x, y, w, h];
 }
 
-
 // try for browser environment
 try {
     let canvas = document.createElement('canvas');
@@ -293,6 +292,13 @@ class NamedNumber extends Number {
     }
 }
 
+class NamedString extends String {
+    constructor(name, value) {
+        super(value);
+        this.name = name;
+    }
+}
+
 // functions
 let exp = Math.exp;
 let log = Math.log;
@@ -322,6 +328,9 @@ let pi = new NamedNumber('pi', Math.PI);
 let phi = new NamedNumber('phi', (1+sqrt(5))/2);
 let r2d = new NamedNumber('r2d', 180/Math.PI);
 let d2r = new NamedNumber('d2r', Math.PI/180);
+let blue = new NamedString('blue', '#1e88e5');
+let red = new NamedString('red', '#ff0d57');
+// '#ff9800', '#4caf50', '#795548', '#9c27b0', '#00bcd4', '#607d8b'
 
 /**
  ** random number generation
@@ -1750,7 +1759,6 @@ class Arrow extends Container {
         graph = graph ?? true;
 
         // baked in shapes
-        console.log(shape);
         if (shape == 'circle') {
             shape = (_, attr) => new Dot(attr);
         } else if (shape == 'arrow') {
@@ -3103,7 +3111,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, red, blue
 ];
 
 // detect object types
