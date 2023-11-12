@@ -324,7 +324,7 @@ let r2d = new NamedNumber('r2d', 180/Math.PI);
 let d2r = new NamedNumber('d2r', Math.PI/180);
 let blue = new NamedString('blue', '#1e88e5');
 let red = new NamedString('red', '#ff0d57');
-// '#ff9800', '#4caf50', '#795548', '#9c27b0', '#00bcd4', '#607d8b'
+let green = new NamedString('green', '#4caf50');
 
 /**
  ** random number generation
@@ -2135,7 +2135,7 @@ class SymPoints extends Container {
             [fs(x, y, t), rad_rect([x, y], fr(x, y, t))]
         );
 
-        // pass to element
+        // pass  to element
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
     }
@@ -2762,9 +2762,11 @@ class BarPlot extends Plot {
     }
 }
 
-//// INTERACTIVE
+/**
+ ** Interactive
+ **/
 
-class InterActive {
+class Interactive {
     constructor(vars, func) {
         this.gumify = func;
         this.vars = vars;
@@ -2814,6 +2816,16 @@ class Variable {
     }
 }
 
+function updateSliderValue(slider) {
+    let pos = (slider.value - slider.min) / (slider.max - slider.min);
+    let len = slider.getBoundingClientRect().width;
+    let lab = slider.parentNode.querySelector('.slider_thumb');
+    let siz = lab.getBoundingClientRect().width;
+    let lef = (100*pos*(len-siz))/len;
+    lab.innerHTML = slider.value;
+    lab.style.left = `${lef}%`;
+}
+
 class Slider extends Variable {
     constructor(init, args) {
         let {min, max, step, ...attr} = args ?? {};
@@ -2856,17 +2868,27 @@ class Slider extends Variable {
         input.className = 'slider_input'; // set the CSS class
         input.id = `InterActive_${name}`;
 
-        slider.append(min_lim, input, max_lim);
+        let outer = document.createElement('div');
+        outer.className = 'slider_outer';
+        let track = document.createElement('div');
+        track.className = 'slider_track';
+        let thumb = document.createElement('div');
+        thumb.className = 'slider_thumb';
+
+        outer.append(track, thumb);
+        slider.append(min_lim, input, max_lim, outer);
         cont.append(title, slider); // slider in cont in targ!
 
+        updateSliderValue(input);
         input.addEventListener('input', function() {
-            v.updateVal(this.value, ctx, redraw);
+            updateSliderValue(this);
+            let val = Number(this.value);
+            v.updateVal(val, ctx, redraw);
         }, false);
 
         return cont;
     }
 }
-
 
 class Toggle extends Variable {
     constructor(init, args) {
@@ -2901,7 +2923,7 @@ class Toggle extends Variable {
             v.updateVal(this.checked, ctx, redraw);
         }, false);
 
-        return cont
+        return cont;
     }
 }
 
@@ -2934,17 +2956,15 @@ class List extends Variable {
         let opts = document.createElement('div');
         opts.className = 'custom-options';
 
-
         wrap.appendChild(source).append(trigger, opts);
 
         Object.entries(v.attr.choices).forEach(([label, value]) => {
-
-        let o  = document.createElement('div');
-        o.className = 'custom-option';
-        o.innerHTML = label;
-        o.setAttribute('data-value', value);
-        opts.append(o);
-        o.addEventListener('click', function() {
+            let o  = document.createElement('div');
+            o.className = 'custom-option';
+            o.innerHTML = label;
+            o.setAttribute('data-value', value);
+            opts.append(o);
+            o.addEventListener('click', function() {
                 let opt = this.closest('.custom-select');
                 let opt_txt = this.textContent;
                 let opt_val = this.getAttribute('data-value');
@@ -2953,7 +2973,6 @@ class List extends Variable {
                 opt.classList.toggle("opened");
             }, false);
         });
-
 
         let cont = document.createElement('div');
         cont.className = 'var_cont list_cont';
@@ -2969,14 +2988,16 @@ class List extends Variable {
         cont.append(title, list); // slider in cont in targ!
 
         list.querySelector('.custom-select-trigger').addEventListener('click', function() {
-                this.parentElement.classList.toggle("opened");
-            }, false);
+            this.parentElement.classList.toggle('opened');
+        }, false);
 
-        return cont
+        return cont;
     }
 }
 
-//// Animation
+/**
+ ** Animation
+ **/
 
 class Animation {
     //vars must be numeric
@@ -3079,7 +3100,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, InterActive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, red, blue
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, grid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green
 ];
 
 // detect object types
@@ -3183,4 +3204,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, InterActive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, grid, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, grid, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };

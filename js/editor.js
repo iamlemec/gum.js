@@ -5,7 +5,7 @@ import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@cod
 import { javascript } from '@codemirror/lang-javascript'
 import { xml } from '@codemirror/lang-xml'
 
-import { SVG, Element, InterActive, Animation, parseGum } from './gum.js'
+import { SVG, Element, Interactive, Animation, parseGum } from './gum.js'
 
 // svg presets
 let prec = 2;
@@ -138,7 +138,7 @@ class GumEditor {
     renderGum(out) {
         if (this.inter != null) {
             this.inter.innerHTML = '';
-            if (out instanceof InterActive || out instanceof Animation) {
+            if (out instanceof Interactive || out instanceof Animation) {
                 let anchors = out.createAnchors(this.disp);
                 out = out.create(this.disp);
                 this.inter.append(...anchors);

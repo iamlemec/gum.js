@@ -4,7 +4,7 @@ import { history, indentWithTab, defaultKeymap, historyKeymap } from '../node_mo
 import { bracketMatching, syntaxHighlighting, defaultHighlightStyle } from '../node_modules/@codemirror/language/dist/index.js';
 import { javascript } from '../node_modules/@codemirror/lang-javascript/dist/index.js';
 import { xml } from '../node_modules/@codemirror/lang-xml/dist/index.js';
-import { InterActive, Animation, Element, SVG, parseGum } from './gum.js';
+import { Interactive, Animation, Element, SVG, parseGum } from './gum.js';
 
 // svg presets
 let prec = 2;
@@ -137,7 +137,7 @@ class GumEditor {
     renderGum(out) {
         if (this.inter != null) {
             this.inter.innerHTML = '';
-            if (out instanceof InterActive || out instanceof Animation) {
+            if (out instanceof Interactive || out instanceof Animation) {
                 let anchors = out.createAnchors(this.disp);
                 out = out.create(this.disp);
                 this.inter.append(...anchors);

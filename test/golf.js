@@ -136,7 +136,7 @@ let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
 
 // interactive opacity
-let i = new InterActive(
+let i = new Interactive(
     {
         x: new Slider(50, {max: 100, title: 'Opacity'}),
         y: new Slider(50, {max: 100, title: 'Width'})
@@ -252,10 +252,26 @@ function update(vars) {
   return Frame(p, {padding: 0.15});
 }
 
-return InterActive({
+return Interactive({
   a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
 }, update);
 
+/// zoink factor
+
+return Interactive({
+  z: Slider(0, {min: 0, max: 1, step: 0.01, title:' Zoink Factor'}),
+  c: Toggle(true, {title: 'Align Line'})
+}, ({ z, c }) => {
+  let rads = (2*pi)*z;
+  let perp = c ? 90 : 0;
+  let angl = Math.atan(cos(-rads));
+  let path = SymPath({fy: sin, xlim: [0, 2*pi]});
+  let pill = VStack([Rect({fill: blue, aspect: 1}), Rect({fill: red, aspect: 1})]);
+  let box = Place(pill, {pos: [rads, sin(rads)], rad: 0.3, rotate: perp-r2d*angl, invar: true});
+  let plot = Graph([path, box], {xlim: [0, 2*pi], ylim: [-1, 1]});
+  let frame = Frame(plot, {margin: [0.2, 0.25]});
+  return frame;
+});
 
 /// CHECK MARK
 
@@ -268,7 +284,7 @@ function guu(vars) {
   return Frame(n2, {margin: margin/100});
 }
 
-return InterActive({
+return Interactive({
     a: Toggle(true, {title: 'Toggle checked/unchecked'}),
     b: Slider(50, {min: 0, max: 100, title: 'Frame margin'})
 }, guu);
@@ -281,7 +297,7 @@ function guu(vars){
   return Rect({stroke:'none', fill:`hsl(180, ${x[0]}%, ${x[1]}%)`})
 }
 
-return InterActive({
+return Interactive({
     x: Slider(50, {min: 0, max: 100, title: 'margin'})
 }, guu);
 
@@ -505,7 +521,7 @@ function guu(vars) {
   return f;
 }
 
-return InterActive({
+return Interactive({
   a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
   b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
 }, guu);
@@ -518,7 +534,7 @@ b = BarPlot(d, {color:[[17, 100, 45],[78,  80, 45]]})
 return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
 }
 
-return InterActive({
+return Interactive({
     x: Slider(10, {min: 0, max: 20, title: 'b'})
 }, guu);
 
@@ -530,7 +546,7 @@ b = BarPlot(d, {color_by:[[17, 100, 45],[78,  80, 45]]})
 return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
 }
 
-return InterActive({
+return Interactive({
     x: Slider(10, {min: 0, max: 20, title: 'b'})
 }, guu);
 

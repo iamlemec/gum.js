@@ -126,7 +126,18 @@
 }
 
 input[type=range] {
+    opacity: 0;
     width: 100%;
+    z-index: 10;
+}
+
+input[type="range"]::-moz-range-track {
+    background: black;
+    height: 1px;
+  }
+
+input[type="range"]::-moz-range-thumb {
+    opacity: 0;
 }
 
 .min_lim, .max_lim {
@@ -135,6 +146,7 @@ input[type=range] {
     font-family: monospace;
     line-height: 24px;
     width: 7.5%;
+    user-select: none;
 }
 
 .min_lim {
@@ -145,6 +157,38 @@ input[type=range] {
 .max_lim {
     text-align: left;
     padding-left: 5px;
+}
+
+.slider_outer {
+    position: absolute;
+    left: 7.5%;
+    width: 85%;
+    height: 100%;
+}
+
+.slider_track {
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background-color: black;
+}
+
+.slider_thumb { 
+    position: absolute;
+    top: calc(50% - 10px);
+    width: 30px;
+    height: 20px;
+    border-radius: 3px;
+    background-color: #CCC;
+    border: 1px solid black;
+    font-family: monospace;
+    font-size: 10px;
+    text-align: center;
+    line-height: 20px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1;
 }
 
 /* check mark */
