@@ -136,19 +136,25 @@ let f = Frame(p, {padding: [0.15, 0.05, 0.05, 0.15]});
 return f;
 
 // interactive opacity
-let i = new Interactive(
-    {
-        x: new Slider(50, {max: 100, title: 'Opacity'}),
-        y: new Slider(50, {max: 100, title: 'Width'})
-    },
-    (vars) => {
-        let [a, w] = [vars.x / 100, vars.y / 100];
-        let r = Rect({x2: w, fill: 'red', opacity: a});
-        let f = Frame(r, {margin: 0.1});
-        return f;
-    }
-);
-return i;
+return Interactive({
+  x: Slider(50, {max: 100, title: 'Opacity'}),
+  y: Slider(50, {max: 100, title: 'Width'})
+}, ({x, y}) => {
+  let [a, w] = [x / 100, y / 100];
+  let r = Rect({rect: [0, 0, w, w], fill: 'red', opacity: a});
+  let f = Frame(r, {margin: 0.1});
+  return f;
+});
+
+return Interactive({
+  x: Slider(50, {max: 100, title: 'Opacity'}),
+  y: Slider(50, {max: 100, title: 'Width'})
+}, ({x, y}) => {
+  let [a, w] = [x / 100, y / 100];
+  let r = Rect({x2: w, fill: 'red', opacity: a});
+  let f = Frame(r, {margin: 0.1});
+  return f;
+});
 
 // tex plot
 let a = 0.027;
@@ -228,10 +234,12 @@ let plot = Plot([bars, labs], {
 let frame = Frame(plot, {margin: 0.15});
 return frame;
 
-/// Expected Utility indiff curves
+// Expected utility indifference curves
 
-function update(vars) {
-  let a = vars.a / 100;
+return Interactive({
+  a: Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
+}, ({a}) => {
+  a = a / 100;
   let slope = (1-a)/a;
   let nlines = round(10/a)+1;
   let offs = linspace(1, 1-1/a, nlines);
@@ -250,14 +258,9 @@ function update(vars) {
   });
 
   return Frame(p, {padding: 0.15});
-}
+});
 
-return Interactive({
-  a: new Slider(50, {min:10, max: 100, title: 'a: y = ax + (1-a)z'})
-}, update);
-
-/// zoink factor
-
+// zoink factor
 return Interactive({
   z: Slider(0, {min: 0, max: 1, step: 0.01, title:' Zoink Factor'}),
   c: Toggle(true, {title: 'Align Line'})
@@ -273,8 +276,7 @@ return Interactive({
   return frame;
 });
 
-/// smooth transition
-
+// smooth transition
 return Interactive({
   x: Slider(50, {min: 0, max: 100, title: 'Transition'})
 }, ({x}) => {
@@ -286,32 +288,25 @@ return Interactive({
   return r;
 });
 
-/// CHECK MARK
-
-function guu(vars) {
-  let [check, margin] = [vars.a, vars.b];
+// check mark
+return Interactive({
+    check: Toggle(true, {title: 'Toggle checked/unchecked'}),
+    margin: Slider(50, {min: 0, max: 100, title: 'Frame margin'})
+}, ({check, margin}) => {
   let letter = check ? '🐋' : '🗻';
   let a = Node(letter);
   let n1 = VStack([a, a]);
   let n2 = HStack([n1, a]);
   return Frame(n2, {margin: margin/100});
-}
+});
 
-return Interactive({
-    a: Toggle(true, {title: 'Toggle checked/unchecked'}),
-    b: Slider(50, {min: 0, max: 100, title: 'Frame margin'})
-}, guu);
-
-/// colors
-
-function guu(vars){
-  let x = interpolateVectors([0, 100],[100, 0], vars.x/100)
-  return Rect({stroke:'none', fill:`hsl(180, ${x[0]}%, ${x[1]}%)`})
-}
-
+// colors
 return Interactive({
     x: Slider(50, {min: 0, max: 100, title: 'margin'})
-}, guu);
+}, ({x}) => {
+  let [s, l] = interpolateVectors([0, 100], [100, 0], x/100);
+  return Rect({stroke:'none', fill:`hsl(180, ${s}%, ${l}%)`});
+});
 
 // custom axes
 let ax = XAxis([[1, 'lo'], [2.1, 'hi']], {lim: [0, 3.2], aspect: 3});
@@ -508,11 +503,12 @@ let make_col = c => VStack(c, {expand: false, align: 'left', spacing: 0.1});
 let table = HStack([ls, ns, cs].map(make_col), {spacing: 0.1});
 return table;
 
-////// INTERACTIBFG VECTOR FIELD
-
-function guu(vars) {
-  let a = vars.a / 50;
-  let b = vars.b / 50;
+// interactive vector field
+return Interactive({
+  a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
+  b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
+}, ({a, b}) => {
+  [a, b] = [a / 50, b / 50];
   let grid0 = linspace(-1, 1, 15);
   let grid = Array.prototype.concat(...grid0.map(x => grid0.map(y => [x, y])));
   let fshape = ([x, y]) => {
@@ -531,56 +527,41 @@ function guu(vars) {
   });
   let f = Frame(p, {margin: 0.13});
   return f;
-}
+});
 
+// bar plot
 return Interactive({
-  a: Slider(50, {min: 1, max: 100, title: 'x-dispersion'}),
-  b: Slider(50, {min: 1, max: 100, title: 'y-dispersion'}),
-}, guu);
+  x: Slider(10, {min: 0, max: 20, title: 'b'})
+}, ({x}) => {
+  d = {'a': 2, 'b': x, 'c':20, 'd': 13};
+  b = BarPlot(d, {color:[[17, 100, 45],[78,  80, 45]]});
+  return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
+});
 
-///BAR PLOT
-
-function guu(vars){
-d = {'a': 2, 'b': vars.x, 'c':20, 'd': 13}
-b = BarPlot(d, {color:[[17, 100, 45],[78,  80, 45]]})
-return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
-}
-
+// stacked bar
 return Interactive({
     x: Slider(10, {min: 0, max: 20, title: 'b'})
-}, guu);
-
-///stacked bar
-
-function guu(vars){
-d = {'a': {stacked: [[vars.x/4], [2, 'blue'],[2, 'purple']]}, 'b': 8, 'c': 4}
-b = BarPlot(d, {color_by:[[17, 100, 45],[78,  80, 45]]})
-return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
-}
-
-return Interactive({
-    x: Slider(10, {min: 0, max: 20, title: 'b'})
-}, guu);
+}, ({x}) => {
+    d = {'a': {stacked: [[x/4], [2, 'blue'],[2, 'purple']]}, 'b': 8, 'c': 4}
+    b = BarPlot(d, {color_by:[[17, 100, 45],[78,  80, 45]]})
+    return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
+});
 
 
-///ANIMATIONS
-
-function guu(vars){
-        let [a, w] = [vars.x / 100, vars.y / 100];
-        let r = Rect({x2: w, fill: 'red', opacity: a});
-        let f = Frame(r, {margin: 0.1});
-        return f;
-}
-
-
-  let i = new Animation(
-    {
-        x: 0,
-        y: 50,
-    }, [
-      [{x: [0,100]}, 1000],
-      [{y: [50,100]}, 1000]
-    ],
-    guu);
-
-return i;
+// animation
+return Animation(
+  {
+    x: 0,
+    y: 50
+  },
+  [
+    [{x: [0,100]}, 1000],
+    [{y: [50,100]}, 1000]
+  ],
+  ({x, y}) => {
+    let [a, w] = [x / 100, y / 100];
+    let r = Rect({x2: w, fill: 'red', opacity: a});
+    let f = Frame(r, {margin: 0.1});
+    return f;
+  }
+);
