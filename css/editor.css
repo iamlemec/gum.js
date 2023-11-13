@@ -200,7 +200,7 @@ input[type="range"]::-moz-range-thumb {
     margin: 10px 0px;
 }
 
-/* radio */666
+/* radio */
 
 .radio__input {
     opacity: 0;
@@ -229,6 +229,13 @@ input[type="radio"]:checked + label {
     font-weight: bold;
     border-color: var(--font-col-int);
     background-color: var(--bg-hl-col);
+}
+
+/* list */
+
+.list-outer select {
+    min-width: 50px;
+    margin: 10px 0px;
 }
 
 /* Custom Select */

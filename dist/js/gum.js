@@ -83,7 +83,7 @@ function sideRenderTextSizer(html, args) {
 
     let textDiv = document.createElement('div');
     textDiv.id = 'sizer';
-    document.body.appendChild(textDiv);
+    document.body.append(textDiv);
 
     textDiv.style.fontSize = `${size}px`;
     textDiv.style.position = 'absolute';
@@ -2836,8 +2836,7 @@ class Slider extends Variable {
 
     // ctx is an interactive context
     anchor(name, ctx, redraw) {
-        let v = this;
-        let {min, max, step} = v.attr;
+        let {min, max, step} = this.attr;
 
         let cont = document.createElement('div');
         cont.className = 'var_cont slider_cont';
@@ -2847,7 +2846,7 @@ class Slider extends Variable {
 
         let title = document.createElement('div');
         title.className = 'var_title';
-        title.innerHTML = v.attr.title ?? `Slider: ${name}`;
+        title.innerHTML = this.attr.title ?? `Slider: ${name}`;
 
         let min_lim = document.createElement('div');
         min_lim.innerHTML = min;
@@ -2863,7 +2862,6 @@ class Slider extends Variable {
         input.step = step;
         input.value = this.value;
         input.className = 'slider_input'; // set the CSS class
-        input.id = `InterActive_${name}`;
 
         let outer = document.createElement('div');
         outer.className = 'slider_outer';
@@ -2877,6 +2875,7 @@ class Slider extends Variable {
         cont.append(title, slider); // slider in cont in targ!
 
         updateSliderValue(input);
+        let v = this;
         input.addEventListener('input', function() {
             updateSliderValue(this);
             let val = Number(this.value);
@@ -2896,8 +2895,6 @@ class Toggle extends Variable {
 
     // ctx is an interactive context
     anchor(name, ctx, redraw) {
-        let v = this;
-
         let cont = document.createElement('div');
         cont.className = 'var_cont toggle_cont';
 
@@ -2906,16 +2903,16 @@ class Toggle extends Variable {
 
         let title = document.createElement('div');
         title.className = 'var_title';
-        title.innerHTML = v.attr.title ?? `Toggle: ${name}`;
+        title.innerHTML = this.attr.title ?? `Toggle: ${name}`;
 
         let input = document.createElement('input');
         input.type = 'checkbox';
         input.checked = this.value;
-        input.id = `InterActive_${name}`;
 
         toggle.append(input);
         cont.append(title, toggle); // slider in cont in targ!
 
+        let v = this;
         input.addEventListener('input', function() {
             v.updateVal(this.checked, ctx, redraw);
         }, false);
@@ -2938,55 +2935,33 @@ class List extends Variable {
 
     // ctx is an interactive context
     anchor(name, ctx, redraw) {
-        let v = this;
-
-        let wrap = document.createElement('div');
-        wrap.className = 'custom-select-wrapper';
-
-        let source = document.createElement('div');
-        source.className = 'custom-select sources';
-
-        let trigger = document.createElement('span');
-        trigger.className = 'custom-select-trigger';
-        trigger.innerHTML = v.value;
-
-        let opts = document.createElement('div');
-        opts.className = 'custom-options';
-
-        wrap.appendChild(source).append(trigger, opts);
-
-        Object.entries(v.attr.choices).forEach(([label, value]) => {
-            let o  = document.createElement('div');
-            o.className = 'custom-option';
+        let select = document.createElement('select');
+        Object.entries(this.attr.choices).forEach(([label, value]) => {
+            let o = document.createElement('option');
+            o.setAttribute('value', value);
             o.innerHTML = label;
-            o.setAttribute('data-value', value);
-            opts.append(o);
-            o.addEventListener('click', function() {
-                let opt = this.closest('.custom-select');
-                let opt_txt = this.textContent;
-                let opt_val = this.getAttribute('data-value');
-                opt.querySelector('.custom-select-trigger').innerHTML = opt_txt;
-                v.updateVal(opt_val, ctx, redraw);
-                opt.classList.toggle("opened");
-            }, false);
+            select.append(o);
         });
 
         let cont = document.createElement('div');
-        cont.className = 'var_cont list_cont';
-
-        let list = document.createElement('div');
-        list.className = 'list';
-        list.appendChild(wrap);
+        cont.className = 'var_cont list-cont';
 
         let title = document.createElement('div');
         title.className = 'var_title';
-        title.innerHTML = v.attr.title ?? `List: ${name}`;
+        title.innerHTML = this.attr.title ?? `List: ${name}`;
 
-        cont.append(title, list); // slider in cont in targ!
+        let list = document.createElement('div');
+        list.className = 'list-outer';
+        list.append(select);
+        cont.append(title, list);
 
-        list.querySelector('.custom-select-trigger').addEventListener('click', function() {
-            this.parentElement.classList.toggle('opened');
-        }, false);
+        select.value = this.value;
+        this.updateVal(select.value, ctx, redraw);
+
+        let v = this;
+        select.addEventListener('input', function() {
+            v.updateVal(this.value, ctx, redraw);
+        });
 
         return cont;
     }
