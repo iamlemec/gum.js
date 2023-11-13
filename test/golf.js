@@ -273,6 +273,19 @@ return Interactive({
   return frame;
 });
 
+/// smooth transition
+
+return Interactive({
+  x: Slider(50, {min: 0, max: 100, title: 'Transition'})
+}, ({x}) => {
+  let f = 0.5*(1-cos(x/100*pi));
+  let a = Text('A', {opacity: 1-f});
+  let b = Text('B', {opacity: f});
+  let g = Group([a, b], {aspect: 1});
+  let r = Frame(g, {margin: 0.1, border: 1});
+  return r;
+});
+
 /// CHECK MARK
 
 function guu(vars) {
@@ -290,7 +303,6 @@ return Interactive({
 }, guu);
 
 /// colors
-
 
 function guu(vars){
   let x = interpolateVectors([0, 100],[100, 0], vars.x/100)

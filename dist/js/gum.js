@@ -2818,12 +2818,9 @@ class Variable {
 
 function updateSliderValue(slider) {
     let pos = (slider.value - slider.min) / (slider.max - slider.min);
-    let len = slider.getBoundingClientRect().width;
     let lab = slider.parentNode.querySelector('.slider_thumb');
-    let siz = lab.getBoundingClientRect().width;
-    let lef = (100*pos*(len-siz))/len;
     lab.innerHTML = slider.value;
-    lab.style.left = `${lef}%`;
+    lab.style.left = `${100*pos}%`;
 }
 
 class Slider extends Variable {
