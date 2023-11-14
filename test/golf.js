@@ -29,7 +29,7 @@ return SVG(frame, {size: 25, prec: 2});
 let x = 0.35;
 let s = Scatter(
   [[x, x], [1-x, 1-x]],
-  {shape: Rect(), radius: x}
+  {shape: Rect(), size: x}
 );
 let f = Frame(s, {margin: 0.05});
 return SVG(f, {size: [20, 25]});
@@ -39,11 +39,11 @@ let n = 16;
 let r = Rect();
 let p1 = Scatter(
     linspace(0, 1, n).map(x => [x, x]),
-    {shape: r, radius: 0.1, stroke: 'red'}
+    {shape: r, size: 0.1, stroke: 'red'}
 );
 let p2 = Scatter(
     linspace(0, 1, n).map(x => [1 - x, x]),
-    {shape: r, radius: 0.1, stroke: 'blue'}
+    {shape: r, size: 0.1, stroke: 'blue'}
 );
 let gg = Group([p1, p2], {opacity: 0.75});
 return Frame(gg, {margin: 0.15});
@@ -176,8 +176,8 @@ return f;
 
 // multi plot
 let s = [0.5, 0.7, 1.0, 1.4].map(a => SymPath({fy: x => sin(a*x), xlim: [-1, 1]}));
-let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015});
-let r = Scatter([[Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]], {radius: 0.1});
+let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {size: 0.015});
+let r = Scatter([[Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]], {size: 0.1});
 let p = Plot([...s, r, t], {
   xlim: [-1, 1], ylim: [-1, 1], ygrid: true, xgrid: true,
   xlabel: 'time (seconds)', ylabel: 'space (meters)', title: 'Spacetime Vibes'
@@ -192,7 +192,7 @@ let exhi = HStack([Frame(ex, {margin: 0.3}), hi]);
 let s0 = Scatter([
   [-0.3, 0.3], [0.4, 0.6], [-0.5, 0.8]
 ], {
-  shape: exhi, radius: 0.1
+  shape: exhi, size: 0.1
 });
 let p = Plot(s0, {xlim: [-1, 1], ylim: [0, 1]});
 let f = Frame(p, {margin: 0.13});
@@ -336,7 +336,7 @@ let fshape = ([x, y]) => Group([
 ]);
 let field = Scatter(
   grid.map(p => [fshape(p), p]),
-  {radius: 0.04}
+  {size: 0.04}
 );
 let p = Plot(field, {
   xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
@@ -361,7 +361,7 @@ let pal = x => interpolateHex('#1e88e5', '#ff0d57', x);
 let xticks = linspace(0, 2, 6).slice(1).map(x => [x*pi, `${rounder(x, 1)} π`]);
 let line = SymPath({fy: func, xlim});
 let points = SymPoints({
-  fy: func, xlim, N: 21, radius: 0.04,
+  fy: func, xlim, N: 21, size: 0.04,
   fs: (x, y) => Circle({fill: pal((1+y)/2), r: (1+abs(y))/2})
 });
 let plot = Plot([line, points], {
@@ -392,7 +392,7 @@ let p0 = [0.2, 0.8];
 let p1 = [0.8, 0.2];
 let px = [0.3, 0.3];
 let path = Path([MoveTo(p0), Bezier2(p1, px)]);
-let dots = Scatter([p0, p1, [Circle({fill: 'white'}), px]], {radius: 0.01});
+let dots = Scatter([p0, p1, [Circle({fill: 'white'}), px]], {size: 0.01});
 let line1 = Line({p1: p0, p2: px, stroke_dasharray: [5, 5]});
 let line2 = Line({p1: p1, p2: px, stroke_dasharray: [5, 5]});
 let plot = Plot([path, line1, line2, dots], {
@@ -409,7 +409,7 @@ return Network([
 ], [
   ['A', 'B'], ['A', 'C']
 ], {
-  radius: 0.1, aspect: phi
+  size: 0.1, aspect: phi
 });
 
 // normalized hypotrochoid thingy
@@ -468,7 +468,7 @@ return cont;
 
 // split axis example
 let locs = range(50).map(i => random_gaussian(0, 1.5));
-let dots = Scatter(locs, {radius: 0.1, opacity: 0.25});
+let dots = Scatter(locs, {size: 0.1, opacity: 0.25});
 let hline = HLine(0, {lim: [-4, 4], stroke_dasharray: 4, opacity: 0.5});
 let vline = VLine(0, {lim: [-4, 4], stroke_dasharray: 4, opacity: 0.5});
 let plot = Plot([hline, vline, dots], {

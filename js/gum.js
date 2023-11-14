@@ -1760,9 +1760,9 @@ class Arrow extends Container {
 
         // baked in shapes
         if (shape == 'circle') {
-            shape = (_, attr) => new Dot(attr);
+            shape = (_, a) => new Dot(a);
         } else if (shape == 'arrow') {
-            shape = (theta, attr) => new Arrowhead(theta, attr);
+            shape = (t, a) => new Arrowhead(t, a);
         } else {
             throw new Error(`Unrecognized arrow shape: ${shape}`);
         }
