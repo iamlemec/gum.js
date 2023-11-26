@@ -2768,31 +2768,26 @@ class BarPlot extends Plot {
 
 class Interactive {
     constructor(vars, func) {
-        this.gumify = func;
+        this.func = func;
         this.vars = vars;
     }
 
     create(redraw) {
-        let vals = Object.fromEntries(
-            Object.entries(this.vars).map(([k, v]) => [k, v.value])
-        );
+        let vals = Object.fromEntries(Object.entries(this.vars).map(
+            ([k, v]) => [k, v.value]
+        ));
+        let elem = this.func(vals);
         if (redraw != null) {
-            let elem = this.gumify(vals);
-            if (elem instanceof Element) {
-                elem = (elem instanceof SVG) ? elem : new SVG(elem);
-                elem = elem.svg();
-            }
-            redraw.innerHTML = elem;
+            redraw.innerHTML = renderElem(elem);
         }
-        return this.gumify(vals);
+        return elem;
     }
 
     createAnchors(redraw) { // tag is where to append anc, redraw is where to redraw
         let i = this;
         let ancs = Object.entries(this.vars).map(([v, k]) => {
             try {
-                let z = k.anchor(v, i, redraw);
-                return z;
+                return k.anchor(v, i, redraw);
             } catch {
                 return null;
             }
@@ -2971,32 +2966,80 @@ class List extends Variable {
  ** Animation
  **/
 
+class Transition {
+    constructor(args) {
+        let {tlim} = args ?? {};
+        this.tlim = tlim ?? [null, null];
+    }
+
+    frac(t, tlimf) {
+        let [t0, t1] = this.tlim;
+        let [t0f, t1f] = tlimf;
+        t0 = t0 ?? t0f;
+        t1 = t1 ?? t1f;
+        let f = (t - t0) / (t1 - t0);
+        return max(0, min(1, f));
+    }
+}
+
+class Continuous extends Transition {
+    constructor(lim, args) {
+        super(args);
+        this.lim = lim;
+    }
+
+    value(t, tlimf) {
+        let f = this.frac(t, tlimf);
+        let [lo, hi] = this.lim;
+        return lo + (hi - lo) * f;
+    }
+}
+
+class Discrete extends Transition {
+    constructor(vals, args) {
+        super(args);
+        this.vals = vals;
+    }
+
+    value(t, tlimf) {
+        let f = this.frac(t, tlimf);
+        let i0 = floor(f * this.vals.length);
+        let i = min(i0, this.vals.length - 1);
+        return this.vals[i];
+    }
+}
+
 class Animation {
-    //vars must be numeric
-    constructor(vars, steps, func, fps=20) {
-        this.gumify = func;
-        this.steps = steps;
-        this.init = {...vars}; // copy object
-        this.vals = vars;
-        this.fps = fps;
+    constructor(vars, func, args) {
+        let {fps, loop, tlim} = args ?? {};
+        this.func = func;
+        this.vars = vars;
+
+        // options
+        this.fps = fps ?? 30;
+        this.loop = loop ?? false;
+        this.tlim = tlim ?? [0, 1];
+
+        // total frames
+        let [t0f, t1f] = this.tlim;
+        this.n = ceil(this.fps * (t1f - t0f));
+        this.time = linspace(t0f, t1f, this.n);
+
+        // animation state
         this.pos = 0; // current frame
         this.playing = false;
-        this.frameList = this.createFrameList();
+        this.frameList = null;
     }
 
-    create(redraw) {
-        if (redraw != null) {
-            let elem = this.gumify(this.vals);
-            if (elem instanceof Element) {
-                elem = (elem instanceof SVG) ? elem : new SVG(elem);
-                elem = elem.svg();
-            }
-            redraw.innerHTML = elem;
-        }
-        return this.gumify(this.vals);
+    create() {
+        let [t0f, t1f] = this.tlim;
+        let vals = Object.fromEntries(Object.entries(this.vars).map(
+            ([k, v]) => [k, v.value(t0f, this.tlim)]
+        ));
+        return this.func(vals);
     }
 
-    createAnchors(redraw) { // tag is where to append anc, redraw is where to redraw
+    createAnchors(redraw) {
         let i = this;
 
         let cont = document.createElement('div');
@@ -3014,42 +3057,31 @@ class Animation {
         return [cont];
     }
 
-
     createFrameList() {
-        // list of lists, inner list [dict of vars and ranges, time]
-        let frameList= [];
-        this.steps.forEach((step) => {
-            let vars = step[0];
-            let time = step[1];
-            let n = ceil(time * (this.fps / 1000));
-            let stepFrames = [...Array(n+1).keys()].map((k) => {
-                let frame = {};
-                Object.entries(vars).forEach(([v,r]) => {
-                    frame[v] = r[0] + k*((r[1] - r[0])/n);
-                });
-                return frame;
-            });
-            frameList.push(...stepFrames);
+        return this.time.map(t => {
+            let vals = Object.fromEntries(Object.entries(this.vars).map(
+                ([k, v]) => [k, v.value(t, this.tlim)]
+            ));
+            let elem = this.func(vals);
+            return renderElem(elem);
         });
-        return frameList;
     }
 
     animate(redraw, input) {
-        let frameList = this.frameList;
-        let stop = frameList.length;
+        if (this.frameList == null) {
+            this.frameList = this.createFrameList();
+        }
         this.metronome = setInterval(() => {
-            if (this.pos < stop) {
-            Object.entries(frameList[this.pos]).forEach(([k, v]) => {
-                this.vals[k] = v;
-                this.create(redraw);
-            });
-            this.pos += 1;
+            if (this.pos < this.frameList.length) {
+                redraw.innerHTML = this.frameList[this.pos];
+                this.pos += 1;
             } else {
-                clearInterval(this.metronome);
-                this.playing = false;
                 this.pos = 0;
-                this.vals = {...this.init}; // copy to not connect init
-                input.textContent = 'RePlay';
+                if (!this.loop) {
+                    clearInterval(this.metronome);
+                    this.playing = false;
+                    input.textContent = 'Play';
+                }
             }
         }, 1000/this.fps);
     }
@@ -3072,7 +3104,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, range, linspace, enumerate, repeat, meshgrid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green
 ];
 
 // detect object types
@@ -3110,14 +3142,18 @@ function parseGum(src) {
     return expr(...mako);
 }
 
-function renderGum(src, args) {
-    let elem = parseGum(src);
+function renderElem(elem, args) {
     if (is_element(elem)) {
         elem = (elem instanceof SVG) ? elem : new SVG(elem, args);
         return elem.svg();
     } else {
         return String(elem);
     }
+}
+
+function renderGum(src, args) {
+    let elem = parseGum(src);
+    return renderElem(elem, args);
 }
 
 function parseHTML(str) {
@@ -3176,4 +3212,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, meshgrid, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Continuous, Discrete, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, meshgrid, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderElem, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };

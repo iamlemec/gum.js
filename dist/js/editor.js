@@ -4,7 +4,7 @@ import { history, indentWithTab, defaultKeymap, historyKeymap } from '../node_mo
 import { bracketMatching, syntaxHighlighting, defaultHighlightStyle } from '../node_modules/@codemirror/language/dist/index.js';
 import { javascript } from '../node_modules/@codemirror/lang-javascript/dist/index.js';
 import { xml } from '../node_modules/@codemirror/lang-xml/dist/index.js';
-import { Interactive, Animation, Element, SVG, parseGum } from './gum.js';
+import { Interactive, Animation, renderElem, parseGum } from './gum.js';
 
 // svg presets
 let prec = 2;
@@ -139,18 +139,12 @@ class GumEditor {
             this.inter.innerHTML = '';
             if (out instanceof Interactive || out instanceof Animation) {
                 let anchors = out.createAnchors(this.disp);
-                out = out.create(this.disp);
+                out = out.create();
                 this.inter.append(...anchors);
             }
         }
-
-        if (out instanceof Element) {
-            let args = {size: size, prec: prec};
-            out = (out instanceof SVG) ? out : new SVG(out, args);
-            return out.svg();
-        } else {
-            return String(out);
-        }
+        let args = {size: size, prec: prec};
+        return renderElem(out, args);
     }
 
     async updateView(src) {

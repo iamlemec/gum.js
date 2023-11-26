@@ -5,7 +5,7 @@ import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@cod
 import { javascript } from '@codemirror/lang-javascript'
 import { xml } from '@codemirror/lang-xml'
 
-import { SVG, Element, Interactive, Animation, parseGum } from './gum.js'
+import { SVG, Element, Interactive, Animation, parseGum, renderElem } from './gum.js'
 
 // svg presets
 let prec = 2;
@@ -140,18 +140,12 @@ class GumEditor {
             this.inter.innerHTML = '';
             if (out instanceof Interactive || out instanceof Animation) {
                 let anchors = out.createAnchors(this.disp);
-                out = out.create(this.disp);
+                out = out.create();
                 this.inter.append(...anchors);
             }
         }
-
-        if (out instanceof Element) {
-            let args = {size: size, prec: prec};
-            out = (out instanceof SVG) ? out : new SVG(out, args);
-            return out.svg();
-        } else {
-            return String(out);
-        }
+        let args = {size: size, prec: prec};
+        return renderElem(out, args);
     }
 
     async updateView(src) {

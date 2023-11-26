@@ -1,3 +1,5 @@
+import { Continuous, Discrete } from "../js/gum";
+
 // gum logo
 let gum = 'gum'.split('').map(Text).map(t => Frame(t, {
   border: 1, padding: [0, -0.35, 0, 0], border_stroke: 'red', adjust: false
@@ -142,16 +144,6 @@ return Interactive({
 }, ({x, y}) => {
   let [a, w] = [x / 100, y / 100];
   let r = Rect({rect: [0, 0, w, w], fill: 'red', opacity: a});
-  let f = Frame(r, {margin: 0.1});
-  return f;
-});
-
-return Interactive({
-  x: Slider(50, {max: 100, title: 'Opacity'}),
-  y: Slider(50, {max: 100, title: 'Width'})
-}, ({x, y}) => {
-  let [a, w] = [x / 100, y / 100];
-  let r = Rect({x2: w, fill: 'red', opacity: a});
   let f = Frame(r, {margin: 0.1});
   return f;
 });
@@ -547,21 +539,48 @@ return Interactive({
     return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
 });
 
-
-// animation
+// travelling rectangle animation
 return Animation(
   {
-    x: 0,
-    y: 50
+    x: Continuous([0, 1])
   },
-  [
-    [{x: [0,100]}, 1000],
-    [{y: [50,100]}, 1000]
-  ],
-  ({x, y}) => {
-    let [a, w] = [x / 100, y / 100];
-    let r = Rect({x2: w, fill: 'red', opacity: a});
-    let f = Frame(r, {margin: 0.1});
-    return f;
+  ({x}) => {
+    let r = Place(Rect(), {pos: [x, x], rad: 0.1});
+    return Frame(r, {margin: 0.15});
   }
+);
+
+// two part animation
+return Animation({
+  w: Continuous([0, 0.5], {tlim: [0, 1]}),
+  o: Continuous([0.1, 1], {tlim: [1, 2]}),
+}, ({w, o}) => {
+  let rect = Rect({rect: [0, 0, w, w], fill: red, opacity: o});
+  return Frame(rect, {margin: 0.1});
+}, {
+  tlim: [0, 2]
+});
+
+// goofy ass sine animation
+let xlim = [0, 2*pi];
+return Animation(
+  {
+    t: Continuous([0, 4*pi])
+  },
+  ({t}) => {
+    let p = (t < 2*pi) ? t : 4*pi-t;
+    let fy = x => sin(t)*sin(x);
+    let path = SymPath({fy, xlim});
+    let scat = Scatter([[p, fy(p)]], {size: 0.1, shape: Dot({fill: red})});
+    let plot = Graph([path, scat], {xlim, ylim: [-1, 1]});
+    return Frame(plot, {margin: 0.15});
+  },
+  {tlim: [0, 4], loop: true, fps: 60}
+);
+
+// moon loop
+return Animation(
+  {m: Discrete(['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'])},
+  ({m}) => Frame(Text(m), {padding: 0.2, border_fill: '#555'}),
+  {tlim: [0, 2], loop: true}
 );
