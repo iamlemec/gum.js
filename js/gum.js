@@ -2772,6 +2772,9 @@ class BarPlot extends Plot {
         aspect = aspect ?? phi;
         shrink = shrink ?? 0.2;
         color = color ?? 'lightgray';
+
+        // wrangle data
+        data = is_object(data) ? Object.entries(data) : data;
         let n = data.length;
 
         // standardize direction
@@ -2784,7 +2787,7 @@ class BarPlot extends Plot {
 
         // generate actual bars
         let [labs, bars] = zip(...data);
-        let bars1 = new Bars(direc, bars, {shrink, ...bars_attr});
+        let bars1 = new Bars(direc, bars, {shrink, bar_fill: color, ...bars_attr});
         let ticks = zip(bars1.vals, labs);
 
         // send to general plot

@@ -523,11 +523,10 @@ return Interactive({
 
 // bar plot
 return Interactive({
-  x: Slider(10, {min: 0, max: 20, title: 'b'})
-}, ({x}) => {
-  d = {'a': 2, 'b': x, 'c':20, 'd': 13};
-  b = BarPlot(d, {color:[[17, 100, 45],[78,  80, 45]]});
-  return Frame(b, {padding: [0.15, 0.05, 0.05, 0.15]});
+  b: Slider(10, {min: 0, max: 20, title: 'b'})
+}, ({b}) => {
+  let bars = BarPlot({'a': 2, 'b': b, 'c':20, 'd': 13});
+  return Frame(bars, {padding: 0.15});
 });
 
 // stacked bar
