@@ -1,6 +1,6 @@
 // global options
 let font = 'Print Clearly';
-let aspect = 0.6754;
+let aspect = 0.6754245246395115;
 
 // font sizing
 function Noder(text, args0) {
@@ -9,8 +9,9 @@ function Noder(text, args0) {
 }
 
 // make fronts
-function make_card_front(chars, emoji, word) {
-  let uplow = [...chars].map(c => Noder(c, {
+function make_card_front(char, emoji, word) {
+  let pair = [char.toUpperCase(), char.toLowerCase()];
+  let uplow = pair.map(c => Noder(c, {
     padding: [0, 0.2], border: 1, border_stroke: '#555',
     border_stroke_dasharray: 4, border_stroke_dashoffset: 17
   }));
@@ -26,7 +27,7 @@ function make_card_front(chars, emoji, word) {
 }
 
 // make backs
-function make_card_back(chars, emoji, word) {
+function make_card_back(char, emoji, word) {
   let frame = Frame(
     Place(
       Noder(emoji, {flex: false, border: 0}),
@@ -39,46 +40,52 @@ function make_card_back(chars, emoji, word) {
 
 // data in alphabetical order
 let data = [
-  ['Aa', '🍎', 'Apple'],
-  ['Bb', '🐻', 'Bear'],
-  ['Cc', '🍪', 'Cookie'],
-  ['Dd', '🚪', 'Door'],
-  ['Ee', '🐘', 'Elephant'],
-  ['Ff', '🔥', 'Fire'],
-  ['Gg', '🍇', 'Grape'],
-  ['Hh', '🐎', 'Horse'],
-  ['Ii', '🧊', 'Ice'],
-  ['Jj', '🫙', 'Jar'],
-  ['Kk', '🐨', 'Koala'],
-  ['Ll', '❤️', 'Love'],
-  ['Mm', '🌔', 'Moon'],
-  ['Nn', '🔢', 'Number'],
-  ['Oo', '🦉', 'Owl'],
-  ['Pp', '🫑', 'Pepper'],
-  ['Qq', '🤫', 'Quiet'],
-  ['Rr', 'R', 'R'],
-  ['Ss', 'S', 'S'],
-  ['Tt', 'T', 'T'],
-  ['Uu', 'U', 'U'],
-  ['Vv', 'V', 'V'],
-  ['Ww', 'W', 'W'],
-  ['Xx', 'X', 'X'],
-  ['Yy', 'Y', 'Y'],
-  ['Zz', 'Z', 'Z'],
-  ['Zz', 'Z', 'Z'],
-  ['Zz', 'Z', 'Z'],
-  ['Zz', 'Z', 'Z'],
-  ['Zz', 'Z', 'Z'],
-  ['Zz', 'Z', 'Z'],
-  ['Zz', 'Z', 'Z'],
+  ['a', '🍎', 'Apple'],
+  ['b', '🐻', 'Bear'],
+  ['c', '🍪', 'Cookie'],
+  ['d', '🚪', 'Door'],
+  ['e', '🐘', 'Elephant'],
+  ['f', '🔥', 'Fire'],
+  ['g', '🍇', 'Grape'],
+  ['h', '🐎', 'Horse'],
+  ['i', '🧊', 'Ice'],
+  ['j', '🫙', 'Jar'],
+  ['k', '🐨', 'Koala'],
+  ['l', '❤️', 'Love'],
+  ['m', '🌔', 'Moon'],
+  ['n', '🔢', 'Number'],
+  ['o', '🦉', 'Owl'],
+  ['p', '🫑', 'Pepper'],
+  ['q', '🤫', 'Quiet'],
+  ['r', '📏', 'Ruler'],
+  ['s', '🐌', 'Snail'],
+  ['t', '🔼', 'Triangle'],
+  ['u', '🍜', 'Udon'],
+  ['v', '🎻', 'Violin'],
+  ['w', '🐺', 'Wolf'],
+  ['x', '🩻', 'X-ray'],
+  ['y', '🥱', 'Yawn'],
+  ['z', '🦓', 'Zebra'],
+  [null, null, null],
+  [null, null, null],
+  [null, null, null],
+  [null, null, null],
+  [null, null, null],
+  [null, null, null],
 ];
 
 // select page
 let page = 3;
-let front = (page % 2 != 0);
-maker = front ? make_card_front : make_card_back;
-data = reshape((page < 3) ? data.slice(0, 16) : data.slice(16), [4, 4]);
+let front = (page % 2 == 0);
+let sheet = (page - (page % 2)) / 2;
+
+// select data
+data = split(data.slice(sheet*16, (sheet+1)*16), 4);
 data = front ? data : data.map(row => row.reverse());
+
+// get constructor
+maker0 = front ? make_card_front : make_card_back;
+maker = (c, e, w) => (c == null) ? Spacer({aspect}) : maker0(c, e, w);
 
 // construct grid
 let grid = VStack(

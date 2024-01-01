@@ -44,13 +44,13 @@ function setText(editor, text) {
 let err_nodata = 'No data. Does your final line return an element?';
 
 class GumEditor {
-    constructor(code, conv, disp, stat, inter, cookie) {
+    constructor(code, conv, disp, stat, inter, store) {
         this.code = code;
         this.conv = conv;
         this.stat = stat;
         this.disp = disp;
         this.inter = inter;
-        this.cookie = cookie;
+        this.store = store;
 
         // init convert
         if (this.conv != null) {
@@ -84,7 +84,7 @@ class GumEditor {
                 EditorView.updateListener.of(upd => {
                     if (upd.docChanged) {
                         let text = getText(upd.state);
-                        this.setCookie(text);
+                        this.setStore(text);
                         this.updateView(text);
                     }
                 }),
@@ -92,9 +92,9 @@ class GumEditor {
         });
     }
 
-    setCookie(src) {
-        if (this.cookie != null) {
-            this.cookie(src);
+    setStore(src) {
+        if (this.store != null) {
+            this.store(src);
         }
     }
 

@@ -1,4 +1,5 @@
 import { enableResize, GumEditor } from './editor.js';
+import { split, range, zip } from './gum.js';
 
 // global elements
 let left = document.querySelector('#left');
@@ -147,21 +148,32 @@ function downloadFile(name, blob) {
     document.body.removeChild(element);
 }
 
-// cookie tools
-function getCookie() {
-    let cookies = document.cookie.split(';').map(x => x.trim().split('='));
-    let cgum = cookies.filter(([k, v]) => k == 'gum').shift();
-    if (cgum == null) {
-        return null;
+// for longer files
+function getCookieLong() {
+    let cookies = Object.fromEntries(document.cookie
+        .split(';')
+        .map(x => x.trim().split('='))
+        .filter(([k, v]) => k.startsWith('gum'))
+        .map(([k, v]) => [k, decodeURIComponent(v)])
+    );
+    if ('gum' in cookies) {
+        let vgum = cookies['gum'];
+        let cnames = vgum.split(',').map(x => x.trim());
+        let chunks = cnames.map(c => cookies[c] ?? '');
+        return chunks.join('');
     } else {
-        let [_, vgum] = cgum;
-        return decodeURIComponent(vgum);
+        return null;
     }
 }
 
-function setCookie(src) {
-    let vgum = encodeURIComponent(src);
-    document.cookie = `gum=${vgum}; SameSite=Lax`;
+function setCookieLong(src, maxlen=1024) {
+    let chunks = split(src, maxlen).map(encodeURIComponent);
+    let cnames = range(chunks.length).map(i => `gum${i}`);
+    let gnames = encodeURIComponent(cnames.join(','));
+    document.cookie = `gum=${gnames}; SameSite=Lax`;
+    for (const [n, c] of zip(cnames, chunks)) {
+        document.cookie = `${n}=${c}; SameSite=Lax`;
+    }
 }
 
 // connect handlers
@@ -223,11 +235,11 @@ return Frame(p, {margin: 0.25});
 // initial value
 let urlParams = new URLSearchParams(window.location.search);
 let source = urlParams.get('source');
-let cook = getCookie();
+let cook = getCookieLong();
 let example = source ?? cook ?? example0;
 
 // make the actual editor
-let gum_editor = new GumEditor(code, conv, disp, stat, inter, setCookie);
+let gum_editor = new GumEditor(code, conv, disp, stat, inter, setCookieLong);
 
 // set initial code input
 gum_editor.setCode(example);
