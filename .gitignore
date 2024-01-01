@@ -22,3 +22,4 @@ mail.toml
 
 # base node
 /node_modules
+/export

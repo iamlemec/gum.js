@@ -147,6 +147,15 @@ function zip(...iterables) {
     return [...gzip(...iterables)];
 }
 
+function reshape(arr, shape) {
+    let [n, m] = shape;
+    let ret = [];
+    for (let i = 0; i < n; i++) {
+        ret.push(arr.slice(i*m, (i+1)*m));
+    }
+    return ret;
+}
+
 function sum(arr) {
     arr = arr.filter(v => v != null);
     return arr.reduce((a, b) => a + b, 0);
@@ -915,7 +924,7 @@ class Group extends Container {
 class Frame extends Container {
     constructor(child, args) {
         let {
-            padding, margin, border, aspect, adjust, flex, rotate, shrink, shape, ...attr0
+            padding, margin, border, aspect, adjust, flex, rotate, align, shrink, shape, ...attr0
         } = args ?? {};
         let [border_attr, attr] = prefix_split(['border'], attr0);
         border = border ?? 0;
@@ -946,7 +955,7 @@ class Frame extends Container {
         let rect = new shape(rargs);
 
         // gather children
-        let children = [[child, {rect: crect, rotate, shrink}]];
+        let children = [[child, {rect: crect, rotate, align, shrink}]];
         children.unshift([rect, brect]);
 
         // pass to Container
@@ -1707,7 +1716,7 @@ class Node extends Frame {
         }
 
         // pass to container
-        let attr1 = {padding, border, ...attr};
+        let attr1 = {padding, border, align, ...attr};
         super(child, attr1);
     }
 }
@@ -3107,7 +3116,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, split, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green
 ];
 
 // detect object types
@@ -3215,4 +3224,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Continuous, Discrete, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, meshgrid, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderElem, renderGum, repeat, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Continuous, Discrete, Dot, Edge, Element, Ellipse, Field, Frame, Graph, Grid, Group, Gum, HAxis, HBar, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBar, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, meshgrid, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderElem, renderGum, repeat, reshape, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
