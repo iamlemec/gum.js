@@ -24,7 +24,8 @@
         "Axis",
         "Graph",
         "Plot",
-        "BarPlot"
+        "BarPlot",
+        "Note"
     ],
     "networks": [
         "Node",
