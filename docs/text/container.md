@@ -10,3 +10,4 @@ Positional arguments:
 Keyword arguments:
 - `tag` = `'g'` — the SVG tag to use for this element
 - `clip` = `true` — whether to infer the `aspect` of this element from the aspect ratio of the minimal bounding box of its children
+- `coord` = `[0, 0, 1, 1]` — the internal coordinate space to use for child elements

@@ -17,6 +17,7 @@
         "Rect",
         "Circle",
         "Polyline",
+        "Path",
         "SymPath"
     ],
     "plotting": [
