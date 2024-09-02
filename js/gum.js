@@ -2285,33 +2285,15 @@ class SymPoints extends Container {
  **/
 
 class Bar extends Container {
-    constructor(direc, length, args) {
-        let {zero, size, color, shape, ...attr} = args ?? {};
+    constructor(args) {
+        let {size, color, shape, ...attr} = args ?? {};
         shape = shape ?? (a => new Rect(a));
-        zero = zero ?? 0;
-
-        // get standardized direction
-        direc = get_orient(direc);
 
         // make shape
         let child = shape({stroke: color, fill: color, ...attr});
 
         // call constructor
         super([child]);
-        this.lim = [zero, zero + length];
-        this.size = size;
-    }
-}
-
-class VBar extends Bar {
-    constructor(length, args) {
-        super('v', length, args);
-    }
-}
-
-class HBar extends Bar {
-    constructor(length, args) {
-        super('h', length, args);
     }
 }
 
@@ -2351,65 +2333,56 @@ class HMultiBar extends MultiBar {
     }
 }
 
-// custom bars must have a ylim and optionally a width
+// custom bars are aspectless
+// variables named for vertical bars case
 class Bars extends Container {
-    constructor(direc, bars, args) {
-        let {lim, shrink, size, integer, ...attr0} = args ?? {};
+    constructor(direc, data, args) {
+        let {lim, shrink, zero, width, integer, ...attr0} = args ?? {};
         let [bar_attr, attr] = prefix_split(['bar'], attr0);
         integer = integer ?? false;
         shrink = shrink ?? 0;
-        let n = bars.length;
+        zero = zero ?? 0;
+        let n = data.length;
 
         // get standardized direction
         direc = get_orient(direc);
 
-        // check input sizes
-        let arrs = new Set(bars.map(is_array));
-        if (arrs.size > 1) {
-            throw new Error('Error: bar specs must all be same type');
-        }
-        let [arr,] = arrs;
+        // fill in default bars
+        let bar0 = new Bar(bar_attr);
+        data = data.map(b => is_array(b) ? b : [bar0, b]);
+        let [bars, heights] = zip(...data);
 
         // expand scalar list case
-        let vals;
-        if (arr) {
-            [vals, bars] = zip(...bars);
-        } else {
-            let lim_int = (n > 1) ? [0, n-1] : [-0.5, 0.5];
-            let lim_def = (integer) ? lim_int : limit_base;
-            lim = lim ?? lim_def;
-            vals = linspace(...lim, n);
-            if (direc == 'h') { vals = vals.reverse(); }
-        }
+        let lim_int = (n > 1) ? [0, n-1] : [-0.5, 0.5];
+        let lim_def = (integer) ? lim_int : limit_base;
+        lim = lim ?? lim_def;
+        let xlocs = linspace(...lim, n);
+        if (direc == 'h') { xlocs = xlocs.reverse(); }
 
         // get data parameters
-        let [vmin, vmax] = [min(...vals), max(...vals)];
-        size = size ?? ((n > 1) ? (1-shrink)*(vmax-vmin)/(n-1) : 1);
-
-        // handle scalar and custom bars
-        bars = bars.map(b =>
-            is_scalar(b) ? new Bar(direc, b, {size, ...bar_attr}) : b
-        );
+        let [xmin, xmax] = [min(...xlocs), max(...xlocs)];
+        width = width ?? ((n > 1) ? (1-shrink)*(xmax-xmin)/(n-1) : 1);
 
         // aggregate lengths
-        let [zmins, zmaxs] = zip(...bars.map(b => b.lim));
-        let [zmin, zmax] = [min(...zmins), max(...zmaxs)];
+        let ymins = heights.map(h => min(zero, h));
+        let ymaxs = heights.map(h => max(zero, h));
+        let [ymin, ymax] = [min(...ymins), max(...ymaxs)];
 
         // compute boxes
-        let children = zip(vals, bars).map(([v, b]) => {
-            let [zlo, zhi, s] = [...b.lim, b.size ?? size];
-            let box = (direc == 'v') ? [v-s/2, zlo, v+s/2, zhi] : [zlo, v-s/2, zhi, v+s/2];
+        let children = zip(ymins, ymaxs, xlocs, bars).map(([ylo, yhi, x, b]) => {
+            let w = width;
+            let box = (direc == 'v') ? [x-w/2, ylo, x+w/2, yhi] : [ylo, x-w/2, yhi, x+w/2];
             return [b, box];
         });
 
         // set up container
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
-        this.vals = vals;
+        this.locs = xlocs;
 
         // set axis limits
-        this.xlim = lim ?? [vmin, vmax];
-        this.ylim = [zmin, zmax];
+        this.xlim = lim ?? [xmin, xmax];
+        this.ylim = [ymin, ymax];
         if (direc == 'h') { [this.xlim, this.ylim] = [this.ylim, this.xlim]; }
     }
 }
@@ -2880,14 +2853,11 @@ class BarPlot extends Plot {
         shrink = shrink ?? 0.2;
         color = color ?? 'lightgray';
 
-        // wrangle data
-        data = is_object(data) ? Object.entries(data) : data;
-        let n = data.length;
-
         // standardize direction
         direc = get_orient(direc);
 
         // set up appropriate padding
+        let n = data.length;
         let zpad = min(0.5, 1/n);
         let padding0 = (direc == 'v') ? [zpad, 0] : [0, zpad];
         padding = padding ?? padding0;
@@ -2895,7 +2865,7 @@ class BarPlot extends Plot {
         // generate actual bars
         let [labs, bars] = zip(...data);
         let bars1 = new Bars(direc, bars, {shrink, bar_fill: color, ...bars_attr});
-        let ticks = zip(bars1.vals, labs);
+        let ticks = zip(bars1.locs, labs);
 
         // send to general plot
         let attr1 = {aspect, padding, ...attr};
@@ -3246,7 +3216,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow,
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3359,5 +3329,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VBar, HBar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow,
+    Gum, Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow
 };
