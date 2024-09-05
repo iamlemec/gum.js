@@ -4,7 +4,7 @@ Welcome to the gum.js docs! Click on an item in the list on the left to get more
 
 Each entry has a description of the operation and arguments of the item and an associated example code snippet. You can edit the code snippet, but note that these will get clobbered if you navigate to another entry! Go to the <a href="/">main editor</a> for non-ephemeral work.
 
-### Common Patterns
+## Common Patterns
 
 *Keyword arguments*: all subclasses of [Element](#Element) take a dictionary called `args` as their final argument. If not used directly by the element, they are passed down to the `Element` constructor and included as properties of the SVG element. Using this, one can directly set SVG properties. For instance, you could specify `stroke` or `fill` colors directly. Note that you must use `_` in place of `-`, so something like `stroke-width` would be specified as `stroke_width` and automatically converted.
 

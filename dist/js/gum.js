@@ -235,7 +235,7 @@ function lingrid(xlim, ylim, N) {
     let [Nx, Ny] = ensure_vector(N, 2);
     let xgrid = linspace(...xlim, Nx);
     let ygrid = linspace(...ylim, Ny);
-    return grid(xgrid, ygrid);
+    return meshgrid(xgrid, ygrid);
 }
 
 function ensure_vector(x, n) {
@@ -319,6 +319,7 @@ function max(...vals) {
 }
 
 // constants
+let e = new NamedNumber('e', Math.E);
 let pi = new NamedNumber('pi', Math.PI);
 let phi = new NamedNumber('phi', (1+sqrt(5))/2);
 let r2d = new NamedNumber('r2d', 180/Math.PI);
@@ -665,7 +666,7 @@ class Context {
         rect = rect ?? coord_base;
         rotate = rotate ?? 0;
         expand = expand ?? false;
-        invar = invar ?? false;
+        invar = invar ?? true;
         align = align ?? 'center';
         pivot = pivot ?? 'center';
 
@@ -922,7 +923,7 @@ class Group extends Container {
 class Frame extends Container {
     constructor(child, args) {
         let {
-            padding, margin, border, aspect, adjust, flex, rotate, align, shrink, shape, ...attr0
+            padding, margin, border, aspect, adjust, flex, rotate, invar, align, shrink, shape, ...attr0
         } = args ?? {};
         let [border_attr, attr] = prefix_split(['border'], attr0);
         border = border ?? 0;
@@ -953,7 +954,7 @@ class Frame extends Container {
         let rect = new shape(rargs);
 
         // gather children
-        let children = [[child, {rect: crect, rotate, align, shrink}]];
+        let children = [[child, {rect: crect, rotate, invar, align, shrink}]];
         children.unshift([rect, brect]);
 
         // pass to Container
@@ -1956,7 +1957,7 @@ class Arrowhead extends Container {
         let rect = rad_rect(pos, rad2);
 
         // pass to group for rotate
-        let child = [shape, {rect, rotate: -direc, invar: true}];
+        let child = [shape, {rect, rotate: -direc}];
         super([child]);
     }
 }
@@ -2531,7 +2532,7 @@ class XLabel extends Frame {
 class YLabel extends Frame {
     constructor(text, attr) {
         let label = is_element(text) ? text : new Text(text, attr);
-        super(label, {rotate: -90});
+        super(label, {rotate: -90, invar: false});
     }
 }
 
@@ -2715,7 +2716,6 @@ class Plot extends Container {
         } else if (xaxis === false) {
             xaxis = null;
         }
-
 
         // default yaxis generation
         if (yaxis === true) {
@@ -3160,7 +3160,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Arrowhead, Text, Tex, Node, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, e, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3268,4 +3268,4 @@ function injectImages(elem) {
     });
 }
 
-export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Continuous, Discrete, Dot, DropShadow, Edge, Effect, Element, Ellipse, Field, Filter, Frame, Graph, Grid, Group, Gum, HAxis, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, meshgrid, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderElem, renderGum, repeat, reshape, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };
+export { Anchor, Animation, ArcDel, ArcTo, Arrow, Arrowhead, Axis, Bar, BarPlot, Bars, Bezier2, Bezier2Line, Bezier2Path, Bezier3, Bezier3Line, Circle, ClosePath, Container, Context, Continuous, Discrete, Dot, DropShadow, Edge, Effect, Element, Ellipse, Field, Filter, Frame, Graph, Grid, Group, Gum, HAxis, HBars, HLabels, HLine, HMultiBar, HScale, HStack, HorizontalDel, HorizontalTo, Interactive, Labels, Legend, Line, LineTo, List, MoveTo, Network, Node, Note, Path, Place, Plot, Polygon, Polyline, Ray, Rect, Rotate, SVG, Scale, Scatter, Slider, Spacer, Square, SymField, SymFill, SymPath, SymPoints, SymPoly, Tex, Text, Toggle, VAxis, VBars, VLabels, VLine, VMultiBar, VScale, VStack, Variable, VerticalDel, VerticalTo, abs, add, aspect_invariant, ceil, cos, cumsum, demangle, e, enumerate, exp, floor, gums, gzip, hex2rgb, injectImage, injectImages, injectScripts, interpolateHex, interpolateVectors, interpolateVectorsPallet, lingrid, linspace, log, make_ticklabel, mako, max, meshgrid, min, mul, norm, pad_rect, parseGum, phi, pi, pos_rect, pow, props_repr, r2d, rad_rect, random, random_gaussian, random_uniform, range, renderElem, renderGum, repeat, reshape, rgb2hex, rgb2hsl, round, rounder, setTextSizer, sin, split, sqrt, zip };

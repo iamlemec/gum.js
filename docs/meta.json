@@ -28,8 +28,14 @@
         "Note"
     ],
     "networks": [
+        "Text",
         "Node",
         "Edge",
         "Network"
+    ],
+    "functions": [
+        "Math",
+        "Arrays",
+        "Colors"
     ]
 }

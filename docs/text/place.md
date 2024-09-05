@@ -16,4 +16,4 @@ Keyword arguments:
 - `align` = `center` — how to align the child when it doesn't fit exactly within `rect`, options are `left`, `right`, `center`, or a fractional position (can set vertical and horizontal separately with a pair)
 - `rotate` = `0` — how much to rotate the child by (degrees counterclockwise)
 - `pivot` = `center` — the point around which to do the rotation (can set vertical and horizontal separately with a pair)
-- `invar` = `false` — whether to ignore rotation when sizing child element
+- `invar` = `true` — whether to ignore rotation when sizing child element
