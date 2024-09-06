@@ -37,15 +37,15 @@ def get_file_base(fn):
 ##
 
 # get prompt intro
-with open('docs/type/prompt.md') as fid:
+with open('../docs/type/prompt.md') as fid:
     prompt_intro = fid.read()
 
 # get prompt examples
-with open('docs/type/examples.md') as fid:
+with open('../docs/type/examples.md') as fid:
     prompt_examples = fid.read()
 
 # get docs metadata
-with open('docs/meta.json') as fid:
+with open('../docs/meta.json') as fid:
     docs_meta = json.load(fid)
 meta_list = [
     (n[0] if type(n) is list else n).lower() for n in
@@ -53,8 +53,8 @@ meta_list = [
 ]
 
 # get docs content
-doc_text = {get_file_base(fn): prepare_text(open(fn).read()) for fn in glob('docs/text/*.md')}
-doc_code = {get_file_base(fn): prepare_code(open(fn).read()) for fn in glob('docs/code/*.js')}
+doc_text = {get_file_base(fn): prepare_text(open(fn).read()) for fn in glob('../docs/text/*.md')}
+doc_code = {get_file_base(fn): prepare_code(open(fn).read()) for fn in glob('../docs/code/*.js')}
 prompt_docs = '\n\n'.join(f'{doc_text[k]}\n\n### Example\n\n{doc_code[k]}' for k in meta_list)
 
 # create full prompt
@@ -77,5 +77,5 @@ prompt_system = f"""{prompt_intro}
 ## main interface
 ##
 
-def generate_gumjs(instruct, **kwargs):
-    return oneping.get_llm_response(instruct, system=prompt_system, provider='anthropic', **kwargs)
+def generate_gumjs(instruct, provider='anthropic', **kwargs):
+    return oneping.get_llm_response(instruct, system=prompt_system, provider=provider, **kwargs)

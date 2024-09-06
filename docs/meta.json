@@ -18,7 +18,8 @@
         "Circle",
         "Polyline",
         "Path",
-        "SymPath"
+        "SymPath",
+        "SymPoints"
     ],
     "plotting": [
         "Axis",
