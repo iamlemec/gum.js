@@ -10,8 +10,8 @@ Positional arguments: None
 
 Keyword arguments:
 - `fx`/`fy` — a function mapping from x-values, y-values, or t-values
-- `fr` = `size` — a function mapping from `(x, y, t)` values to a radius
-- `fs` = `shape` — a function mapping from `(x, y, t)` values to a shape
+- `fr` = `size` — a function mapping from `(x, y, t, i)` values to a radius
+- `fs` = `shape` — a function mapping from `(x, y, t, i)` values to a shape
 - `size` = `0.01` — a size to use if `fr` is not specified
 - `shape` = `Dot()` — a shape to use if `fs` is not specified
 - `xlim`/`ylim`/`tlim` — a pair of numbers specifying variable limits

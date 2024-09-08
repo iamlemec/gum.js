@@ -6,12 +6,8 @@ __pycache__/
 # Git local config
 .gitattributes
 
-# Mac bullshit
-.DS_Store
-
-# Databases
-*.db
-backup/
+# Fasthtml
+.sesskey
 
 # External logs
 screenlog.*

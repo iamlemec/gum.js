@@ -79,3 +79,6 @@ prompt_system = f"""{prompt_intro}
 
 def generate_gumjs(instruct, provider='anthropic', **kwargs):
     return oneping.get_llm_response(instruct, system=prompt_system, provider=provider, **kwargs)
+
+def stream_gumjs(instruct, provider='anthropic', **kwargs):
+    return oneping.stream_llm_response(instruct, system=prompt_system, provider=provider, **kwargs)

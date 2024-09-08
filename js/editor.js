@@ -144,8 +144,7 @@ class GumEditor {
                 this.inter.append(...anchors);
             }
         }
-        let args = {size: size, prec: prec};
-        return renderElem(out, args);
+        return renderElem(out, {size, prec});
     }
 
     async updateView(src) {

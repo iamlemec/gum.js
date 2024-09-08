@@ -3,6 +3,7 @@ import resolve from '@rollup/plugin-node-resolve'
 import gulp from 'gulp'
 import connect from 'gulp-connect'
 import rename from 'gulp-rename'
+import { minify } from 'rollup-plugin-esbuild-minify';
 import { parseArgs } from 'node:util';
 
 // parse arguments
@@ -128,3 +129,22 @@ gulp.task('serve-watch', () => {
 
 // development mode
 gulp.task('serve', gulp.series('build', 'serve-watch'));
+
+/*
+ * minifry
+ */
+
+// creates an ES module bundle
+gulp.task('minify', () => {
+    return rollup({
+        cache: cache.esm,
+        input: 'js/gum.js',
+        plugins: [resolve()],
+    }).then(bundle => {
+        return bundle.write({
+            dir: './server/web/libs',
+            format: 'iife',
+            name: 'gum',
+        });
+    });
+});
