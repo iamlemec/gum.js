@@ -1,4 +1,4 @@
-import { GumEditor, enableResize } from './editor.js';
+import { GumGen, enableResize } from './editor.js';
 
 // svg presets
 let prec = 2;
@@ -102,5 +102,5 @@ return TitleFrame(plot, 'Quadratic Functions with Sine Wave Peaks', {
 });`;
 
 // init editors
-gumedit = new GumEditor(editor, svgout, output);
+gumedit = new GumGen(editor, svgout, output);
 gumedit.setCode(starter, true);

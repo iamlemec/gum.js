@@ -1,4 +1,4 @@
-import { GumEditor, enableResize } from './editor.js'
+import { GumGen, enableResize } from './editor.js'
 import { range, zip, split } from './gum.js'
 
 // global elements
@@ -255,7 +255,7 @@ let cook = getCookieLong();
 let example = source ?? cook ?? example0;
 
 // make the actual editor
-let gum_editor = new GumEditor(code, conv, disp, stat, setCookieLong);
+let gum_editor = new GumGen(code, conv, disp, {stat, store: setCookieLong});
 
 // set initial code input
 gum_editor.setCode(example);

@@ -1,9 +1,5 @@
 import { parseGum, renderElem } from './gum.js'
 
-// svg presets
-const prec = 2;
-const size = 500;
-
 // readonly config compartment
 const editableCompartment = new cm.Compartment;
 const readOnlyCompartment = new cm.Compartment;
@@ -58,7 +54,7 @@ function createReadonlyState(text='') {
     });
 }
 
-class CmEditor {
+class CodeMirror {
     constructor(parent, readOnly=false, update=null) {
         const State = readOnly ? createReadonlyState : createEditState;
         this.makeState = text => State(text, update);
@@ -92,22 +88,21 @@ class CmEditor {
     }
 }
 
-// canned error messages
-const err_nodata = 'No data. Does your final line return an element?';
-
-class GumEditor {
-    constructor(code, conv, disp, stat=null, inter=null, store=null) {
+class CodeGen {
+    constructor(code, conv, disp, execute, render, args) {
+        const {stat, store} = args ?? {};
         this.code = code;
         this.conv = conv;
         this.disp = disp;
-        this.stat = stat;
-        this.inter = inter;
-        this.store = store;
+        this.execute = execute;
+        this.render = render ?? null;
+        this.stat = stat ?? null;
+        this.store = store ?? null;
 
         // init editor
-        this.editor = new CmEditor(code, false, text => this.updateView(text));
+        this.editor = new CodeMirror(code, false, text => this.updateView(text));
         if (conv != null) {
-            this.svgout = new CmEditor(conv, true);
+            this.svgout = new CodeMirror(conv, true);
         } else {
             this.svgout = null;
         }
@@ -165,44 +160,31 @@ class GumEditor {
         }
     }
 
-    async updateView(src) {
-        // parse gum into element
-        let elem;
+    updateView(src) {
+        // execute code
+        let data;
         try {
-            elem = await parseGum(src);
+            data = this.execute(src);
         } catch (err) {
-            this.setState(false);
-            if (err == 'timeout') {
-                this.setConvert('function timeout');
-            } else {
-                this.setConvert(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-            }
+            this.setConvert(err.message);
             return;
         }
+        this.setConvert(data);
 
-        // check for null
-        if (elem == null) {
-            this.setState();
-            this.setConvert(err_nodata);
-            return;
-        }
-
-        // render element to svg
-        let svg;
+        // render data
+        let rend;
         try {
-            svg = renderElem(elem, {size, prec});
+            rend = (this.render != null) ? this.render(data) : data;
         } catch (err) {
-            this.setState(false);
-            this.setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-            return;
+            rend = err.message;
         }
-
-        // success
-        this.setState(true);
-        this.setConvert(svg);
-        this.setDisplay(svg);
+        this.setDisplay(rend);
     }
 }
+
+/*
+ * resize helper
+ */
 
 function enableResize(left, right, mid) {
     function resizePane(evt) {
@@ -224,4 +206,48 @@ function enableResize(left, right, mid) {
     }, false);
 }
 
-export { GumEditor, enableResize }
+/*
+ * gum specific
+ */
+
+// svg presets
+const prec = 2;
+const size = 500;
+
+function executeGum(src) {
+    // parse gum into element
+    let elem;
+    try {
+        elem = parseGum(src);
+    } catch (err) {
+        if (err == 'timeout') {
+            throw new Error('code took too long to run');
+        } else {
+            throw new Error(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+        }
+    }
+
+    // check for null
+    if (elem == null) {
+        throw new Error('no data. does your code return an element?');
+    }
+
+    // render element to svg
+    let svg;
+    try {
+        svg = renderElem(elem, {size, prec});
+    } catch (err) {
+        throw new Error(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+    }
+
+    // success
+    return svg;
+}
+
+class GumGen extends CodeGen {
+    constructor(code, conv, disp, args) {
+        super(code, conv, disp, executeGum, null, args);
+    }
+}
+
+export { GumGen, enableResize }
