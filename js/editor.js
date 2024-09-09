@@ -1,95 +1,120 @@
-import { EditorView, drawSelection, keymap, lineNumbers } from '@codemirror/view'
-import { EditorState } from '@codemirror/state'
-import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands'
-import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language'
-import { javascript } from '@codemirror/lang-javascript'
-import { xml } from '@codemirror/lang-xml'
-
-import { SVG, Element, Interactive, Animation, parseGum, renderElem } from './gum.js'
+import { parseGum, renderElem } from './gum.js'
 
 // svg presets
-let prec = 2;
-let size = 500;
+const prec = 2;
+const size = 500;
 
-// primarily for svg output
-function readOnlyEditor(parent) {
-    return new EditorView({
-        state: EditorState.create({
-            doc: '',
-            extensions: [
-                xml(),
-                drawSelection(),
-                syntaxHighlighting(defaultHighlightStyle),
-                EditorState.readOnly.of(true),
-                EditorView.editable.of(false),
-            ],
-        }),
-        parent: parent,
-    });
-}
+// readonly config compartment
+const editableCompartment = new cm.Compartment;
+const readOnlyCompartment = new cm.Compartment;
 
+// get text from state object
 function getText(state) {
     return state.doc.toString();
 }
 
-function setText(editor, text) {
-    let len = editor.state.doc.length;
-    let upd = editor.state.update({
-        changes: {from: 0, to: len, insert: text}
+// for javascript editing
+function createEditState(text='', update=null) {
+    const extensions = [
+        cm.javascript(),
+        cm.history(),
+        cm.drawSelection(),
+        cm.lineNumbers(),
+        cm.bracketMatching(),
+        cm.keymap.of([
+            cm.indentWithTab,
+            ...cm.defaultKeymap,
+            ...cm.historyKeymap,
+        ]),
+        cm.syntaxHighlighting(cm.defaultHighlightStyle),
+        editableCompartment.of(cm.EditorView.editable.of(true)),
+        readOnlyCompartment.of(cm.EditorState.readOnly.of(false)),
+    ];
+    if (update != null) {
+        extensions.push(cm.EditorView.updateListener.of(upd => {
+            if (upd.docChanged) {
+                const text = getText(upd.state);
+                update(text);
+            }
+        }));
+    }
+    return cm.EditorState.create({
+        doc: text,
+        extensions
     });
-    editor.dispatch(upd);
 }
 
-// canned error messages
-let err_nodata = 'No data. Does your final line return an element?';
+// for svg output
+function createReadonlyState(text='') {
+    return cm.EditorState.create({
+        doc: text,
+        extensions: [
+            cm.xml(),
+            cm.drawSelection(),
+            cm.syntaxHighlighting(cm.defaultHighlightStyle),
+            cm.EditorView.editable.of(false),
+            cm.EditorState.readOnly.of(true),
+        ],
+    });
+}
 
-class GumEditor {
-    constructor(code, conv, disp, stat, inter, store) {
-        this.code = code;
-        this.conv = conv;
-        this.stat = stat;
-        this.disp = disp;
-        this.inter = inter;
-        this.store = store;
-
-        // init convert
-        if (this.conv != null) {
-            this.conv_text = readOnlyEditor(this.conv);
-        } else {
-            this.conv_text = null;
-        }
-
-        // init editor
-        this.edit_text = new EditorView({
-            state: this.createEditState(''),
-            parent: code,
+class CmEditor {
+    constructor(parent, readOnly=false, update=null) {
+        const State = readOnly ? createReadonlyState : createEditState;
+        this.makeState = text => State(text, update);
+        this.editor = new cm.EditorView({
+            state: this.makeState(''),
+            parent: parent,
         });
     }
 
-    createEditState(doc) {
-        return EditorState.create({
-            doc: doc,
-            extensions: [
-                javascript(),
-                history(),
-                drawSelection(),
-                lineNumbers(),
-                bracketMatching(),
-                keymap.of([
-                    indentWithTab,
-                    ...defaultKeymap,
-                    ...historyKeymap,
-                ]),
-                syntaxHighlighting(defaultHighlightStyle),
-                EditorView.updateListener.of(upd => {
-                    if (upd.docChanged) {
-                        let text = getText(upd.state);
-                        this.setStore(text);
-                        this.updateView(text);
-                    }
-                }),
-            ],
+    setEditable(editable) {
+        this.editor.dispatch({
+            effects: [
+                editableCompartment.reconfigure(cm.EditorView.editable.of(editable)),
+                readOnlyCompartment.reconfigure(cm.EditorState.readOnly.of(!editable)),
+            ]
         });
+    }
+
+    getText() {
+        return getText(this.editor.state);
+    }
+
+    setText(text, reset=true) {
+        if (reset) {
+            this.editor.setState(this.makeState(text));
+        } else {
+            this.editor.dispatch({
+                changes: {from: 0, to: this.editor.state.doc.length, insert: text}
+            });
+        }
+    }
+}
+
+// canned error messages
+const err_nodata = 'No data. Does your final line return an element?';
+
+class GumEditor {
+    constructor(code, conv, disp, stat=null, inter=null, store=null) {
+        this.code = code;
+        this.conv = conv;
+        this.disp = disp;
+        this.stat = stat;
+        this.inter = inter;
+        this.store = store;
+
+        // init editor
+        this.editor = new CmEditor(code, false, text => this.updateView(text));
+        if (conv != null) {
+            this.svgout = new CmEditor(conv, true);
+        } else {
+            this.svgout = null;
+        }
+    }
+
+    setEditable(editable) {
+        this.editor.setEditable(editable);
     }
 
     setStore(src) {
@@ -98,21 +123,23 @@ class GumEditor {
         }
     }
 
-    setCode(src) {
-        this.edit_text.setState(this.createEditState(src));
+    setCode(src, reset=true) {
+        this.editor.setText(src, reset);
         this.updateView(src);
     }
 
     getConvert() {
-        return getText(this.conv_text.state);
+        if (this.svgout == null) {
+            return null;
+        }
+        return this.svgout.getText();
     }
 
     setConvert(text) {
-        if (this.conv_text != null) {
-            setText(this.conv_text, text);
-        } else {
-            this.setDisplay(text, true);
+        if (this.svgout == null) {
+            return;
         }
+        this.svgout.setText(text);
     }
 
     setDisplay(svg, error) {
@@ -126,6 +153,9 @@ class GumEditor {
     }
 
     setState(good) {
+        if (this.stat == null) {
+            return;
+        }
         if (good == null) {
             this.stat.classList = [];
         } else if (good) {
@@ -135,20 +165,8 @@ class GumEditor {
         }
     }
 
-    renderGum(out) {
-        if (this.inter != null) {
-            this.inter.innerHTML = '';
-            if (out instanceof Interactive || out instanceof Animation) {
-                let anchors = out.createAnchors(this.disp);
-                out = out.create();
-                this.inter.append(...anchors);
-            }
-        }
-        return renderElem(out, {size, prec});
-    }
-
     async updateView(src) {
-        // parse gum into tree
+        // parse gum into element
         let elem;
         try {
             elem = await parseGum(src);
@@ -162,33 +180,37 @@ class GumEditor {
             return;
         }
 
-        // render gum tree
+        // check for null
         if (elem == null) {
             this.setState();
             this.setConvert(err_nodata);
-        } else {
-            let svg;
-            try {
-                svg = this.renderGum(elem);
-            } catch (err) {
-                this.setState(false);
-                this.setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-                return;
-            }
-            this.setState(true);
-            this.setConvert(svg);
-            this.setDisplay(svg);
+            return;
         }
+
+        // render element to svg
+        let svg;
+        try {
+            svg = renderElem(elem, {size, prec});
+        } catch (err) {
+            this.setState(false);
+            this.setConvert(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+            return;
+        }
+
+        // success
+        this.setState(true);
+        this.setConvert(svg);
+        this.setDisplay(svg);
     }
 }
 
 function enableResize(left, right, mid) {
-    let base = left.getBoundingClientRect().left;
-    function resizePane(e) {
-        let vw = window.innerWidth;
-        let x = e.clientX;
-        let lw = Math.max(200, x - 2 - base);
-        let rw = Math.max(200, vw - x - 2);
+    function resizePane(evt) {
+        const pos = evt.clientX;
+        const base = left.getBoundingClientRect().left;
+        const wind = window.innerWidth;
+        const lw = Math.max(200, pos - 2 - base);
+        const rw = Math.max(200, wind - pos - 2);
         left.style.width = `${lw}px`;
         right.style.width = `${rw}px`;
     }

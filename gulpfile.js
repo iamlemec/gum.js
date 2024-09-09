@@ -1,150 +1,50 @@
 import { rollup } from 'rollup'
 import resolve from '@rollup/plugin-node-resolve'
 import gulp from 'gulp'
-import connect from 'gulp-connect'
-import rename from 'gulp-rename'
 import { minify } from 'rollup-plugin-esbuild-minify';
-import { parseArgs } from 'node:util';
-
-// parse arguments
-const {
-    values: { host, port },
-} = parseArgs({
-    args: process.argv.slice(3),
-    options: {
-        host: { type: 'string', default: 'localhost' },
-        port: { type: 'string', default: '8000'},
-    },
-});
-
-// store values globally
-let cache = {};
-
-// creates an ES module bundle
-gulp.task('js-core', () => {
-    return rollup({
-        cache: cache.esm,
-        input: [
-            'js/gum.js',
-            'js/editor.js',
-            'js/index.js',
-            'js/docs.js'
-        ],
-        plugins: [
-            resolve(),
-        ],
-    }).then(bundle => {
-        cache.esm = bundle.cache;
-        return bundle.write({
-            dir: './dist',
-            preserveModules: true,
-            format: 'es',
-        });
-    });
-});
-
-// all js
-gulp.task('js', gulp.parallel('js-core'));
-
-// css core
-gulp.task('css-core', () => gulp.src(['./css/editor.css', './css/index.css', './css/docs.css'])
-    .pipe(gulp.dest('./dist/css'))
-);
-
-// all css
-gulp.task('css', gulp.parallel('css-core'))
-
-// core fonts css
-gulp.task('core-fonts-css', () => gulp.src(['./css/fonts.css'])
-    .pipe(gulp.dest('./dist/css'))
-);
-
-// core fonts data
-gulp.task('core-fonts-data', () => gulp.src(['./css/fonts/*'])
-    .pipe(gulp.dest('./dist/css/fonts'))
-);
-
-// core fonts
-gulp.task('core-fonts', gulp.parallel('core-fonts-css', 'core-fonts-data'));
 
 // katex fonts css
 gulp.task('katex-fonts-css', () => gulp.src(['./node_modules/katex/dist/katex.css'])
-    .pipe(rename('katex.css'))
-    .pipe(gulp.dest('./dist/css'))
+    .pipe(gulp.dest('./libs'))
 );
 
 // katex fonts data
 gulp.task('katex-fonts-data', () => gulp.src(['./node_modules/katex/dist/fonts/*'])
-    .pipe(gulp.dest('./dist/css/fonts'))
+    .pipe(gulp.dest('./libs/fonts'))
 );
 
 // katex fonts
 gulp.task('katex-fonts', gulp.parallel('katex-fonts-css', 'katex-fonts-data'));
 
-// all fonts
-gulp.task('fonts', gulp.parallel('core-fonts', 'katex-fonts'));
-
-// images
-gulp.task('images', () => gulp.src('./css/*.svg')
-    .pipe(gulp.dest('./dist/css'))
-);
-
-// all assets
-gulp.task('assets', gulp.parallel('images'));
-
-// full build
-gulp.task('build', gulp.parallel('js', 'css', 'fonts', 'assets'));
-
-// watch files
-gulp.task('watch', () => {
-    gulp.watch(['js/*.js'], gulp.series('js'));
-    gulp.watch(['css/*.css'], gulp.series('css'));
-    gulp.watch(['css/fonts/*'], gulp.series('fonts'));
-    gulp.watch(['css/*.svg'], gulp.series('assets'));
-});
-
-// devel watch
-gulp.task('devel', gulp.series('build', 'watch'));
-
-// reload index
-gulp.task('reload', () => gulp.src(['index.html'])
-    .pipe(connect.reload())
-);
-
-// development mode
-gulp.task('serve-watch', () => {
-    connect.server({
-        root: '.',
-        host: host,
-        port: parseInt(port),
-        livereload: true
-    });
-
-    gulp.watch(['index.html', 'docs.html'], gulp.series('reload'));
-    gulp.watch(['js/*.js'], gulp.series('js', 'reload'));
-    gulp.watch(['css/*.css'], gulp.series('css', 'reload'));
-    gulp.watch(['css/fonts/*'], gulp.series('fonts', 'reload'));
-    gulp.watch(['css/*.svg'], gulp.series('assets', 'reload'));
-});
-
-// development mode
-gulp.task('serve', gulp.series('build', 'serve-watch'));
-
 /*
  * minifry
  */
 
-// creates an ES module bundle
-gulp.task('minify', () => {
+function minify_file(file, name) {
     return rollup({
-        cache: cache.esm,
-        input: 'js/gum.js',
-        plugins: [resolve()],
+        input: file,
+        plugins: [resolve(), minify()],
     }).then(bundle => {
         return bundle.write({
-            dir: './server/web/libs',
+            dir: './libs',
             format: 'iife',
-            name: 'gum',
+            name: name,
         });
     });
-});
+}
+
+
+// minify codemirror
+gulp.task('minify-codemirror', () => minify_file('js/codemirror.js', 'cm'));
+
+// minify katex
+gulp.task('minify-katex', () => minify_file('js/katex.js', 'katex'));
+
+// minify marked
+gulp.task('minify-marked', () => minify_file('js/marked.js', 'marked'));
+
+// minify all
+gulp.task('minify', gulp.parallel('minify-codemirror', 'minify-katex', 'minify-marked'));
+
+// build all
+gulp.task('build', gulp.parallel('katex-fonts', 'minify'));

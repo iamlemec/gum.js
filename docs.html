@@ -9,7 +9,8 @@
 <title>gum.js docs</title>
 
 <link rel="shortcut icon" type="image/svg" href="favicon.svg">
-<link href="dist/css/docs.css" rel="stylesheet">
+<link href="css/docs.css" rel="stylesheet">
+<link href="libs/katex.css" rel="stylesheet">
 
 </head>
 
@@ -32,13 +33,18 @@
 <div id="stat"></div>
 <div id="code"></div>
 
+<div id="disp-outer">
 <div id="disp"></div>
-
 </div>
 
 </div>
 
-<script src="dist/js/docs.js" type="module"></script>
+</div>
+
+<script src="libs/codemirror.js"></script>
+<script src="libs/katex.js"></script>
+<script src="libs/marked.js"></script>
+<script src="js/docs.js" type="module"></script>
 
 </body>
 

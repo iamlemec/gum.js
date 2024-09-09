@@ -1,7 +1,5 @@
 // gum.js
 
-import render from 'katex'
-
 /**
  ** defaults
  **/
@@ -1809,10 +1807,10 @@ class Tex extends Element {
         vshift = vshift ?? -0.05;
 
         // render with katex
-        let katex = render.renderToString(text);
+        let math = katex.renderToString(text);
 
         // compute text box
-        let [xoff, yoff, width, height] = sideRenderTextSizer(katex, {size, actual});
+        let [xoff, yoff, width, height] = sideRenderTextSizer(math, {size, actual});
         [xoff, yoff, size] = [xoff/width, yoff/height, size/height];
 
         // pass to element
@@ -1826,7 +1824,7 @@ class Tex extends Element {
         this.size = size;
         this.xover = xover;
         this.yover = yover;
-        this.katex = katex;
+        this.math = math;
     }
 
     props(ctx) {
@@ -1847,7 +1845,7 @@ class Tex extends Element {
     }
 
     inner(ctx) {
-        return this.katex;
+        return this.math;
     }
 }
 

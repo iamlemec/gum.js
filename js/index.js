@@ -10,7 +10,6 @@ let code = document.querySelector('#code');
 let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
-let inter = document.querySelector('#inter');
 
 let save = document.querySelector('#save');
 let copy = document.querySelector('#copy');
@@ -53,7 +52,7 @@ async function makeFontFace(family, style, weight, path) {
 
 // get ibm font
 let ibmFontFace = await makeFontFace(
-    'IBMPlexSans', 'normal', 100, 'dist/css/fonts/IBMPlexSans-Thin.ttf'
+    'IBMPlexSans', 'normal', 100, 'fonts/IBMPlexSans-Thin.ttf'
 );
 
 // get viewBox size
@@ -256,7 +255,7 @@ let cook = getCookieLong();
 let example = source ?? cook ?? example0;
 
 // make the actual editor
-let gum_editor = new GumEditor(code, conv, disp, stat, inter, setCookieLong);
+let gum_editor = new GumEditor(code, conv, disp, stat, setCookieLong);
 
 // set initial code input
 gum_editor.setCode(example);

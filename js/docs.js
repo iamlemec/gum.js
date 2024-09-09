@@ -1,10 +1,7 @@
-import { marked } from 'marked'
-
 import { GumEditor, enableResize } from './editor.js'
 
 // global elements
 let code = document.querySelector('#code');
-let conv = document.querySelector('#conv');
 let disp = document.querySelector('#disp');
 let stat = document.querySelector('#stat');
 
@@ -31,7 +28,7 @@ let code_empty = '// no example code found';
 async function loadEntry(name) {
     let name1 = name.toLowerCase();
     let text = await getData(`docs/text/${name1}.md`);
-    left.innerHTML = marked(text);
+    left.innerHTML = marked.marked(text);
     let code = await getData(`docs/code/${name1}.js`) ?? code_empty;
     gum_editor.setCode(code);
 }
@@ -57,7 +54,7 @@ function parseEntry(name0, type) {
 enableResize(left, right, mid);
 
 // make the actual editor
-let gum_editor = new GumEditor(code, conv, disp, stat);
+let gum_editor = new GumEditor(code, null, disp, stat);
 
 // get docs data
 let meta = await getData('docs/meta.json', true);

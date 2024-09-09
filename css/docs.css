@@ -43,6 +43,7 @@ body {
     justify-content: center;
     align-items: center;
     width: 45%;
+    height: 100%;
 }
 
 #code, #disp {
@@ -51,19 +52,25 @@ body {
 
 #code {
     height: 40%;
+    width: 100%;
     background-color: white;
 }
 
-#disp {
+#disp-outer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     height: 60%;
-    border-top: 1px solid #CCC;
-    box-sizing: border-box;
+    width: 100%;
     background-color: #EEE;
+    border-top: 1px solid #CCC;
+    padding: 50px;
+    box-sizing: border-box;
 }
 
-#disp svg {
-    max-height: 80%;
+#disp {
     max-width: 80%;
+    border: 1px solid #CCC;
 }
 
 #disp.error {
@@ -71,8 +78,6 @@ body {
     font-family: monospace;
     font-size: 12px;
     line-height: 1.5;
-    align-items: start;
-    justify-content: start;
     padding: 5px;
 }
 
