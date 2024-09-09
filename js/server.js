@@ -98,7 +98,7 @@ let plot = Plot([sine, peaks, ...quads], {
 
 // Return the framed plot
 return TitleFrame(plot, 'Quadratic Functions with Sine Wave Peaks', {
-    margin: 0.15, label_size: 0.06, label_border_radius: 0.03, border: 1
+    margin: 0.15, title_size: 0.065, title_border_radius: 0.03, border: 1
 });`;
 
 // init editors

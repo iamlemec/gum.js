@@ -1877,20 +1877,20 @@ class Node extends Frame {
 }
 
 class TitleFrame extends Frame {
-    constructor(child, title, attr) {
-        let {label_size, label_fill, border, margin, ...attr0} = attr ?? {};
-        let [label_attr0, frame_attr0] = prefix_split(['label'], attr0);
-        label_size = label_size ?? 0.075;
-        label_fill = label_fill ?? 'white';
+    constructor(child, text, attr) {
+        let {title_size, title_fill, border, margin, ...attr0} = attr ?? {};
+        let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
+        title_size = title_size ?? 0.075;
+        title_fill = title_fill ?? 'white';
         border = border ?? 1;
 
         // fill in default attributes
-        let label_attr = {fill: label_fill, ...label_attr0};
+        let title_attr = {fill: title_fill, ...title_attr0};
         let frame_attr = {border, ...frame_attr0};
 
         // place label at top
-        let label = new Node(title, label_attr);
-        let place = new Place(label, {pos: [0.5, 0.0], rad: [null, label_size], expand: true});
+        let title = new Node(text, title_attr);
+        let place = new Place(title, {pos: [0.5, 0.0], rad: [null, title_size], expand: true});
         let frame = new Frame(child, frame_attr);
         let group = new Group([frame, place], {clip: false, aspect: frame.aspect});
 
