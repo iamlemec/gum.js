@@ -73,4 +73,4 @@ async def generation(request: Request):
     response = generate.generate_gumjs(prompt)
     return invert_code_blocks(response)
 
-serve(port=5000)
+serve(host='127.0.0.1', port=5000)
