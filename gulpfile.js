@@ -20,10 +20,14 @@ gulp.task('katex-fonts', gulp.parallel('katex-fonts-css', 'katex-fonts-data'));
  * minifry
  */
 
-function minify_file(file, name) {
+function minify_file(file, name, do_minify=true) {
+    let plugins = [resolve()];
+    if (do_minify) {
+        plugins.push(minify());
+    }
     return rollup({
         input: file,
-        plugins: [resolve(), minify()],
+        plugins: plugins,
     }).then(bundle => {
         return bundle.write({
             dir: './libs',
@@ -32,7 +36,6 @@ function minify_file(file, name) {
         });
     });
 }
-
 
 // minify codemirror
 gulp.task('minify-codemirror', () => minify_file('js/codemirror.js', 'cm'));
@@ -43,8 +46,11 @@ gulp.task('minify-katex', () => minify_file('js/katex.js', 'katex'));
 // minify marked
 gulp.task('minify-marked', () => minify_file('js/marked.js', 'marked'));
 
+// minify gum
+gulp.task('minify-gum', () => minify_file('js/gum.js', 'gum', false));
+
 // minify all
-gulp.task('minify', gulp.parallel('minify-codemirror', 'minify-katex', 'minify-marked'));
+gulp.task('minify', gulp.parallel('minify-codemirror', 'minify-katex', 'minify-marked', 'minify-gum'));
 
 // build all
 gulp.task('build', gulp.parallel('katex-fonts', 'minify'));

@@ -82,3 +82,10 @@ def generate_gumjs(instruct, provider='anthropic', **kwargs):
 
 def stream_gumjs(instruct, provider='anthropic', **kwargs):
     return oneping.stream_llm_response(instruct, system=prompt_system, provider=provider, **kwargs)
+
+##
+## print prompt on main
+##
+
+if __name__ == '__main__':
+    print(prompt_system)

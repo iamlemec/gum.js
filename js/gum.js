@@ -1806,8 +1806,13 @@ class Tex extends Element {
         hshift = hshift ?? 0.0;
         vshift = vshift ?? -0.05;
 
-        // render with katex
-        let math = katex.renderToString(text);
+        // render with katex (or do nothing if katex is not available)
+        let math;
+        if (typeof katex === 'undefined') {
+            math = text;
+        } else {
+            math = katex.renderToString(text);
+        }
 
         // compute text box
         let [xoff, yoff, width, height] = sideRenderTextSizer(math, {size, actual});
