@@ -19,14 +19,15 @@ body {
 
 #left {
     justify-content: space-between;
-    width: 50%;
+    width: 53%;
 }
 
 #right {
     justify-content: center;
     align-items: center;
-    width: 50%;
-    background-color: #EEE;
+    width: 47%;
+    background-color: #F3F4F6;
+    padding: 2.5rem;
 }
 
 #code, #conv {
@@ -39,8 +40,9 @@ body {
 }
 
 #disp {
-    width: 80%;
-    border: 1px solid #CCC;
+    width: 100%;
+    border: 1px solid #D1D5DB;
+    box-sizing: border-box;
 }
 
 #disp svg {

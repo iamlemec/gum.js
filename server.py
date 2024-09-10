@@ -22,19 +22,13 @@ hdrs = [
     ScriptX('libs/codemirror.js'),
     ScriptX('libs/katex.js'),
     Link(rel='stylesheet', href='libs/katex.css'),
-    Link(rel='stylesheet', href='server.css'),
-    Link(rel='stylesheet', href='fonts.css'),
 ]
 app = FastHTML(hdrs=hdrs, pico=False, live=True, debug=True)
 rt = app.route
 
 # set up static routes
-app.static_route('.woff2', prefix='/libs/fonts/', static_path='./libs/fonts')
-app.static_route('.ttf', prefix='/libs/fonts/', static_path='./libs/fonts')
-app.static_route('.css', prefix='/libs/', static_path='./libs')
-app.static_route('.ttf', prefix='/fonts/', static_path='./css/fonts')
-app.static_route('.js', static_path='./js')
-app.static_route('.css', static_path='./css')
+app.static_route('js', static_path='js')
+app.static_route_exts()
 
 @rt('/')
 def get():
@@ -54,12 +48,17 @@ def get():
     right = Div(id='right', cls='flex flex-col justify-center items-center grow h-full w-[47%] p-10 bg-gray-100')(output)
     outer = Div(id='outer', cls='flex flex-row w-screen h-screen')(left, mid, right)
 
-    # outer layout
+    # header includes
     title = Title('gum.js')
+    style_server = Link(rel='stylesheet', href='css/server.css')
+    style_fonts = Link(rel='stylesheet', href='css/fonts.css')
+    head = (title, style_server, style_fonts)
+
+    # outer layout
     script_index = ScriptX('js/server.js', type='module')
     body = Body()(outer, script_index)
 
-    return title, body
+    return head, body
 
 @rt('/favicon.ico')
 def favicon():
