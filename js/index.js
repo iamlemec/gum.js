@@ -1,5 +1,5 @@
-import { GumEditor, enableResize, executeGum } from './editor.js'
-import { range, zip, split } from './gum.js'
+import { GumEditor, enableResize } from './editor.js'
+import { renderGumSafe, range, zip, split } from './gum.js'
 
 // global elements
 let left = document.querySelector('#left');
@@ -183,7 +183,6 @@ function getCookieLong() {
 }
 
 function setCookieLong(src, maxlen=1024) {
-    console.log(`setCookieLong: ${src}`);
     let chunks = split(src, maxlen).map(encodeURIComponent);
     let cnames = range(chunks.length).map(i => `gum${i}`);
     let gnames = encodeURIComponent(cnames.join(','));
@@ -256,7 +255,7 @@ let cook = getCookieLong();
 let example = source ?? cook ?? example0;
 
 // make the actual editor
-let gum_editor = new GumEditor(code, conv, disp, executeGum, {stat, store: setCookieLong});
+let gum_editor = new GumEditor(code, conv, disp, renderGumSafe, {stat, store: setCookieLong});
 
 // set initial code input
 gum_editor.setCode(example);

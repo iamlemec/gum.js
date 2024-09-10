@@ -11,7 +11,7 @@ let ns_svg = 'http://www.w3.org/2000/svg';
 let size_base = 500;
 let rect_base = [0, 0, size_base, size_base];
 let coord_base = [0, 0, 1, 1];
-let prec_base = 13;
+let prec_base = 2;
 
 // fonts
 let font_family_base = 'IBMPlexSans';
@@ -3320,6 +3320,32 @@ function renderGum(src, args) {
     return renderElem(elem, args);
 }
 
+function renderGumSafe(src, args) {
+    // parse gum into element
+    let elem;
+    try {
+        elem = parseGum(src);
+    } catch (err) {
+        throw new Error(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+    }
+
+    // check for null
+    if (elem == null) {
+        throw new Error('no data. does your code return an element?');
+    }
+
+    // render element to svg
+    let svg;
+    try {
+        svg = renderElem(elem, args);
+    } catch (err) {
+        throw new Error(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
+    }
+
+    // success
+    return svg;
+}
+
 function parseHTML(str) {
     let tmp = document.implementation.createHTMLDocument('');
     tmp.body.innerHTML = str;
@@ -3381,5 +3407,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, rescale, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, gums, mako, setTextSizer, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow
+    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, rescale, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow
 };

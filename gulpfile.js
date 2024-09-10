@@ -2,6 +2,8 @@ import { rollup } from 'rollup'
 import resolve from '@rollup/plugin-node-resolve'
 import gulp from 'gulp'
 import { minify } from 'rollup-plugin-esbuild-minify';
+import { exec } from 'child_process';
+import fs from 'fs';
 
 /*
  * style
@@ -76,33 +78,40 @@ gulp.task('build', gulp.parallel('minify', 'style'));
 // bundle gum
 gulp.task('env-gum-js', () => minify_file('js/gum.js', 'gum', {
     do_minify: false,
-    output_dir: 'playgen',
+    output_dir: 'playgen/libs',
 }));
 
 // minify katex
 gulp.task('env-katex-js', () => minify_file('js/katex.js', 'katex', {
-    output_dir: 'playgen',
+    output_dir: 'playgen/libs',
 }));
 
 // copy gum css
 gulp.task('env-gum-css', () => gulp.src(['./css/fonts.css'])
-    .pipe(gulp.dest('playgen'))
+    .pipe(gulp.dest('playgen/libs'))
 );
 
 // copy gum fonts
 gulp.task('env-gum-fonts', () => gulp.src(['./css/fonts/*'])
-    .pipe(gulp.dest('playgen/fonts'))
+    .pipe(gulp.dest('playgen/libs/fonts'))
 );
 
 // copy katex css
 gulp.task('env-katex-css', () => gulp.src(['./libs/katex.css'])
-    .pipe(gulp.dest('playgen'))
+    .pipe(gulp.dest('playgen/libs'))
 );
 
 // copy katex fonts
 gulp.task('env-katex-fonts', () => gulp.src(['./libs/fonts/*'])
-    .pipe(gulp.dest('playgen/fonts'))
+    .pipe(gulp.dest('playgen/libs/fonts'))
 );
+
+// generate system prompt (execute generate.py and pipe to system.md)
+gulp.task('env-system-prompt', cb => {
+    exec('python generate.py', (err, stdout, stderr) => {
+        fs.writeFile('playgen/system.md', stdout, cb);
+    });
+});
 
 // make playgen env
 gulp.task('playgen', gulp.parallel(
@@ -112,4 +121,5 @@ gulp.task('playgen', gulp.parallel(
     'env-gum-fonts',
     'env-katex-css',
     'env-katex-fonts',
+    'env-system-prompt',
 ));

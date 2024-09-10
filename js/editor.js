@@ -208,45 +208,4 @@ function enableResize(left, right, mid) {
     }, false);
 }
 
-/*
- * execute helper
- */
-
-// execute gum code
-function executeGum(src, args) {
-    // default args
-    const {
-        prec = 2,
-        size = 500,
-    } = args ?? {};
-
-    // parse gum into element
-    let elem;
-    try {
-        elem = parseGum(src);
-    } catch (err) {
-        if (err == 'timeout') {
-            throw new Error('code took too long to run');
-        } else {
-            throw new Error(`parse error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-        }
-    }
-
-    // check for null
-    if (elem == null) {
-        throw new Error('no data. does your code return an element?');
-    }
-
-    // render element to svg
-    let svg;
-    try {
-        svg = renderElem(elem, {size, prec});
-    } catch (err) {
-        throw new Error(`render error, line ${err.lineNumber}: ${err.message}\n${err.stack}`);
-    }
-
-    // success
-    return svg;
-}
-
-export { GumEditor, enableResize, executeGum }
+export { GumEditor, enableResize }

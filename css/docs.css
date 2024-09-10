@@ -46,7 +46,7 @@ body {
     height: 100%;
 }
 
-#code, #disp {
+#code {
     width: 100%;
 }
 
@@ -58,18 +58,18 @@ body {
 
 #disp-outer {
     display: flex;
+    align-items: start;
     justify-content: center;
-    align-items: center;
     height: 60%;
     width: 100%;
     background-color: #EEE;
     border-top: 1px solid #CCC;
-    padding: 50px;
+    padding: 2.5rem;
     box-sizing: border-box;
 }
 
 #disp {
-    max-width: 80%;
+    width: 100%;
     border: 1px solid #CCC;
 }
 
