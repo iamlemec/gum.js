@@ -1,4 +1,4 @@
-import { GumGen, enableResize } from './editor.js'
+import { GumEditor, enableResize, executeGum } from './editor.js'
 import { range, zip, split } from './gum.js'
 
 // global elements
@@ -52,7 +52,7 @@ async function makeFontFace(family, style, weight, path) {
 
 // get ibm font
 let ibmFontFace = await makeFontFace(
-    'IBMPlexSans', 'normal', 100, 'fonts/IBMPlexSans-Thin.ttf'
+    'IBMPlexSans', 'normal', 100, 'css/fonts/IBMPlexSans-Thin.ttf'
 );
 
 // get viewBox size
@@ -183,6 +183,7 @@ function getCookieLong() {
 }
 
 function setCookieLong(src, maxlen=1024) {
+    console.log(`setCookieLong: ${src}`);
     let chunks = split(src, maxlen).map(encodeURIComponent);
     let cnames = range(chunks.length).map(i => `gum${i}`);
     let gnames = encodeURIComponent(cnames.join(','));
@@ -255,7 +256,7 @@ let cook = getCookieLong();
 let example = source ?? cook ?? example0;
 
 // make the actual editor
-let gum_editor = new GumGen(code, conv, disp, {stat, store: setCookieLong});
+let gum_editor = new GumEditor(code, conv, disp, executeGum, {stat, store: setCookieLong});
 
 // set initial code input
 gum_editor.setCode(example);

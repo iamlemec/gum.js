@@ -1,4 +1,4 @@
-import { GumEditor, enableResize } from './editor.js'
+import { GumEditor, enableResize, executeGum } from './editor.js'
 
 // global elements
 let code = document.querySelector('#code');
@@ -54,7 +54,7 @@ function parseEntry(name0, type) {
 enableResize(left, right, mid);
 
 // make the actual editor
-let gum_editor = new GumEditor(code, null, disp, stat);
+let gum_editor = new GumEditor(code, null, disp, executeGum, {stat});
 
 // get docs data
 let meta = await getData('docs/meta.json', true);

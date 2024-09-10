@@ -1,4 +1,4 @@
-import { parseGum, renderElem } from './gum.js'
+import { parseGum, renderElem } from './gum.js';
 
 // readonly config compartment
 const editableCompartment = new cm.Compartment;
@@ -88,16 +88,21 @@ class CodeMirror {
     }
 }
 
-class CodeGen {
-    constructor(code, conv, disp, execute, render, args) {
-        const {stat, store} = args ?? {};
+class GumEditor {
+    constructor(code, conv, disp, execute, args) {
+        // default args
+        const {
+            stat = null,
+            store = null,
+        } = args ?? {};
+
+        // set up variables
         this.code = code;
         this.conv = conv;
         this.disp = disp;
         this.execute = execute;
-        this.render = render ?? null;
-        this.stat = stat ?? null;
-        this.store = store ?? null;
+        this.stat = stat;
+        this.store = store;
 
         // init editor
         this.editor = new CodeMirror(code, false, text => this.updateView(text));
@@ -161,6 +166,9 @@ class CodeGen {
     }
 
     updateView(src) {
+        // store source
+        this.setStore(src);
+
         // execute code
         let data;
         try {
@@ -169,16 +177,10 @@ class CodeGen {
             this.setConvert(err.message);
             return;
         }
-        this.setConvert(data);
 
-        // render data
-        let rend;
-        try {
-            rend = (this.render != null) ? this.render(data) : data;
-        } catch (err) {
-            rend = err.message;
-        }
-        this.setDisplay(rend);
+        // set display
+        this.setConvert(data);
+        this.setDisplay(data);
     }
 }
 
@@ -207,14 +209,17 @@ function enableResize(left, right, mid) {
 }
 
 /*
- * gum specific
+ * execute helper
  */
 
-// svg presets
-const prec = 2;
-const size = 500;
+// execute gum code
+function executeGum(src, args) {
+    // default args
+    const {
+        prec = 2,
+        size = 500,
+    } = args ?? {};
 
-function executeGum(src) {
     // parse gum into element
     let elem;
     try {
@@ -244,10 +249,4 @@ function executeGum(src) {
     return svg;
 }
 
-class GumGen extends CodeGen {
-    constructor(code, conv, disp, args) {
-        super(code, conv, disp, executeGum, null, args);
-    }
-}
-
-export { GumGen, enableResize }
+export { GumEditor, enableResize, executeGum }

@@ -9,7 +9,8 @@
     ".": "./js/gum.js"
   },
   "scripts": {
-    "build": "npx gulp build"
+    "build": "npx gulp build",
+    "playgen": "npx gulp playgen"
   },
   "dependencies": {
     "@codemirror/commands": "^6.1.2",
