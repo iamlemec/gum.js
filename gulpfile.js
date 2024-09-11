@@ -78,38 +78,38 @@ gulp.task('build', gulp.parallel('minify', 'style'));
 // bundle gum
 gulp.task('env-gum-js', () => minify_file('js/gum.js', 'gum', {
     do_minify: false,
-    output_dir: 'playgen/libs',
+    output_dir: 'playgen',
 }));
 
 // minify katex
 gulp.task('env-katex-js', () => minify_file('js/katex.js', 'katex', {
-    output_dir: 'playgen/libs',
+    output_dir: 'playgen',
 }));
 
 // copy gum css
 gulp.task('env-gum-css', () => gulp.src(['./css/fonts.css'])
-    .pipe(gulp.dest('playgen/libs'))
+    .pipe(gulp.dest('playgen'))
 );
 
 // copy gum fonts
 gulp.task('env-gum-fonts', () => gulp.src(['./css/fonts/*'])
-    .pipe(gulp.dest('playgen/libs/fonts'))
+    .pipe(gulp.dest('playgen/fonts'))
 );
 
 // copy katex css
-gulp.task('env-katex-css', () => gulp.src(['./libs/katex.css'])
-    .pipe(gulp.dest('playgen/libs'))
+gulp.task('env-katex-css', () => gulp.src(['./node_modules/katex/dist/katex.css'])
+    .pipe(gulp.dest('playgen'))
 );
 
 // copy katex fonts
-gulp.task('env-katex-fonts', () => gulp.src(['./libs/fonts/*'])
-    .pipe(gulp.dest('playgen/libs/fonts'))
+gulp.task('env-katex-fonts', () => gulp.src(['./node_modules/katex/dist/fonts/*'])
+    .pipe(gulp.dest('playgen/fonts'))
 );
 
 // generate system prompt (execute generate.py and pipe to system.md)
 gulp.task('env-system-prompt', cb => {
     exec('python generate.py', (err, stdout, stderr) => {
-        fs.writeFile('playgen/system.md', stdout, cb);
+        fs.writeFile('system.md', stdout, cb);
     });
 });
 

@@ -148,23 +148,6 @@ function downloadFile(name, blob) {
 }
 
 // cookie tools
-function getCookie() {
-    let cookies = document.cookie.split(';').map(x => x.trim().split('='));
-    let cgum = cookies.filter(([k, v]) => k == 'gum').shift();
-    if (cgum == null) {
-        return null;
-    } else {
-        let [_, vgum] = cgum;
-        return decodeURIComponent(vgum);
-    }
-}
-
-function setCookie(src) {
-    let vgum = encodeURIComponent(src);
-    document.cookie = `gum=${vgum}; SameSite=Lax`;
-}
-
-// for longer files
 function getCookieLong() {
     let cookies = Object.fromEntries(document.cookie
         .split(';')
