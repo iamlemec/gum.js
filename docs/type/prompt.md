@@ -29,9 +29,11 @@ Your task is to create JavaScript code snippets or full programs that leverage `
    - Properly invoke `gum.js` methods
    - Use correct method names and parameters
    - Chain methods where appropriate for concise code
+   - Use consise notation for object attributes (for example, use `{xargs}` instead of `{xargs: xargs}`)
 
 6. Implement best practices:
    - Use meaningful but short variable names
+   - Avoid hardcoding values unless specified in the prompt
    - Add comments to explain complex logic
    - Use functions like `range` and `map` to generate collections of elements
 
@@ -42,7 +44,7 @@ Example Input:
 
 Example Output:
 ```javascript
-return Circle({pos: [0.5, 0.5], rad: 0.25, fill: "red", stroke_width: 5});
+return Circle({rad: 0.25, fill: "red", stroke_width: 5});
 ```
 
 # Documentation
@@ -50,12 +52,16 @@ return Circle({pos: [0.5, 0.5], rad: 0.25, fill: "red", stroke_width: 5});
 This is a description of the types, functions, and constructors used in the `gum.js` library using TypeScript style annotations. Below are the type aliases used throughout the library.
 ```typescript
 type point = number[2];
-type size = number[2];
+type size = number | number[2];
 type range = number[2];
 type rect = number[4];
 type frame = number | number[2] | rect;
 type spec = {pos?: point, rad?: size, rect?: rect, expand?: boolean, align?: string, rotate?: number, pivot?: string | number | number[2], invar?: boolean};
 type child = Element | [Element, spec];
+type valign = 'top' | 'bottom' | 'center' | number;
+type halign = 'left' | 'right' | 'center' | number;
+type aspect = number | 'auto';
+type align = valign | halign;
 type label = string | Element;
 type ticks = number | number[] | [number, label][];
 type grid = number | number[];
@@ -64,6 +70,8 @@ type edge_pos = point | [point, string];
 type node = [string, string, point] | [string, string, point, size];
 type edge = [string, string];
 type func1d = (x: number) => number;
+type sizefunc = (x: number, y: number, t: number, i: number) => size;
+type shapefunc = (x: number, y: number, t: number, i: number) => Element;
 ```
 These are the generic utility functions used in the library. Many of them mimic the functionality of core Python and numpy and are used for array operations and aggregations. They are also for constructing arrays that can be mapped into series of `Element` objects.
 ```typescript
@@ -87,23 +95,25 @@ function interpolateHex(c1: string, c2: string, alpha: number): string;
 These are the constructors used to create the various types of `Element` objects that can be used in the library. For convenience, one does not have to use the `new` keyword, you can simply call them as functions, but they are functions that return the specified object of the same name. The two most important types of elements are `Element`, which represents a single element and `Group`, which represents a container that can hold multiple elements. All other elements are derived from one or both of these.
 ```typescript
 function Element(tag: string, unary: boolean, args?: {aspect: number}): Element;
-function Group(children: child[], args?: {tag: string, clip: boolean, coord: rect}): Group;
+function Container(children: child[], args?: {tag: string, clip: boolean, coord: rect}): Container;
 function Frame(child: Element, args?: {padding: frame, margin: frame, border: number, adjust: boolean, flex: boolean, shape: Element}): Frame;
-function Stack(direc: string, children: child[], args?: {tag: string, coord: rect, clip: boolean}): Stack;
+function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
 function Place(child: Element, args?: spec): Place;
-function Scatter(children: child[], args?: {size: number, shape: Element}): Scatter;
+function Scatter(children: child[], args?: {size: size, shape: Element}): Scatter;
 function Rect(args?: {p0: point, p1: point, radius: number | number[2]}): Rect;
 function Circle(args?: {c: point, r: size}): Circle;
 function Polyline(points: point[]): Polyline;
 function Path(commands: Command[]): Path;
 function SymPath(args?: {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number}): SymPath;
+function SymPoints(args?: {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number, size: size, shape: Element, fr: sizefunc, fs: shapefunc}): SymPoints;
 function Axis(dirc: string, ticks: ticks, args?: {label_size: number, lim: range, tick_pos: string}): Axis;
 function Graph(elems: Element[], args?: {xlim: range, ylim: range, padding: frame}): Graph;
 function Plot(elems: Element[], args?: {xlim: range, ylim: range, xanchor: number, yanchor: number, xticks: ticks, yticks: ticks, xgrid: grid, ygrid: grid, xlabel: label, ylabel: label, title: label}): Plot;
 function BarPlot(bars: bars, args?: {direc: string, shrink: number, color: string}): BarPlot;
 function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
+function Text(text: string, args?: {size: size, hshift: number, vshift: number}): Text;
 function Node(text: string, args?: {padding: frame, border: number, spacing: number, align: string}): Node;
 function Edge(beg: edge_pos, end: edge_pos, args?: {arrow: boolean, arrow_beg: boolean, arrow_end: boolean, arrow_size: number, curve: number}): Edge;
 function Network(nodes: node[], edges: edge[], args?: {size: size, directed: boolean}): Network;
 ```
-You will typically use one of the higher level constructors to create the elements you need, but you can also create your own custom elements by using the `Element` constructor.
+You will typically use one of the higher level constructors to create the elements you need, but you can also create your own custom elements by using the `Element` or `Container`constructor. Note that for ease of use, `Group` is an alias for `Container`. Additionally, elements with a direction notion such as `Stack` and `Axis` have specialized versions denoted by the prefixes `V` and `H`, for example `VStack` and `HStack` and `VAxis` and `HAxis`.
