@@ -164,6 +164,10 @@ function sum(arr) {
     return arr.reduce((a, b) => a + b, 0);
 }
 
+function mean(arr) {
+    return sum(arr)/arr.length;
+}
+
 function all(arr) {
     return arr.reduce((a, b) => a && b);
 }
@@ -1142,16 +1146,22 @@ class Grid extends Container {
         rows = rows ?? children.length;
         cols = cols ?? max(...children.map(row => row.length));
 
-        // fill in missing widths and heights
-        let [spacex, spacey] = spacing;
-        widths = widths ?? repeat((1-(cols-1)*spacex)/cols, cols);
-        heights = heights ?? repeat((1-(rows-1)*spacey)/rows, rows);
-
         // fill in missing rows and columns
         let spacer = new Spacer();
         let filler = range(cols).map(i => spacer);
         children = children.map(row => range(cols).map(i => i < row.length ? row[i] : spacer));
         children = range(rows).map(i => i < children.length ? children[i] : filler);
+
+        // aggregate aspect ratios along rows and columns (assuming null goes to 1)
+        let aspect_grid = children.map(row => row.map(e => e.aspect ?? 1));
+        widths =  normalize(widths ?? zip(...aspect_grid).map(mean));
+        heights = normalize(heights ?? aspect_grid.map(row => mean(row.map(a => 1/a))));
+
+        // adjust widths and heights to account for spacing
+        let [spacex, spacey] = spacing;
+        let [scalex, scaley] = [1 - spacex * (cols-1), 1 - spacey * (rows-1)];
+        widths = widths.map(w => scalex * w);
+        heights = heights.map(h => scaley * h);
 
         // get top left positions
         let lpos = cumsum(widths.map(w => w + spacex));
