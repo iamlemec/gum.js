@@ -183,7 +183,7 @@ function mul(arr1, arr2) {
 function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
-    return (first ?? true) ? [0, ...ret] : ret;
+    return (first ?? true) ? [0, ...ret.slice(0, -1)] : ret;
 }
 
 // fill in missing values to ensure: sum(vals) == target
@@ -231,6 +231,10 @@ function repeat(x, n) {
 
 function meshgrid(x, y) {
     return x.flatMap(xi => y.map(yi => [xi, yi]));
+}
+
+function outer(x, y) {
+    return y.map(yi => x.map(xi => [xi, yi]));
 }
 
 function lingrid(xlim, ylim, N) {
@@ -1114,6 +1118,37 @@ class HStack extends Stack {
     }
 }
 
+class Grid extends Container {
+    constructor(children, args) {
+        let {rows, cols, widths, heights, spacing, ...attr} = args ?? {};
+        spacing = ensure_vector(spacing ?? 0, 2);
+        rows = rows ?? children.length;
+        cols = cols ?? max(...children.map(row => row.length));
+
+        // fill in missing widths and heights
+        let [spacex, spacey] = spacing;
+        widths = widths ?? repeat((1-(cols-1)*spacex)/cols, cols);
+        heights = heights ?? repeat((1-(rows-1)*spacey)/rows, rows);
+
+        // fill in missing rows and columns
+        let spacer = new Spacer();
+        let filler = range(cols).map(i => spacer);
+        children = children.map(row => range(cols).map(i => i < row.length ? row[i] : spacer));
+        children = range(rows).map(i => i < children.length ? children[i] : filler);
+
+        // get top left positions
+        let lpos = cumsum(widths.map(w => w + spacex));
+        let tpos = cumsum(heights.map(h => h + spacey));
+        let cbox = zip(lpos, widths).map(([l, w]) => [l, l + w]);
+        let rbox = zip(tpos, heights).map(([t, h]) => [t, t + h]);
+
+        // make grid
+        let grid = meshgrid(rbox, cbox).map(([[y0, y1], [x0, x1]]) => [x0, y0, x1, y1]);
+        let attr1 = {clip: false, ...attr};
+        super(zip(children.flat(), grid), attr1);
+    }
+}
+
 class Place extends Container {
     constructor(child, args) {
         let {rect, pos, rad, rotate, expand, invar, align, pivot, ...attr} = args ?? {};
@@ -1888,10 +1923,11 @@ class Node extends Frame {
 
 class TitleFrame extends Frame {
     constructor(child, text, attr) {
-        let {title_size, title_fill, border, margin, ...attr0} = attr ?? {};
+        let {title_size, title_fill, title_offset, border, margin, ...attr0} = attr ?? {};
         let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
         title_size = title_size ?? 0.075;
         title_fill = title_fill ?? 'white';
+        title_offset = title_offset ?? 0;
         border = border ?? 1;
 
         // fill in default attributes
@@ -1899,8 +1935,9 @@ class TitleFrame extends Frame {
         let frame_attr = {border, ...frame_attr0};
 
         // place label at top
+        let base = title_offset * title_size;
         let title = new Node(text, title_attr);
-        let place = new Place(title, {pos: [0.5, 0.0], rad: [null, title_size], expand: true});
+        let place = new Place(title, {pos: [0.5, base], rad: [null, title_size], expand: true});
         let frame = new Frame(child, frame_attr);
         let group = new Group([frame, place], {clip: false, aspect: frame.aspect});
 
@@ -2660,7 +2697,7 @@ class Title extends Frame {
     }
 }
 
-class Grid extends Scale {
+class Mesh extends Scale {
     constructor(direc, locs, args) {
         let {lim, opacity, ...attr} = args ?? {};
         lim = lim ?? limit_base;
@@ -2669,13 +2706,13 @@ class Grid extends Scale {
     }
 }
 
-class HGrid extends Grid {
+class HMesh extends Mesh {
     constructor(locs, args) {
         super('h', locs, args);
     }
 }
 
-class VGrid extends Grid {
+class VMesh extends Mesh {
     constructor(locs, args) {
         super('v', locs, args);
     }
@@ -2851,10 +2888,10 @@ class Plot extends Container {
             ygrid = (yaxis != null) ? yaxis.ticks.map(([y, t]) => y) : null;
         }
         if (is_array(xgrid)) {
-            xgrid = new HGrid(xgrid, {lim: ylim, ...xgrid_attr});
+            xgrid = new HMesh(xgrid, {lim: ylim, ...xgrid_attr});
         }
         if (is_array(ygrid)) {
-            ygrid = new VGrid(ygrid, {lim: xlim, ...ygrid_attr});
+            ygrid = new VMesh(ygrid, {lim: xlim, ...ygrid_attr});
         }
 
         // create graph from core elements
@@ -3277,7 +3314,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame,MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, mask, rescale, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame,MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, mask, rescale, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3416,5 +3453,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Grid, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, mask, rescale, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow
+    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, mask, rescale, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow
 };

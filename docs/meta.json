@@ -25,14 +25,17 @@
         "Axis",
         "Graph",
         "Plot",
-        "BarPlot",
-        "Note"
+        "BarPlot"
     ],
     "networks": [
-        "Text",
         "Node",
         "Edge",
         "Network"
+    ],
+    "display": [
+        "Text",
+        "Note",
+        "TitleFrame"
     ],
     "functions": [
         "Math",

@@ -114,4 +114,4 @@ let logo = Path([
     LineTo([16.071, 22.9985]),
     VerticalTo(17.9991),
 ]);
-return Container(logo, {coord: [0, 0, 41, 41]});
+return Container(logo, {coord: [0, 0, 41, 41], fill: '#eee'});
