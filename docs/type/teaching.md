@@ -193,3 +193,28 @@ return TitleFrame(plot, 'Sparkle Motion', {
   border_stroke: '#999'
 });
 ```
+
+## Multiple Gridded Plots
+
+Prompt: Create a grid plot of sine waves at various frequencies that are spaced logarithmically. The lines are colored from blue to red according to their frequency. Frame the entire thing with the title "Different Frequencies".
+
+```javascript
+// Create frequency range
+let flim_log = [0, log(4)]; let flim = flim_log.map(exp);
+let freqs = linspace(...flim_log, 9).map(exp);
+
+// Create plots
+let plots = freqs.map(f => {
+  let color = interpolateHex(red, blue, rescale(f, flim));
+  let path = SymPath({fy: x => sin(f*x), xlim: [0, 2*pi], stroke: color});
+  let plot = Graph(path, {padding: 0.15, flex: true});
+  let frame = Frame(plot, {border: 1});
+  return frame;
+});
+
+// Create grid and frame
+let grid = Grid(split(plots, 3), {spacing: 0.1});
+return TitleFrame(grid, 'Different Frequencies', {
+  margin: 0.1, padding: 0.1, border_radius: 0.02, title_size: 0.055
+});
+```

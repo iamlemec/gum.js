@@ -2830,8 +2830,9 @@ function expand_limits(lim, fact) {
 
 class Graph extends Container {
     constructor(elems, args) {
-        let {xlim, ylim, aspect, padding, ...attr} = args ?? {};
-        aspect = aspect ?? 'auto';
+        let {xlim, ylim, aspect, flex, padding, ...attr} = args ?? {};
+        flex = flex ?? false;
+        aspect = flex ? null : (aspect ?? 'auto');
         padding = padding ?? 0;
 
         // handle singleton line
@@ -2865,14 +2866,15 @@ class Plot extends Container {
         let {
             xlim, ylim, xaxis, yaxis, xticks, yticks, grid, xgrid, ygrid, xlabel, ylabel,
             title, tick_size, label_size, label_offset, title_size, title_offset, xlabel_size,
-            ylabel_size, xlabel_offset, ylabel_offset, padding, prec, aspect, ...attr0
+            ylabel_size, xlabel_offset, ylabel_offset, padding, prec, aspect, flex, ...attr0
         } = args ?? {};
         xaxis = xaxis ?? true;
         yaxis = yaxis ?? true;
         xticks = xticks ?? num_ticks_base;
         yticks = yticks ?? num_ticks_base;
         tick_size = tick_size ?? tick_size_base;
-        aspect = aspect ?? 'auto';
+        flex = flex ?? false;
+        aspect = flex ? null : (aspect ?? 'auto');
 
         // some advanced piping
         let [
