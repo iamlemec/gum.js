@@ -1144,8 +1144,7 @@ class Grid extends Container {
 
         // make grid
         let grid = meshgrid(rbox, cbox).map(([[y0, y1], [x0, x1]]) => [x0, y0, x1, y1]);
-        let attr1 = {clip: false, ...attr};
-        super(zip(children.flat(), grid), attr1);
+        super(zip(children.flat(), grid), attr);
     }
 }
 
@@ -1923,26 +1922,40 @@ class Node extends Frame {
 
 class TitleFrame extends Frame {
     constructor(child, text, attr) {
-        let {title_size, title_fill, title_offset, border, margin, ...attr0} = attr ?? {};
+        let {title_size, title_fill, title_offset, title_radius, adjust, padding, margin, border, ...attr0} = attr ?? {};
         let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
         title_size = title_size ?? 0.075;
         title_fill = title_fill ?? 'white';
         title_offset = title_offset ?? 0;
+        title_radius = title_radius ?? 0.05;
+        adjust = adjust ?? true;
+        padding = padding ?? 0;
+        margin = margin ?? 0;
         border = border ?? 1;
 
+        // adjust padding for title
+        if (adjust) {
+            margin = pad_rect(margin);
+            padding = pad_rect(padding);
+            let [pl, pt, pr, pb] = padding;
+            let [ml, mt, mr, mb] = margin;
+            padding = [pl, pt + title_size, pr, pb];
+            margin = [ml, mt + title_size, mr, mb];
+        }
+
         // fill in default attributes
-        let title_attr = {fill: title_fill, ...title_attr0};
-        let frame_attr = {border, ...frame_attr0};
+        let frame_attr = {margin, border, ...frame_attr0};
+        let title_attr = {fill: title_fill, border_radius: title_radius, ...title_attr0};
 
         // place label at top
         let base = title_offset * title_size;
         let title = new Node(text, title_attr);
         let place = new Place(title, {pos: [0.5, base], rad: [null, title_size], expand: true});
-        let frame = new Frame(child, frame_attr);
+        let frame = new Frame(child, {padding});
         let group = new Group([frame, place], {clip: false, aspect: frame.aspect});
 
         // apply margin only frame
-        super(group, {margin});
+        super(group, frame_attr);
     }
 }
 

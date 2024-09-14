@@ -9,7 +9,10 @@ Positional arguments:
 
 Keyword arguments:
 - `title_size` = `0.1` — the size of the title element
-- `title_border_radius` = `0.05` — the border radius of the title element
+- `title_fill` = `'white'` — the fill color of the title element
+- `title_offset` = `0` — the vertical offset of the title element (`0` is centered, `-1` sits on top, `1` hangs below)
+- `title_radius` = `0.05` — the border radius of the title element
+- `adjust` = `true` — whether to adjust the padding and margin to account for the title element
 - `padding` = `0` — the padding to be added (inside border)
 - `margin` = `0` — the margin to be added (outside border)
 - `border` = `0` — the border width to use
