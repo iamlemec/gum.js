@@ -315,6 +315,7 @@ let sign = Math.sign;
 let floor = Math.floor;
 let ceil = Math.ceil;
 let round = Math.round;
+let atan = Math.atan;
 
 // null on empty
 function min(...vals) {
@@ -341,6 +342,20 @@ function rescale(x, lim) {
     return (x-lo)/(hi-lo);
 }
 
+function sigmoid(x) {
+    return 1/(1+exp(-x));
+}
+
+function logit(p) {
+    return log(p/(1-p));
+}
+
+function smoothstep(x, lim) {
+    let [lo, hi] = lim ?? [0, 1];
+    let t = clamp((x-lo)/(hi-lo), [0, 1]);
+    return t*t*(3 - 2*t);
+}
+
 // constants
 let e = new NamedNumber('e', Math.E);
 let pi = new NamedNumber('pi', Math.PI);
@@ -357,12 +372,14 @@ let green = new NamedString('green', '#4caf50');
 
 let random = Math.random;
 
-function random_uniform(lo, hi) {
+function uniform(lo, hi) {
     return lo + (hi-lo)*random();
 }
 
 // Standard Normal variate using Box-Muller transform.
-function random_gaussian(mean, stdv) {
+function normal(mean, stdv) {
+    mean = mean ?? 0;
+    stdv = stdv ?? 1;
     let [u, v] = [1 - random(), random()];
     let [r, t] = [sqrt(-2*log(u)), 2*pi*v];
     let [a, b] = [r*cos(t), r*sin(t)];
@@ -3327,7 +3344,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame,MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, mask, rescale, pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, random_uniform, random_gaussian, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame,MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3466,5 +3483,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, norm, add, mul, clamp, mask, rescale, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, random_uniform, random_gaussian, cumsum, Filter, Effect, DropShadow
+    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow
 };
