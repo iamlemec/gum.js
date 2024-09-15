@@ -34,6 +34,7 @@
     ],
     "display": [
         "Text",
+        "Tex",
         "Note",
         "TitleFrame"
     ],

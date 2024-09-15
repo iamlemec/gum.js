@@ -1,6 +1,7 @@
 import { rollup } from 'rollup'
 import resolve from '@rollup/plugin-node-resolve'
 import gulp from 'gulp'
+import rename from 'gulp-rename'
 import { minify } from 'rollup-plugin-esbuild-minify';
 import { exec } from 'child_process';
 import fs from 'fs';
@@ -58,11 +59,17 @@ gulp.task('minify-codemirror', () => minify_file('js/codemirror.js', 'cm'));
 // minify katex
 gulp.task('minify-katex', () => minify_file('js/katex.js', 'katex'));
 
+// minify mathjax
+gulp.task('minify-mathjax', () => gulp.src(['node_modules/mathjax/es5/tex-svg.js'])
+    .pipe(rename('mathjax.js'))
+    .pipe(gulp.dest('./libs'))
+);
+
 // minify marked
 gulp.task('minify-marked', () => minify_file('js/marked.js', 'marked'));
 
 // minify all
-gulp.task('minify', gulp.parallel('minify-codemirror', 'minify-katex', 'minify-marked'));
+gulp.task('minify', gulp.parallel('minify-codemirror', 'minify-katex', 'minify-mathjax', 'minify-marked'));
 
 /*
  * build

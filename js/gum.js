@@ -17,7 +17,6 @@ let prec_base = 2;
 let font_family_base = 'IBMPlexSans';
 let font_weight_base = 100;
 let font_size_base = 12;
-let font_size_latex = 14;
 
 // plot defaults
 let num_ticks_base = 5;
@@ -1828,7 +1827,7 @@ class Text extends Element {
         calc_size = calc_size ?? size;
 
         // compute text box
-        let fargs = {family: calc_family, weight: calc_weight, calc_size: size, actual};
+        let fargs = {family: calc_family, weight: calc_weight, calc_size: calc_size, actual};
         let [xoff, yoff, width, height] = textSizer(text, fargs);
         [xoff, yoff, size] = [xoff/height, yoff/height, size/height];
         let aspect = width/height;
@@ -1862,61 +1861,64 @@ class Text extends Element {
     }
 }
 
+function get_attributes(elem) {
+    return Object.fromEntries(
+        Array.from(elem.attributes, ({name, value}) => [name, value])
+    )
+}
+
 class Tex extends Element {
     constructor(text, args) {
-        let {size, actual, xover, yover, hshift, vshift, ...attr} = args ?? {};
-        size = size ?? font_size_latex;
-        actual = actual ?? false;
-        yover = yover ?? 1.0;
-        xover = xover ?? 1.0;
-        hshift = hshift ?? 0.0;
-        vshift = vshift ?? -0.05;
+        let {pos, size, ...attr} = args ?? {};
+        pos = pos ?? [0, 0];
+        size = size ?? 1;
 
         // render with katex (or do nothing if katex is not available)
-        let math;
-        if (typeof katex === 'undefined') {
-            math = text;
-        } else {
-            math = katex.renderToString(text);
-        }
+        let svg_attr, math, width, height;
+        if (typeof MathJax !== 'undefined') {
+            // render with mathjax
+            let output = MathJax.tex2svg(text);
+            let svg = output.children[0];
 
-        // compute text box
-        let [xoff, yoff, width, height] = sideRenderTextSizer(math, {size, actual});
-        [xoff, yoff, size] = [xoff/width, yoff/height, size/height];
+            // strip outer size attributes
+            svg.removeAttribute('width');
+            svg.removeAttribute('height');
+
+            // get width and height
+            let viewBox = svg.getAttribute('viewBox');
+            let viewNum = viewBox.split(' ').map(Number);
+            [width, height] = viewNum.slice(2);
+
+            // get tag info and inner svg
+            svg_attr = get_attributes(svg);
+            math = svg.innerHTML;
+
+        } else {
+            math = text;
+        }
 
         // pass to element
         let aspect = width/height;
-        let attr1 = {aspect, ...attr};
-        super('foreignObject', false, attr1);
+        let attr1 = {aspect, ...svg_attr,...attr};
+        super('svg', false, attr1);
 
         // store metrics
-        this.xoff = xoff + hshift;
-        this.yoff = yoff + vshift;
+        self.pos = pos;
         this.size = size;
-        this.xover = xover;
-        this.yover = yover;
         this.math = math;
     }
 
     props(ctx) {
         // get pixel position
-        let [x0, y0] = ctx.coord_to_pixel([this.xoff, this.yoff]);
-        let [w0, h0] = ctx.coord_to_pixel_size([this.size*this.aspect, this.size]);
+        let [x, y] = ctx.coord_to_pixel(self.pos);
+        let [w, h] = ctx.coord_to_pixel_size([this.size, this.size]);
 
-        // get adjusted size
-        let w = (1+this.xover)*w0;
-        let h = (1+this.yover)*h0;
-
-        // get adjusted position
-        let x = x0 + this.xoff*w;
-        let y = y0 + this.yoff*h;
-
-        let base = {x, y, width: w, height: h, font_size: `${h0}px`};
+        let base = {x, y, width: w, height: h, font_size: `${h}px`};
         return {...base, ...this.attr};
     }
 
     inner(ctx) {
-        return this.math;
+        return `\n${this.math}\n`;
     }
 }
 
