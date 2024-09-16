@@ -113,6 +113,12 @@ gulp.task('env-katex-fonts', () => gulp.src(['./node_modules/katex/dist/fonts/*'
     .pipe(gulp.dest('playgen/fonts'))
 );
 
+// copy mathjax js
+gulp.task('env-mathjax-js', () => gulp.src(['./node_modules/mathjax/es5/tex-svg.js'])
+    .pipe(rename('mathjax.js'))
+    .pipe(gulp.dest('playgen'))
+);
+
 // generate system prompt (execute generate.py and pipe to system.md)
 gulp.task('env-system-prompt', cb => {
     exec('python generate.py', (err, stdout, stderr) => {
@@ -128,5 +134,6 @@ gulp.task('playgen', gulp.parallel(
     'env-gum-fonts',
     'env-katex-css',
     'env-katex-fonts',
+    'env-mathjax-js',
     'env-system-prompt',
 ));

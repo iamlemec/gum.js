@@ -27,7 +27,6 @@ let label_size_base = 0.06;
 let label_offset_base = 0.15;
 let title_size_base = 0.1;
 let title_offset_base = 0.1;
-let grid_color_base = '#CCC';
 let limit_base = [0, 1];
 let N_base = 100;
 
@@ -39,13 +38,7 @@ let svg_props_base = {
     font_weight: font_weight_base,
 };
 
-// text sizer
-let textSizer = null;
-function setTextSizer(sizer) {
-    textSizer = sizer;
-}
-
-// use canvas sizer
+// canvas text sizer
 function canvasTextSizer(ctx, text, args) {
     let {family, weight, size, actual} = args ?? {};
     family = family ?? font_family_base;
@@ -72,45 +65,8 @@ function canvasTextSizer(ctx, text, args) {
     return [x, y, w, h];
 }
 
-function sideRenderTextSizer(html, args) {
-    let {family, size, actual} = args ?? {};
-    family = family ?? font_family_base;
-    size = size ?? font_size_base;
-    actual = actual ?? false;
-
-    let textDiv = document.createElement('div');
-    textDiv.id = 'sizer';
-    document.body.append(textDiv);
-
-    textDiv.style.fontSize = `${size}px`;
-    textDiv.style.position = 'absolute';
-    textDiv.style.top = '0';
-    textDiv.style.left = '0';
-    textDiv.style.fontFamily = family;
-    textDiv.style.visibility = 'hidden';
-
-    textDiv.innerHTML = html;
-    let rect = textDiv.getBoundingClientRect();
-
-    let x, y, w, h;
-    if (actual) {
-        x = rect.left;
-        y = rect.top;
-        w = rect.width;
-        h = rect.height;
-    } else {
-        x = 0;
-        y = 0;
-        w = rect.width;
-        h = size;
-    }
-
-    document.body.removeChild(textDiv);
-
-    return [x, y, w, h];
-}
-
 // try for browser environment
+let textSizer = null;
 try {
     let canvas = document.createElement('canvas');
     let ctx = canvas.getContext('2d');
@@ -725,12 +681,12 @@ class Context {
 
         // sort out alignment
         let [halign, valign] = ensure_vector(align, 2);
-        halign = 1 - align_frac(halign);
+        halign = align_frac(halign);
         valign = align_frac(valign);
 
         // sort out pivot point
         let [hpivot, vpivot] = ensure_vector(pivot, 2);
-        hpivot = 1 - align_frac(hpivot);
+        hpivot = align_frac(hpivot);
         vpivot = align_frac(vpivot);
 
         // get true pixel rect
@@ -1209,10 +1165,28 @@ class Anchor extends Container {
             'left': [1, 0, 1, 1], 'right': [0, 0, 0, 1],
             'top': [0, 0, 1, 0], 'bottom': [0, 1, 1, 1]
         };
-        let rect = rmap[align];
 
-        let spec = {rect, expand: true, align};
-        super([[child, spec]], {aspect, ...attr});
+        let falign = 1 - align_frac(align);
+        let spec = {rect: rmap[align], expand: true, align: falign};
+        super([[child, spec]], {aspect, clip: false, ...attr});
+    }
+}
+
+class Attach extends Container {
+    constructor(child, side, args) {
+        let {offset, size, align, ...attr} = args ?? {};
+        offset = offset ?? 0;
+        size = size ?? 1;
+
+        let extent = size + offset;
+        let rmap = {
+            'left': [-extent, 0, -offset, 1], 'right': [1+offset, 0, 1+extent, 1],
+            'top': [0, -extent, 1, -offset], 'bottom': [0, 1+offset, 1, 1+extent]
+        };
+
+        let spec = {rect: rmap[side], align};
+        let attr1 = {clip: false, ...attr};
+        super([[child, spec]], attr1);
     }
 }
 
@@ -2133,13 +2107,8 @@ class Arrowhead extends Container {
         base = base ?? false;
         stroke_width = stroke_width ?? 1;
 
-        // stroke_width translate hack
-        let theta = d2r*direc;
-        let [offx, offy] = [cos(theta)*stroke_width, sin(theta)*stroke_width];
-        let transform = `translate(${-0.5*offx}, ${0.5*offy})`;
-
         // generate arrowhead polygon
-        let pattr = {stroke_width, transform, ...attr};
+        let pattr = {stroke_width, ...attr};
         let points = [[0, 0], [0.5, 0.5], [0, 1]];
         let Maker = base ? Polygon : Polyline;
         let shape = new Maker(points, pattr);
@@ -2678,7 +2647,7 @@ class Axis extends Container {
         let cline = new UnitLine(direc, 0.5, {lim, ...line_attr});
         let scale = new Scale(direc, locs, {lim: tick_lim, ...tick_attr});
         let label = new Labels(direc, ticks, {align: label_pos, ...label_attr});
- 
+
         // position children (main direction has data coordinates)
         let lbox, sbox;
         if (direc == 'v') {
@@ -2718,17 +2687,24 @@ class VAxis extends Axis {
     }
 }
 
-class XLabel extends Frame {
+class XLabel extends Attach {
     constructor(text, attr) {
-        let label = is_element(text) ? text : new Text(text, attr);
-        super(label);
+        let {offset, size, align, ...attr0} = attr ?? {};
+        offset = offset ?? label_offset_base;
+        size = size ?? label_size_base;
+        let label = is_element(text) ? text : new Text(text, attr0);
+        super(label, 'bottom', {offset, size, align});
     }
 }
 
-class YLabel extends Frame {
+class YLabel extends Attach {
     constructor(text, attr) {
-        let label = is_element(text) ? text : new Text(text, attr);
-        super(label, {rotate: -90, invar: false});
+        let {offset, size, align, ...attr0} = attr ?? {};
+        offset = offset ?? label_offset_base;
+        size = size ?? label_size_base;
+        let label = is_element(text) ? text : new Text(text, attr0);
+        let rotate = new Rotate(label, -90, {invar: false});
+        super(rotate, 'left', {offset, size, align});
     }
 }
 
@@ -2867,8 +2843,9 @@ class Plot extends Container {
     constructor(elems, args) {
         let {
             xlim, ylim, xaxis, yaxis, xticks, yticks, grid, xgrid, ygrid, xlabel, ylabel,
-            title, tick_size, label_size, label_offset, title_size, title_offset, xlabel_size,
-            ylabel_size, xlabel_offset, ylabel_offset, padding, prec, aspect, flex, ...attr0
+            title, tick_size, label_size, label_offset, label_align, title_size, title_offset,
+            xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align,
+            padding, prec, aspect, flex, ...attr0
         } = args ?? {};
         xaxis = xaxis ?? true;
         yaxis = yaxis ?? true;
@@ -2956,18 +2933,24 @@ class Plot extends Container {
             let [xlabeloffset, ylabeloffset] = aspect_invariant(label_offset, aspect);
             xlabel_offset = xlabel_offset ?? xlabeloffset;
             ylabel_offset = ylabel_offset ?? ylabeloffset;
+
+            label_align = label_align ?? 'center';
+            xlabel_align = xlabel_align ?? label_align;
+            ylabel_align = ylabel_align ?? label_align;
         }
 
         // optional axis labels
         if (xlabel != null) {
-            xlabel = new XLabel(xlabel, xlabel_attr);
-            let xlabel_rect = [0, 1+xlabel_offset, 1, 1+xlabel_offset+xlabel_size];
-            children.push([xlabel, xlabel_rect]);
+            xlabel = new XLabel(xlabel, {
+                size: xlabel_size, offset: xlabel_offset, align: xlabel_align, ...xlabel_attr
+            });
+            children.push(xlabel);
         }
         if (ylabel != null) {
-            ylabel = new YLabel(ylabel, ylabel_attr);
-            let ylabel_rect = [-ylabel_offset-ylabel_size, 0, -ylabel_offset, 1];
-            children.push([ylabel, ylabel_rect]);
+            ylabel = new YLabel(ylabel, {
+                size: ylabel_size, offset: ylabel_offset, align: ylabel_align, ...ylabel_attr
+            });
+            children.push(ylabel);
         }
 
         // optional plot title
@@ -3354,11 +3337,11 @@ class Animation {
 }
 
 /**
- ** expose
+ ** scripting
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame,MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame,MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3371,26 +3354,30 @@ function detect(g) {
     }
 }
 
-// interface mapper
-let gums = Gum.map(g => g.name);
-let mako = Gum.map(g => {
-    let t = detect(g);
-    if (t == 'class') {
-        let func = function(...args) {
-            return new g(...args);
-        };
-        func.class = g;
-        return func;
-    } else if (t == 'function') {
-        return function(...args) {
-            return g(...args);
+// make functional interface
+function mapper(objs) {
+    let nams = objs.map(g => g.name);
+    let mako = objs.map(g => {
+        let t = detect(g);
+        if (t == 'class') {
+            let func = function(...args) {
+                return new g(...args);
+            };
+            func.class = g;
+            return func;
+        } else if (t == 'function') {
+            return function(...args) {
+                return g(...args);
+            }
+        } else {
+            return g;
         }
-    } else {
-        return g;
-    }
-});
+    });
+    return [nams, mako];
+}
 
 // main parser entry
+let [gums, mako] = mapper(Gum);
 function parseGum(src) {
     let expr = new Function(gums, src);
     return expr(...mako);
@@ -3497,5 +3484,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, rounder, make_ticklabel, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow
+    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Scatter, Spacer, Ray, Line, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Tex, Node, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, sum, normalize, is_string, is_array, is_element
 };
