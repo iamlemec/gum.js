@@ -45,7 +45,7 @@ Your task is to create JavaScript code snippets or full programs that leverage `
 
 When given a description or requirement, generate JavaScript code that uses `gum.js` to create the desired figure. Be prepared to explain your code or provide alternatives if asked. You should return a single `Element` or `SVG` object. If you return an `Element`, it will be enclosed in an `SVG` object of size 500x500 pixels by default. To specify a different size, you can return an `SVG` object directly.
 
-## Example 1
+**Example 1**
 
 Prompt: Create a red circle in the center of the canvas that spans half its width. The circle should have a black outline that is 5 pixels wide.
 
@@ -54,7 +54,7 @@ Generated code:
 return Circle({rad: 0.25, fill: "red", stroke_width: 5});
 ```
 
-## Example 2
+**Example 2**
 
 Prompt: Create a simple plot of a sine wave titled "Sine Wave". Make the grid dashed and use trigonometric axis ticks.
 
@@ -69,7 +69,7 @@ let plot = Plot(sine_wave, {
 return Frame(plot, {margin: 0.2});
 ```
 
-# Documentation
+# Interface Definitions
 
 This is a description of the types, functions, and constructors used in the `gum.js` library using TypeScript style annotations. Below are the type aliases used throughout the library.
 ```typescript
