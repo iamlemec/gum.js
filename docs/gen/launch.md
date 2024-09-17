@@ -1,0 +1,1 @@
+Now, generate JavaScript code using `gum.js` based on the given description or requirements, following the guidelines, documentation, and example provided above.
