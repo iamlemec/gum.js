@@ -1,6 +1,6 @@
 {
   "name": "gum.js",
-  "version": "0.5",
+  "version": "0.5.0",
   "description": "Grammar for SVG creation.",
   "type": "module",
   "author": "Doug Hanley and Evan Piermont",
