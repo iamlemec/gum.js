@@ -232,3 +232,35 @@ let tex = Tex('f(x) = \\exp(-x^2)');
 let frame = TitleFrame(plot, tex, {margin: 0.15, title_size: 0.08, adjust: false});
 return frame;
 ```
+
+## Sine Wave with Cosine Epicycle
+
+Prompt: Create a plot of a sine wave with a little cosine epicycle. Make the line black and the markers blue.
+
+```javascript
+// Define the function for our wave
+let xlim = [0, 2*pi]; let ylim = [-1.5, 1.5];
+let wave = x => sin(x) + 0.2 * cos(5*x);
+
+// Create the main path
+let path = SymPath({
+  fy: wave, xlim, N: 200, stroke: 'black', stroke_width: 2
+});
+
+// Create markers
+let markers = SymPoints({
+  fy: wave, xlim, N: 20, size: 0.05, shape: Circle({fill: blue})
+});
+
+// Create the plot
+let xticks = [[0, '0'], [pi/2, 'π/2'], [pi, 'π'], [3*pi/2, '3π/2'], [2*pi, '2π']];
+let plot = Plot([path, markers], {
+  aspect: phi, xlim, ylim, xticks: xticks, yticks: 5,
+  grid: true, grid_stroke_dasharray: 4, grid_opacity: 0.4
+});
+
+// Create the final figure with a title
+return TitleFrame(plot, 'Sine Wave with Cosine Epicycle', {
+  margin: 0.2, adjust: false, title_size: 0.07
+});
+```

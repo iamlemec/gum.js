@@ -937,7 +937,7 @@ class Frame extends Container {
         margin = margin ?? 0;
         adjust = adjust ?? true;
         flex = flex ?? false;
-        shape = shape ?? Rect;
+        shape = shape ?? (sargs => new Rect(sargs));
 
         // convenience boxing
         padding = pad_rect(padding);
@@ -957,7 +957,7 @@ class Frame extends Container {
 
         // make border box
         let rargs = {stroke_width: border, ...border_attr};
-        let rect = new shape(rargs);
+        let rect = shape(rargs);
 
         // gather children
         let children = [[child, {rect: crect, rotate, invar, align, shrink}]];

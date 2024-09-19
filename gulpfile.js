@@ -82,12 +82,6 @@ gulp.task('build', gulp.parallel('minify', 'style'));
  * playgen env
  */
 
-// bundle gum
-gulp.task('env-gum-js', () => minify_file('js/gum.js', 'gum', {
-    do_minify: false,
-    output_dir: 'playgen',
-}));
-
 // minify katex
 gulp.task('env-katex-js', () => minify_file('js/katex.js', 'katex', {
     output_dir: 'playgen',
