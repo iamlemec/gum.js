@@ -721,7 +721,7 @@ class Context {
         let vx = (1-hpivot)*px1 + hpivot*px2;
         let vy = (1-vpivot)*py1 + vpivot*py2;
         let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
-        let trans = (rotate != 0) ? `rotate(${rotate} ${sx} ${sy})` : null;
+        let trans = (rotate != 0) ? `rotate(${rotate} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
 
         return new Context(prect, {
             coord, rrect, trans, aspec, prec: this.prec, debug: this.debug
@@ -1960,7 +1960,7 @@ class TitleFrame extends Frame {
         title_fill = title_fill ?? 'white';
         title_offset = title_offset ?? 0;
         title_radius = title_radius ?? 0.05;
-        adjust = adjust ?? true;
+        adjust = adjust ?? false;
         padding = padding ?? 0;
         margin = margin ?? 0;
         border = border ?? 1;

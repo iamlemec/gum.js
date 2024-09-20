@@ -264,3 +264,33 @@ return TitleFrame(plot, 'Sine Wave with Cosine Epicycle', {
   margin: 0.2, adjust: false, title_size: 0.07
 });
 ```
+
+## Spirograph!!
+
+Prompt: Create a spirograph plot with oscillating color markers.
+
+```javascript
+// Spirograph parameters
+let R = 0.8;  // Fixed circle radius
+let r = 0.3;  // Moving circle radius
+let a = 0.7;  // Distance from center of moving circle
+let numRotations = 80;  // Number of rotations to make
+
+// Parametric equations for spirograph
+let x = t => (R - r) * cos(t) + a * cos((R - r) * t / r);
+let y = t => (R - r) * sin(t) - a * sin((R - r) * t / r);
+
+// Color oscillation function
+let color = t => interpolateHex(red, blue, rescale(sin(t/numRotations), [-1, 1]));
+let shape = (x, y, t) => Circle({fill: color(t)});
+
+// Create the spirograph with oscillating color markers
+let spirograph = SymPoints({
+    fx: x, fy: y, tlim: [0, 2 * pi * numRotations],
+    N: 16 * numRotations, size: 0.05, fs: shape
+});
+
+// Create the plot
+let plot = Graph(spirograph, {aspect: 1, xlim: [-1, 1], ylim: [-1, 1]});
+return Frame(plot, {margin: 0.2, border: 1, border_opacity: 0.5});
+```
