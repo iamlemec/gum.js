@@ -2317,7 +2317,7 @@ function func_or_scalar(x) {
 
 // determines actual values given combinations of limits, values, and functions
 function sympath(args) {
-    let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+    let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N} = args ?? {};
     tlim = tlim ?? limit_base;
     fx = func_or_scalar(fx);
     fy = func_or_scalar(fy);
@@ -2338,10 +2338,10 @@ function sympath(args) {
         xvals = tvals.map(fx);
         yvals = tvals.map(fy);
     } else if (fy != null) {
-        xvals = linspace(...xlim, N);
+        xvals = xvals ?? linspace(...xlim, N);
         yvals = xvals.map(fy);
     } else if (fx != null) {
-        yvals = linspace(...ylim, N);
+        yvals = yvals ?? linspace(...ylim, N);
         xvals = yvals.map(fx);
     }
 

@@ -47,16 +47,12 @@ body {
 }
 
 #code {
-    width: 100%;
-}
-
-#code {
     height: 40%;
     width: 100%;
     background-color: white;
 }
 
-#disp-outer {
+#disp {
     display: flex;
     align-items: start;
     justify-content: center;
@@ -68,9 +64,8 @@ body {
     box-sizing: border-box;
 }
 
-#disp {
-    width: 70%;
-    border: 1px solid #CCC;
+#disp svg {
+    max-height: 100%;
 }
 
 #disp.error {

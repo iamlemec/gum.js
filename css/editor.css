@@ -57,10 +57,6 @@
     align-items: center;
 }
 
-#disp svg {
-    background-color: white;
-}
-
 /* status dot */
 
 #stat {

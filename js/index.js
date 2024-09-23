@@ -1,7 +1,10 @@
 import { GumEditor, enableResize } from './editor.js'
 import { renderGumSafe, range, zip, split } from './gum.js'
 
-// global elements
+/*
+ * ui elements
+ */
+
 let left = document.querySelector('#left');
 let right = document.querySelector('#right');
 let mid = document.querySelector('#mid');
@@ -16,6 +19,22 @@ let copy = document.querySelector('#copy');
 let docs = document.querySelector('#docs');
 let spng = document.querySelector('#spng');
 let font = document.querySelector('#font');
+
+/*
+ * file tools
+ */
+
+// download tools
+function downloadFile(name, blob) {
+    let url = URL.createObjectURL(blob);
+    let element = document.createElement('a');
+    element.setAttribute('href', url);
+    element.setAttribute('download', `${name}`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
 
 // wrapper to use async
 function readBlobAsync(blob) {
@@ -54,6 +73,10 @@ async function makeFontFace(family, style, weight, path) {
 let ibmFontFace = await makeFontFace(
     'IBMPlexSans', 'normal', 100, 'css/fonts/IBMPlexSans-Thin.ttf'
 );
+
+/*
+ * svg tools
+ */
 
 // get viewBox size
 function parseViewbox(elem) {
@@ -135,19 +158,10 @@ let drawSvg = (elem, embed) => new Promise((resolve, reject) => {
     }
 });
 
-// download tools
-function downloadFile(name, blob) {
-    let url = URL.createObjectURL(blob);
-    let element = document.createElement('a');
-    element.setAttribute('href', url);
-    element.setAttribute('download', `${name}`);
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-}
+/*
+ * cookie tools
+ */
 
-// cookie tools
 function getCookieLong() {
     let cookies = Object.fromEntries(document.cookie
         .split(';')
@@ -175,7 +189,10 @@ function setCookieLong(src, maxlen=1024) {
     }
 }
 
-// connect handlers
+/*
+ * event handlers
+ */
+
 save.addEventListener('click', evt => {
     let elem0 = disp.querySelector('svg');
     let elem = prepareSvg(elem0, embed_font);
@@ -208,8 +225,9 @@ spng.addEventListener('click', evt => {
     }); 
 });
 
-// resize panels
-enableResize(left, right, mid);
+/*
+ * editor setup
+ */
 
 // example code
 let example0 = `
@@ -236,6 +254,9 @@ let urlParams = new URLSearchParams(window.location.search);
 let source = urlParams.get('source');
 let cook = getCookieLong();
 let example = source ?? cook ?? example0;
+
+// resize panels
+enableResize(left, right, mid);
 
 // make the actual editor
 let gum_editor = new GumEditor(code, conv, disp, renderGumSafe, {stat, store: setCookieLong});

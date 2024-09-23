@@ -142,14 +142,27 @@ class GumEditor {
         this.svgout.setText(text);
     }
 
-    setDisplay(svg, error) {
-        if (error) {
-            this.disp.classList.add('error');
-            this.disp.innerText = svg;
-        } else {
-            this.disp.classList.remove('error');
-            this.disp.innerHTML = svg;
+    setDisplay(svg) {
+        this.disp.classList.remove('error');
+        this.disp.innerHTML = svg;
+        this.addSvgBorder();
+    }
+
+    addSvgBorder() {
+        const svg = this.disp.querySelector('svg');
+        if (svg == null) {
+            return;
         }
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute('x', '1px');
+        rect.setAttribute('y', '1px');
+        rect.setAttribute('width', 'calc(100% - 2px)');
+        rect.setAttribute('height', 'calc(100% - 2px)');
+        rect.setAttribute('fill', 'white');
+        rect.setAttribute('stroke', '#ccc');
+        rect.setAttribute('stroke-width', '1');
+        svg.insertBefore(rect, svg.firstChild);
     }
 
     setState(good) {
