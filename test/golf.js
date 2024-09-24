@@ -29,7 +29,7 @@ return SVG(frame, {size: 25, prec: 2});
 
 // copy icon
 let x = 0.35;
-let s = Scatter(
+let s = Points(
   [[x, x], [1-x, 1-x]],
   {shape: Rect(), size: x}
 );
@@ -39,11 +39,11 @@ return SVG(f, {size: [20, 25]});
 // square arrangement
 let n = 16;
 let r = Rect();
-let p1 = Scatter(
+let p1 = Points(
     linspace(0, 1, n).map(x => [x, x]),
     {shape: r, size: 0.1, stroke: 'red'}
 );
-let p2 = Scatter(
+let p2 = Points(
     linspace(0, 1, n).map(x => [1 - x, x]),
     {shape: r, size: 0.1, stroke: 'blue'}
 );
@@ -125,7 +125,7 @@ let s1 = Line({x1: -2, y1: 2, x2: 2, y2: -2});
 let s2 = SymPath({fy: t => 2*(sqrt(2+t)-1), xlim: [-2, 2], N: 500});
 let s3 = VLine(0, {y1: -2, y2: 0, stroke_dasharray: 3, stroke: 'blue'});
 let s4 = HLine(0, {x1: -2, x2: 0, stroke_dasharray: 3, stroke: 'red'});
-let sc = Scatter([
+let sc = Points([
   [0, 0], [2, 2], [-2, -2], [2, -2], [-2, 2], [0, -2], [-2, 0]
 ]);
 let p = Plot([s1, s2, s3, s4, sc], {
@@ -154,7 +154,7 @@ let s1 = SymPath({fy: t => t, xlim: [-2, 2]});
 let s2 = SymPath({fy: t => -t, xlim: [-2, 2]});
 let s3 = SymPath({fx: t => 0, ylim: [-2, 0], stroke_dasharray: 3, stroke: 'blue'});
 let s4 = SymPath({fy: t => 0, xlim: [-2, 0], stroke_dasharray: 3, stroke: 'red'});
-let sc = Scatter([
+let sc = Points([
   [0, 0], [2, 2], [-2, -2], [2, -2], [-2, 2], [0, -2], [-2, 0]
 ]);
 let p = Plot([s1, s2, s3, s4, sc], {
@@ -168,20 +168,20 @@ return f;
 
 // multi plot
 let s = [0.5, 0.7, 1.0, 1.4].map(a => SymPath({fy: x => sin(a*x), xlim: [-1, 1]}));
-let t = Scatter([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {size: 0.015});
-let r = Scatter([[Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]], {size: 0.1});
+let t = Points([[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {size: 0.015});
+let r = Points([[Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]], {size: 0.1});
 let p = Plot([...s, r, t], {
   xlim: [-1, 1], ylim: [-1, 1], ygrid: true, xgrid: true,
   xlabel: 'time (seconds)', ylabel: 'space (meters)', title: 'Spacetime Vibes'
 });
 return Frame(p, {margin: 0.3});
 
-// complex scatter
+// complex points
 let r0 = Rect({stroke: 'red', opacity: 0.5});
 let ex = Group([Ray(45), Ray(-45)]);
 let hi = Text('hello', {font_family: 'Montserrat', font_weight: 300});
 let exhi = HStack([Frame(ex, {margin: 0.3}), hi]);
-let s0 = Scatter([
+let s0 = Points([
   [-0.3, 0.3], [0.4, 0.6], [-0.5, 0.8]
 ], {
   shape: exhi, size: 0.1
@@ -216,7 +216,7 @@ let vals = range(n).map(x => 50*random(x));
 let bars = VBars(vals, {
   integer: true, bar_fill: c, bar_stroke: c
 });
-let labs = Scatter([0, 25, 50, 75].map(
+let labs = Points([0, 25, 50, 75].map(
   x => [Anchor(Text(x)), [n+3, x+4]]
 ), {size: 1});
 let plot = Plot([bars, labs], {
@@ -326,7 +326,7 @@ let fshape = ([x, y]) => Group([
   Circle({cx: 0.5+x, cy: 0.5-y, r: 0.1, fill: 'black'}),
   Line({x1: 0.5, y1: 0.5, x2: 0.5+x, y2: 0.5-y})
 ]);
-let field = Scatter(
+let field = Points(
   grid.map(p => [fshape(p), p]),
   {size: 0.04}
 );
@@ -384,7 +384,7 @@ let p0 = [0.2, 0.8];
 let p1 = [0.8, 0.2];
 let px = [0.3, 0.3];
 let path = Path([MoveTo(p0), Bezier2(p1, px)]);
-let dots = Scatter([p0, p1, [Circle({fill: 'white'}), px]], {size: 0.01});
+let dots = Points([p0, p1, [Circle({fill: 'white'}), px]], {size: 0.01});
 let line1 = Line({p1: p0, p2: px, stroke_dasharray: [5, 5]});
 let line2 = Line({p1: p1, p2: px, stroke_dasharray: [5, 5]});
 let plot = Plot([path, line1, line2, dots], {
@@ -460,7 +460,7 @@ return cont;
 
 // split axis example
 let locs = range(50).map(i => random_gaussian(0, 1.5));
-let dots = Scatter(locs, {size: 0.1, opacity: 0.25});
+let dots = Points(locs, {size: 0.1, opacity: 0.25});
 let hline = HLine(0, {lim: [-4, 4], stroke_dasharray: 4, opacity: 0.5});
 let vline = VLine(0, {lim: [-4, 4], stroke_dasharray: 4, opacity: 0.5});
 let plot = Plot([hline, vline, dots], {
@@ -512,7 +512,7 @@ return Interactive({
       Line([0.5, 0.5], [0.5+(a*x), 0.5-(b*y)], {stroke_width: 2, stroke: c, opacity: o})
     ]);
   };
-  let field = Scatter(grid.map(p => [fshape(p), p]), {size: 0.04});
+  let field = Points(grid.map(p => [fshape(p), p]), {size: 0.04});
   let p = Plot(field, {
     xlim: [-1.2, 1.2], ylim: [-1.2, 1.2],
     xticks: linspace(-1, 1, 5), yticks: linspace(-1, 1, 5)
@@ -570,7 +570,7 @@ return Animation(
     let p = (t < 2*pi) ? t : 4*pi-t;
     let fy = x => sin(t)*sin(x);
     let path = SymPath({fy, xlim});
-    let scat = Scatter([[p, fy(p)]], {size: 0.1, shape: Dot({fill: red})});
+    let scat = Points([[p, fy(p)]], {size: 0.1, shape: Dot({fill: red})});
     let plot = Graph([path, scat], {xlim, ylim: [-1, 1]});
     return Frame(plot, {margin: 0.15});
   },

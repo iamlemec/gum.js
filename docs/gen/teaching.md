@@ -89,7 +89,7 @@ let [x1, x2] = [-1, 1];
 let [y1, y2] = [f(x1), f(x2)];
 
 // Create markers for extrema
-let markers = Scatter([[x1, y1], [x2, y2]],{
+let markers = Points([[x1, y1], [x2, y2]],{
     shape: Circle({fill: 'white'}), size: 0.05
 });
 

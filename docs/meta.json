@@ -11,7 +11,7 @@
         "Frame",
         "Stack",
         "Place",
-        "Scatter"
+        "Points"
     ],
     "simple": [
         "Rect",

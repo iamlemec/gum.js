@@ -69,11 +69,11 @@ let arms = backs.map(([k0, c0, dir]) =>
 );
 
 // points
-let point = Scatter(
+let point = Points(
   starts.map(([k0, c0, N]) => [k0, c0]),
   {shape: Circle({stroke: 'gray', fill: 'gray'})}
 );
-let state = Scatter([[kss, css]], {radius: 0.05});
+let state = Points([[kss, css]], {size: 0.05});
 
 // lines
 vline = VLine(kss, {
@@ -89,14 +89,14 @@ dc0line = SymPath({fx: y => kss, ylim: [0, cm], stroke: green, stroke_width: 1})
 let texstack = lines => VStack(lines.map(
   s => Tex(s, {opacity: 0.85})
 ));
-let zones = Scatter(
+let zones = Points(
   [
     [texstack(['\\dot{c} > 0', '\\dot{k} < 0']), [2.4, 2.15]],
     [texstack(['\\dot{c} < 0', '\\dot{k} < 0']), [5.5, 2.15]],
     [texstack(['\\dot{c} > 0', '\\dot{k} > 0']), [2.4, 0.35]],
     [texstack(['\\dot{c} < 0', '\\dot{k} > 0']), [5.5, 0.35]],
   ],
-  {radius: 0.45}
+  {size: 0.45}
 );
 
 // plot

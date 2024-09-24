@@ -121,7 +121,7 @@ function Container(children: child[], args?: {tag: string, clip: boolean, coord:
 function Frame(child: Element, args?: {padding: frame, margin: frame, border: number, adjust: boolean, flex: boolean, shape: Element}): Frame;
 function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
 function Place(child: Element, args?: spec): Place;
-function Scatter(children: child[], args?: {size: size, shape: Element}): Scatter;
+function Points(children: child[], args?: {size: size, shape: Element}): Points;
 function Rect(args?: {p0: point, p1: point, radius: number | number[2]}): Rect;
 function Circle(args?: {c: point, r: size}): Circle;
 function Polyline(points: point[]): Polyline;

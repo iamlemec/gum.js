@@ -26,7 +26,7 @@ return SVG(frame, {size: 25, prec: 2});
 A 20 by 25 pixel icon of two rectangles shaped like pieces of paper partially overlaid on one another.
 ```javascript
 let x = 0.35;
-let s = Scatter(
+let s = Points(
   [[x, x], [1-x, 1-x]],
   {shape: Rect(), size: x}
 );
@@ -38,11 +38,11 @@ An array of partially overlapping squares depicting the letter "X". The squares 
 ```javascript
 let n = 16;
 let r = Rect();
-let p1 = Scatter(
+let p1 = Points(
     linspace(0, 1, n).map(x => [x, x]),
     {shape: r, size: 0.1, stroke: 'red'}
 );
-let p2 = Scatter(
+let p2 = Points(
     linspace(0, 1, n).map(x => [1 - x, x]),
     {shape: r, size: 0.1, stroke: 'blue'}
 );
@@ -97,15 +97,15 @@ let p = Plot(s, {xlim: [-1, 1], ylim: [-1, 1]});
 return Frame(p, {margin: 0.1});
 ```
 
-A plot of three different increasing curves of varying steepness and multiple points scattered at regular intervals. The x-axis label is "time (seconds)", the y-axis label is "space (meters)", and the title is "Spacetime Vibes". There are axis ticks in both directions with assiated faint grid lines.
+A plot of three different increasing curves of varying steepness and multiple points spaced at regular intervals. The x-axis label is "time (seconds)", the y-axis label is "space (meters)", and the title is "Spacetime Vibes". There are axis ticks in both directions with assiated faint grid lines.
 ```javascript
 let s = [0.5, 0.7, 1.0, 1.4].map(a =>
   SymPath({fy: x => sin(a*x), xlim: [-1, 1]})
 );
-let t = Scatter(
+let t = Points(
   [[0, 0.5], [0.5, 0], [-0.5, 0], [0, -0.5]], {radius: 0.015}
 );
-let r = Scatter(
+let r = Points(
   [[Rect(), [0.5, 0.5]], [Circle(), [-0.5, -0.5]]], {radius: 0.1}
 );
 let p = Plot([...s, r, t], {
@@ -115,13 +115,13 @@ let p = Plot([...s, r, t], {
 return Frame(p, {margin: 0.3});
 ```
 
-Scatter plot showing three points, each one marked with an "x" and the label "hello". The x-axis ranges from -1 to 1, while the y-axis ranges from 0 to 1.
+Plot showing three points, each one marked with an "x" and the label "hello". The x-axis ranges from -1 to 1, while the y-axis ranges from 0 to 1.
 ```javascript
 let r0 = Rect({stroke: 'red', opacity: 0.5});
 let ex = Frame(Group([Ray(45), Ray(-45)]), {margin: 0.3});
 let hi = Text('hello');
 let exhi = HStack([ex, hi], {spacing: 0.05});
-let s0 = Scatter(
+let s0 = Points(
   [[-0.3, 0.3], [0.4, 0.6], [-0.5, 0.8]], {shape: exhi, size: 0.1}
 );
 let p = Plot(s0, {xlim: [-1, 1], ylim: [0, 1]});
@@ -162,7 +162,7 @@ A bar plot in the style of the Economist magazine. There are roughly 40 densely 
 let n = 41; let ymax = 70; let yticks = linspace(0, 100, 5);
 let vals = range(n).map(x => ymax*random(x));
 let bars = VBars(vals, {integer: true, bar_fill: '#1e5c99', bar_stroke: 'none'});
-let labs = Scatter(
+let labs = Points(
   yticks.map(x => [Anchor(Text(x)), [n+3, x+4]]), {size: 1}
 );
 let plot = Plot([bars, labs], {
@@ -217,7 +217,7 @@ let net = Network([
 ], {
   aspect: 8, directed: true, node_border_radius: 0.05, arrow_size: [0.04, 0.03]
 });
-let notes = Scatter([[0.32, 0.4], [0.67, 0.4]], {
+let notes = Points([[0.32, 0.4], [0.67, 0.4]], {
     shape: Text('Layer Norm'), size: 0.08
 });
 return Group([net, notes]);
@@ -249,7 +249,7 @@ let zero1 = HLine(0, {lim: xlim, opacity: 0.2});
 let zero2 = VLine(ybar, {lim: ylim, opacity: 0.2});
 let line1 = HLine(gza, {lim: xlim, stroke_dasharray: 3});
 let line2 = VLine(ystar, {lim: ylim, stroke_dasharray: 3});
-let dot = Scatter([[ystar, gza]], {size: 0.04});
+let dot = Points([[ystar, gza]], {size: 0.04});
 let xticks = [[1, Tex('\\bar{y}')], [ystar, Tex('y^{\\ast}')], [xhi, '']];
 let yticks = [[0, '0'], [gz/alpha, Tex('\\frac{g_z}{\\alpha}')], [nbar, Tex('\\bar{n}')], [yhi, '']];
 let plot = Plot([path, zero1, zero2, line1, line2, dot], {
@@ -407,7 +407,7 @@ Two boxes with text in them that have black borders and gray interiors. The box 
 ```javascript
 let hello = Node('hello', {fill: '#EEE'});
 let world = Node('world!', {fill: '#EEE'});
-return Scatter([[hello, [0.33, 0.3]], [world, [0.62, 0.7]]], {size: [0.25, 0.1]});
+return Points([[hello, [0.33, 0.3]], [world, [0.62, 0.7]]], {size: [0.25, 0.1]});
 ```
 
 A curved line going from the upper left to the lower right. The left side of the line has a red arrow facing left and the right side has a blue arrow facing right. Both arrows are triangular with black borders.
@@ -476,9 +476,9 @@ let p1 = [0.08, 0.17, b1, 0.52, 0.59];
 let p2 = [0.2, 0.4, b2, 0.95];
 let base = VLine(0);
 let prods = [y1, y2].map(y => HLine(y, {stroke: 'black'}));
-let steps1 = Scatter(p1.map(x => [x, y1]), {shape: Circle({fill: blue}), size});
-let steps1a = Scatter([[0.36, y1]], {shape: Circle({fill: red}), size: 0.02});
-let steps2 = Scatter(p2.map(x => [x, y2]), {shape: Circle({fill: red}), size});
+let steps1 = Points(p1.map(x => [x, y1]), {shape: Circle({fill: blue}), size});
+let steps1a = Points([[0.36, y1]], {shape: Circle({fill: red}), size: 0.02});
+let steps2 = Points(p2.map(x => [x, y2]), {shape: Circle({fill: red}), size});
 let cross = Group([Circle({fill: blue}), Ray(45), Ray(-45)], {aspect: 1, opacity: 0.6})
 let fail = Place(cross, {pos: [0.72, y2], rad: size});
 let pat1 = Rect({rect: [b1, y1-bsize, b1+B1, y1+bsize], fill: '#DDD', opacity: 0.75});
@@ -577,7 +577,7 @@ let line_pmb = SymPath({fy: pmb, xlim: [0, 1], N});
 let note_mc = Note('SMC=PMC*', {pos: [0.758, 4.23], rad: 0.07});
 let note_smb = Note('SMB', {pos: [1.055, 2.02], rad: 0.03});
 let note_pmb = Note('PMB*', {pos: [1.06, 0.68], rad: 0.035});
-let dots = Scatter([[rstar, 1.34], [rhat, 2]], {size: 0.008});
+let dots = Points([[rstar, 1.34], [rhat, 2]], {size: 0.008});
 let label_smb = Tex('\\frac{\\eta}{\\alpha\\rho}');
 let xticks = [[0, '0'], [rstar, 'Equil'], [rhat, 'Efficient'], [1, '1']];
 let yticks = [[0, '0'], [1, '1'], [smb0, label_smb], [4, '']];

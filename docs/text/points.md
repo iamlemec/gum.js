@@ -1,4 +1,4 @@
-# Scatter
+# Points
 
 <span class="inherit">[Container](#Container) > [Element](#Element)</span>
 
