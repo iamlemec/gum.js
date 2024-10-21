@@ -122,7 +122,7 @@ function Frame(child: Element, args?: {padding: frame, margin: frame, border: nu
 function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
 function Place(child: Element, args?: spec): Place;
 function Points(children: child[], args?: {size: size, shape: Element}): Points;
-function Rect(args?: {p0: point, p1: point, radius: number | number[2]}): Rect;
+function Rect(args?: {rect: rect, radius: number | number[2]}): Rect;
 function Circle(args?: {c: point, r: size}): Circle;
 function Polyline(points: point[]): Polyline;
 function Path(commands: Command[]): Path;
