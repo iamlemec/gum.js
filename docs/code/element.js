@@ -1,4 +1,4 @@
-// Element extension example (note the ".class"!)
+// create a custom triangle element called `Tri` and use it to create a triangle with a gray fill
 class Tri extends Element.class {
   constructor(p0, p1, p2, attr) {
     super('polygon', true, attr);

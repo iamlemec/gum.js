@@ -1,9 +1,10 @@
 // Four by three grid of boxes, each with a different emoji in it. The emojis are a random selection of fruits and candies.
-let data = [
+let emoji = [
   '🍩🍦🍨🍫🍌',
   '🍕🍉🍒🍇🍐',
   '🥝🍎🍓🍬🍪',
-]
-let rows = data.map(s => [...s].map(c => Node(c, {aspect: 1})));
-let grid = Grid(rows);
+];
+let nodes = emoji.map(row => [...row].map(s => Node(s, {flex: true})));
+let aspect = max(...nodes.map(r => r.length))/nodes.length;
+let grid = Grid(nodes, {aspect});
 return Frame(grid, {margin: 0.1});

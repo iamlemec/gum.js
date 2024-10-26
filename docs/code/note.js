@@ -1,4 +1,4 @@
-// add a note to a paricular place
+// plot the function 1 - x^2 and add a note on the top labeling the function
 let line = SymPath({fy: x => 1-x*x, xlim: [-1, 1]});
 let note = Note('1 - x^2', {pos: [0.025, 1.1], rad: 0.15, latex: true});
 let plot = Plot([line, note], {

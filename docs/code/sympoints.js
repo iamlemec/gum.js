@@ -1,4 +1,4 @@
-// create spiral of squares
+// Various simple shapes spiraling inwards. The shapes have black borders and semi-transparent fills. They are tinted blue at the outside and red towards the inside. They are framed by a circle with a black border and a gray background.
 let freq = 38*pi;
 let shapes = [Circle, Square, Triangle];
 let pal = t => interpolateHex(red, blue, t/freq);

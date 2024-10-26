@@ -1,4 +1,4 @@
-// inward triangular spiral
+// A gray line spiraling clockwise inward in a triangular path. The background is nearly black with rounded corners.
 let spiral = SymPath({
   fx: t => 0.43 + 0.5*exp(-0.05*t)*cos(t),
   fy: t => 0.48 + 0.5*exp(-0.05*t)*sin(t),
