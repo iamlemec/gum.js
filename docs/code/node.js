@@ -1,4 +1,4 @@
-// simple greeting
+// Two boxes with text in them that have black borders and gray interiors. The box in the upper left says "hello" and the box in the lower right says "world!".
 let hello = Node('hello', {fill: '#EEE'});
 let world = Node('world!', {fill: '#EEE'});
 let scat = Points([

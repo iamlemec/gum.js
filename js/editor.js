@@ -16,6 +16,7 @@ function createEditState(text='', update=null) {
         cm.history(),
         cm.drawSelection(),
         cm.lineNumbers(),
+        cm.EditorView.lineWrapping,
         cm.bracketMatching(),
         cm.keymap.of([
             cm.indentWithTab,
