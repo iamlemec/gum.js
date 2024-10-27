@@ -17,9 +17,13 @@
         "Rect",
         "Circle",
         "Polyline",
-        "Path",
+        "Path"
+    ],
+    "symbolic": [
+        "SymPoints",
         "SymPath",
-        "SymPoints"
+        "SymFill",
+        "SymPoly"
     ],
     "plotting": [
         "Axis",

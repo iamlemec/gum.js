@@ -705,7 +705,7 @@ class Context {
         let rasp = aspect ?? asp0; // mimic outer if null
         let asp1 = rotate_aspect_radians(rasp, theta);
 
-        // shink down if aspect mismatch
+        // shrink down if aspect mismatch
         let [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
         let [rw0, rh0] = [pw0/tw, ph0/th];
         let [pw1, ph1] = (expand ^ (asp0 >= asp1)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
@@ -726,7 +726,7 @@ class Context {
         let vx = (1-hpivot)*px1 + hpivot*px2;
         let vy = (1-vpivot)*py1 + vpivot*py2;
         let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
-        let trans = (rotate != 0) ? `rotate(${rotate} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
+        let trans = (rotate != 0) ? `rotate(${rounder(rotate, this.prec)} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
 
         return new Context(prect, {
             coord, rrect, trans, aspec, prec: this.prec, debug: this.debug
@@ -760,8 +760,10 @@ class Element {
 
         // collect all properties
         let pvals = this.props(ctx);
-        let trans = `${pvals.transform ?? ''} ${ctx.trans ?? ''}`.trim();
-        if (trans.length > 0) { pvals.transform = trans; }
+        if (ctx.trans != null) {
+            let trans = `${pvals.transform ?? ''} ${ctx.trans}`.trim();
+            pvals = {...pvals, transform: trans};
+        }
 
         // convert to strings
         let props = props_repr(pvals, ctx.prec);
@@ -2374,11 +2376,15 @@ class SymPath extends Polyline {
 
 class SymFill extends Polygon {
     constructor(args) {
-        let {fx1, fy1, fx2, fy2, xlim, ylim, N, ...attr} = args ?? {};
+        let {fx1, fy1, fx2, fy2, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
 
         // compute point values
-        let [tvals1, xvals1, yvals1] = sympath({fx: fx1, fy: fy1, xlim, ylim, N});
-        let [tvals2, xvals2, yvals2] = sympath({fx: fx2, fy: fy2, xlim, ylim, N});
+        let [tvals1, xvals1, yvals1] = sympath({
+            fx: fx1, fy: fy1, xlim, ylim, tlim, xvals, yvals, tvals, N
+        });
+        let [tvals2, xvals2, yvals2] = sympath({
+            fx: fx2, fy: fy2, xlim, ylim, tlim, xvals, yvals, tvals, N
+        });
         let points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()];
 
         // pass to element
@@ -2388,11 +2394,13 @@ class SymFill extends Polygon {
 
 class SymPoly extends Polygon {
     constructor(args) {
-        let {fx, fy, xlim, ylim, tlim, N, ...attr} = args ?? {};
+        let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
 
         // compute point values
-        let [tvals, xvals, yvals] = sympath({fx, fy, xlim, ylim, tlim, N});
-        let points = zip(xvals, yvals);
+        let [tvals1, xvals1, yvals1] = sympath({
+            fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
+        });
+        let points = zip(xvals1, yvals1);
 
         // pass to element
         super(points, attr);
