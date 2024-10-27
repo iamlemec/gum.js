@@ -34,3 +34,21 @@ let plot = Plot([line1, line2, note1, note2, dot], {
 });
 let frame = Frame(plot, {margin: [0.2, 0.05, 0.1, 0.15]});
 return frame;
+
+// A swirl of 24 shaded in sine waves. Each wave is a different color ranging from red to blue.
+// define parameters
+let xlim = [0, 2*pi]; let ylim = [-1, 1];
+let decay = x => exp(-0.1*x) * sin(x);
+let pal = th => interpolateHex(red, blue, abs(th-180)/180);
+// make individual blades
+let wave = th => SymFill({fy1: decay, fy2: 0, xlim, fill: pal(th), opacity: 0.5});
+let graph = th => Graph(wave(th), {aspect: phi, xlim, ylim});
+// swirl blades around
+let blades = Group(linspace(0, 360, 24).slice(1).map(th =>
+  [graph(th), {pos: [0.75, 0.5], rad: 0.25, rotate: th, pivot: [0, 0.5]}]
+), {clip: false});
+// frame the result
+return Frame(blades, {
+  padding: 0.05, margin: 0.1, border: 1, border_radius: 0.05,
+  border_fill: '#EEE', border_stroke: '#999'
+});
