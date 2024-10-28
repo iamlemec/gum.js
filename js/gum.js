@@ -1796,43 +1796,38 @@ class Merge extends MetaContainer {
 
 class Text extends Element {
     constructor(text, args) {
-        let {
-            font_family, font_weight, size, actual, calc_family, calc_weight, calc_size, hshift, vshift, ...attr
-        } = args ?? {};
-        size = size ?? font_size_base;
-        actual = actual ?? false;
-        hshift = hshift ?? 0.0;
-        vshift = vshift ?? -0.13;
-
-        // select calculated fonts
-        calc_family = calc_family ?? font_family ?? font_family_base;
-        calc_weight = calc_weight ?? font_weight ?? font_weight_base;
-        calc_size = calc_size ?? size;
+        let {font_family, font_weight, offset, scale, ...attr0} = args ?? {};
+        let [calc_args, attr] = prefix_split(['calc'], attr0);
+        offset = offset ?? [0.0, -0.13];
+        scale = scale ?? 1.0;
 
         // compute text box
-        let fargs = {family: calc_family, weight: calc_weight, calc_size: calc_size, actual};
-        let [xoff, yoff, width, height] = textSizer(text, fargs);
-        [xoff, yoff, size] = [xoff/height, yoff/height, size/height];
-        let aspect = width/height;
+        let fargs = {family: font_family, weight: font_weight, ...calc_args};
+        let [xoff0, yoff0, width0, height0] = textSizer(text, fargs);
+
+        // get position and size
+        let offset1 = add([xoff0/height0, yoff0/height0], offset);
+        let size = [width0/height0, 1];
+        let aspect = width0/height0;
 
         // pass to element
         let attr1 = {aspect, font_family, font_weight, fill: 'black', ...attr};
         super('text', false, attr1);
 
         // store metrics
-        this.xoff = xoff + hshift;
-        this.yoff = yoff + vshift;
+        this.offset = offset1;
         this.size = size;
+        this.scale = scale;
         this.text = text;
     }
 
     props(ctx) {
         // get pixel position
-        let [x, y0] = ctx.coord_to_pixel([this.xoff, this.yoff]);
-        let [w0, h0] = ctx.coord_to_pixel_size([0, this.size]);
+        let [x, y0] = ctx.coord_to_pixel(this.offset);
+        let [w0, h0] = ctx.coord_to_pixel_size(this.size);
 
         // get adjusted size
-        let h = this.size*h0;
+        let h = this.scale*h0;
         let y = y0 + h;
 
         let base = {x, y, font_size: `${h}px`};
