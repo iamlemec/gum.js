@@ -13,7 +13,7 @@ Your task is to create JavaScript code snippets or full programs that leverage `
   - Plan how to layout the elements in the figure
 
 2. Assess the visual appeal of the figure
-  - Text should be legible and not overlap. Usually a font size of about `0.05` is good for text.
+  - Text should be legible and not overlap. Usually a text element size of about `0.1` to `0.2` works well.
   - Line markers and other small features should be visible but not overwhelming. Usually a size of about `0.03` is good for small features.
   - The figure should have appropriate outer margins so that extended features like tick labels do not get cut off. Usually a margin of about `0.1` to `0.2` works well. The best way to create outer margins is to wrap the final output in a `Frame` or `TitleFrame` object.
   - When the aspect ratio of the figure is not determined, a good default is to use `phi`, the golden ratio, which is considered aesthetically pleasing. The variable `phi` is defined in the global scope.
@@ -27,7 +27,8 @@ Your task is to create JavaScript code snippets or full programs that leverage `
 4. Implement best practices
   - Use meaningful but short variable names
   - Avoid hardcoding values unless specified in the prompt
-  - Add comments to explain complex logic
+  - Only add comments when clearly needed
+  - When declaring objects, put multiple attributes on each line, and put commas after each attribute including the last one
   - Use functions like `range` and `map` to generate collections of elements
   - Use consise notation for object attributes (for example, use `{xargs}` instead of `{xargs: xargs}`)
 
@@ -132,3 +133,15 @@ function Network(nodes: node[], edges: edge[], args?: {size: size, directed: boo
 ```
 
 You will typically use one of the higher level constructors to create the elements you need, but you can also create your own custom elements by using the `Element` or `Container`constructor. Note that for ease of use, `Group` is an alias for `Container`. Additionally, elements with a direction notion such as `Stack` and `Axis` have specialized versions denoted by the prefixes `V` and `H`, for example `VStack` and `HStack` and `VAxis` and `HAxis`.
+
+There are a number of pre-defined constants that are used throughout the library. You should use these when appropriate, as they are chosen to be mathematically useful and aesthetically pleasing.
+```typescript
+let e = Math.E; // base of the natural logarithm
+let pi = Math.PI; // ratio of circumference to diameter
+let phi = (1+sqrt(5))/2; // golden ratio
+let r2d = 180/Math.PI; // conversion from radians to degrees
+let d2r = Math.PI/180; // conversion from degrees to radians
+let blue = '#1e88e5'; // a nice neon blue color
+let red = '#ff0d57'; // a nice neon red color
+let green = '#4caf50'; // a nice neon green color
+```

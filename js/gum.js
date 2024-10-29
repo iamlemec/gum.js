@@ -2252,9 +2252,9 @@ class Edge extends Container {
 
 class Network extends Container {
     constructor(nodes, edges, args) {
-        let {size, directed, aspect, debug, arrow_size, ...attr0} = args ?? {};
+        let {node_size, directed, aspect, debug, arrow_size, ...attr0} = args ?? {};
         let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
-        size = size ?? 0.1;
+        node_size = node_size ?? 0.1;
         directed = directed ?? false;
         arrow_size = arrow_size ?? [0.02, 0.015];
 
@@ -2268,7 +2268,7 @@ class Network extends Container {
         let make_node = b => new Node(b, {flex: true, ...node_attr});
         let bmap = Object.fromEntries(nodes.map(([s, b, p, r]) => {
             b = is_element(b) ? b : make_node(b);
-            return [s, new Place(b, {pos: p, rad: r ?? size})];
+            return [s, new Place(b, {pos: p, rad: r ?? node_size})];
         }));
 
         // collect edge paths

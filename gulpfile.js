@@ -113,21 +113,12 @@ gulp.task('env-mathjax-js', () => gulp.src(['./node_modules/mathjax/es5/tex-svg.
     .pipe(gulp.dest('playgen'))
 );
 
-// generate system prompt (execute generate.py and pipe to system.md)
-gulp.task('env-system-prompt', cb => {
-    exec('python generate.py', (err, stdout, stderr) => {
-        fs.writeFile('system.md', stdout, cb);
-    });
-});
-
 // make playgen env
 gulp.task('playgen', gulp.parallel(
-    'env-gum-js',
     'env-katex-js',
     'env-gum-css',
     'env-gum-fonts',
     'env-katex-css',
     'env-katex-fonts',
     'env-mathjax-js',
-    'env-system-prompt',
 ));
