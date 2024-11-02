@@ -4,7 +4,7 @@ let emoji = [
   '🍕🍉🍒🍇🍐',
   '🥝🍎🍓🍬🍪',
 ];
-let nodes = emoji.map(row => [...row].map(s => Node(s, {flex: true})));
+let nodes = emoji.map(row => [...row].map(s => TextFrame(s, {flex: true})));
 let aspect = max(...nodes.map(r => r.length))/nodes.length;
 let grid = Grid(nodes, {aspect});
 return Frame(grid, {margin: 0.1});

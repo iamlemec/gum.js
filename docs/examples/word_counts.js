@@ -9,8 +9,8 @@ let data = [
 
 // make stacked cell array
 let cells = data.map(([w, c]) => VStack([
-  Node(w, {aspect: 1, border: 0, padding: [0, 0.8]}),
-  Node(c, {padding: 0.4, aspect: 1})
+  TextFrame(w, {aspect: 1, border: 0, padding: [0, 0.8]}),
+  TextFrame(c, {padding: 0.4, aspect: 1})
 ]));
 
 // splice in ellipsis

@@ -146,6 +146,10 @@ function add(arr1, arr2) {
     return zip(arr1, arr2).map(([a, b]) => a + b);
 }
 
+function sub(arr1, arr2) {
+    return zip(arr1, arr2).map(([a, b]) => a - b);
+}
+
 function mul(arr1, arr2) {
     return zip(arr1, arr2).map(([a, b]) => a * b);
 }
@@ -2370,9 +2374,10 @@ function vector_angle(vector) {
     return r2d*Math.atan2(vector[1], vector[0]);
 }
 
+// make direc_beg and direc_end optional, using straight line if not specified
 class Arrowpath extends Container {
-    constructor(pos_beg, pos_end, direc_beg, direc_end, args) {
-        let {arrow, arrow_beg, arrow_end, arrow_size, ...attr0} = args ?? {};
+    constructor(pos_beg, pos_end, args) {
+        let {direc_beg, direc_end, arrow, arrow_beg, arrow_end, arrow_size, ...attr0} = args ?? {};
         let [path_attr, arrow_beg_attr, arrow_end_attr, arrow_attr, attr] = prefix_split(
             ['path', 'arrow_beg', 'arrow_end', 'arrow'], attr0
         );
@@ -2383,6 +2388,11 @@ class Arrowpath extends Container {
         // accumulate arguments
         arrow_beg_attr = {...arrow_attr, ...arrow_beg_attr};
         arrow_end_attr = {...arrow_attr, ...arrow_end_attr};
+
+        // set default directions (gets normalized later)
+        let direc = sub(pos_end, pos_beg);
+        direc_beg = direc_beg ?? direc;
+        direc_end = direc_end ?? direc;
 
         // get unit vectors
         let [vector_beg, vector_end] = [direc_beg, direc_end].map(unit_direc);
@@ -2472,7 +2482,8 @@ class Edge extends Arrowpath {
         let grad2 = multiply(vec_direction(direc2), -1);
 
         // pass to arrowpath
-        super(anchor1, anchor2, grad1, grad2, attr);
+        let attr1 = {direc_beg: grad1, direc_end: grad2, ...attr};
+        super(anchor1, anchor2, attr1);
     }
 }
 
