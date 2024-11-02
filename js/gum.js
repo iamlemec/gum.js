@@ -150,6 +150,10 @@ function mul(arr1, arr2) {
     return zip(arr1, arr2).map(([a, b]) => a * b);
 }
 
+function multiply(arr, scalar) {
+    return arr.map(x => x*scalar);
+}
+
 function cumsum(arr, first) {
     let sum = 0;
     let ret = arr.map(x => sum += x);
@@ -424,11 +428,6 @@ function merge_rects(rects) {
 function rect_lims(rect) {
     let [xa, ya, xb, yb] = rect;
     return [[xa, xb], [ya, yb]];
-}
-
-function rect_bounds(rect) {
-    let [xa, ya, xb, yb] = rect;
-    return [min(xa, xb), min(ya, yb), max(xa, xb), max(ya, yb)];
 }
 
 function rect_dims(rect) {
@@ -879,10 +878,11 @@ class Container extends Element {
 
 class SVG extends Container {
     constructor(children, args) {
-        let {clip, size, prec, filters, ...attr} = args ?? {};
+        let {clip, size, prec, bare, filters, ...attr} = args ?? {};
         clip = clip ?? true;
         size = size ?? size_base;
         prec = prec ?? prec_base;
+        bare = bare ?? false;
         filters = filters ?? null;
 
         if (filters != null) {
@@ -890,7 +890,8 @@ class SVG extends Container {
             children = [defs, ...children];
         }
 
-        let attr1 = {tag: 'svg', clip: clip, ...svg_props_base, ...attr};
+        let svg_props = bare ? {} : svg_props_base;
+        let attr1 = {tag: 'svg', clip: clip, ...svg_props, ...attr};
         super(children, attr1);
 
         if (is_scalar(size)) {
@@ -1839,6 +1840,14 @@ class Text extends Element {
     }
 }
 
+class MultiText extends VStack {
+    constructor(texts, args) {
+        texts = is_array(texts) ? texts : [texts];
+        let children = texts.map(t => new Text(t, args));
+        super(children, args);
+    }
+}
+
 class Emoji extends Text {
     constructor(tag, args) {
         let text = emoji_table[tag];
@@ -1914,7 +1923,7 @@ class Tex extends Element {
     }
 }
 
-class Node extends Frame {
+class TextFrame extends Frame {
     constructor(text, args) {
         let {padding, border, spacing, align, latex, emoji, ...attr0} = args ?? {};
         let [text_attr, attr] = prefix_split(['text'], attr0);
@@ -1942,14 +1951,6 @@ class Node extends Frame {
 
         // pass to container
         let attr1 = {padding, border, align, ...attr};
-        super(child, attr1);
-    }
-}
-
-class FlexNode extends Node {
-    constructor(child, args) {
-        let attr = args ?? {};
-        let attr1 = {flex: true, ...attr};
         super(child, attr1);
     }
 }
@@ -1983,7 +1984,7 @@ class TitleFrame extends Frame {
 
         // place label at top
         let base = title_offset * title_size;
-        let title = new Node(text, title_attr);
+        let title = new TextFrame(text, title_attr);
         let place = new Place(title, {pos: [0.5, base], rad: [null, title_size], expand: true});
         let frame = new Frame(child, {padding});
         let group = new Group([frame, place], {clip: false, aspect: frame.aspect});
@@ -1994,322 +1995,10 @@ class TitleFrame extends Frame {
 }
 
 /**
- ** fields
- **/
-
-class Arrow extends Container {
-    constructor(direc, args) {
-        let {pos, head, tail, shape, graph, ...attr0} = args ?? {};
-        let [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
-        pos = pos ?? [0.5, 0.5];
-        head = head ?? 0.3;
-        tail = tail ?? 2.0;
-        shape = shape ?? 'arrow';
-        graph = graph ?? true;
-
-        // baked in shapes
-        if (shape == 'circle') {
-            shape = (_, a) => new Dot(a);
-        } else if (shape == 'arrow') {
-            shape = (t, a) => new Arrowhead(t, a);
-        } else {
-            throw new Error(`Unrecognized arrow shape: ${shape}`);
-        }
-
-        // ensure vector direction
-        let theta;
-        if (is_scalar(direc)) {
-            theta = direc;
-            let radians = d2r*direc;
-            direc = [cos(radians), sin(radians)];
-        } else {
-            theta = r2d*Math.atan2(direc[1], direc[0]);
-            direc = normalize(direc, 2);
-        }
-
-        // sort out graph direction
-        direc = graph ? mul(direc, [1, -1]) : direc;
-
-        // create head (override with null direction)
-        let head_elem;
-        if (norm(direc, 2) == 0) {
-            head_elem = new Dot({pos, rad: head, ...head_attr});
-        } else {
-            head_elem = shape(theta, {pos, rad: head, ...head_attr});
-        }
-
-        // create tail
-        let tail_direc = direc.map(z => -tail*z);
-        let tail_elem = new Line(pos, add(pos, tail_direc), tail_attr);
-
-        super([head_elem, tail_elem], attr);
-    }
-}
-
-class Field extends Points {
-    constructor(points, direcs, args) {
-        let {marker, ...attr0} = args ?? {};
-        let [marker_attr, attr] = prefix_split(['marker'], attr0);
-        marker = marker ?? ((p, d, attr) => new Arrow(d, attr));
-        let field = zip(points, direcs).map(([p, d]) => [marker(p, d, marker_attr), p]);
-        super(field, attr);
-    }
-}
-
-class SymField extends Field {
-    constructor(func, args) {
-        let {xlim, ylim, N, ...attr} = args ?? {};
-        xlim = xlim ?? limit_base;
-        ylim = ylim ?? limit_base;
-        N = N ?? 10;
-
-        let points = lingrid(xlim, ylim, N);
-        let direcs = points.map(func);
-        super(points, direcs, attr);
-    }
-}
-
-/**
- ** networks
- **/
-
-function get_center(elem) {
-    let [xmin, xmax] = elem.xlim;
-    let [ymin, ymax] = elem.ylim;
-    let [x, y] = [0.5*(xmin+xmax), 0.5*(ymin+ymax)];
-    return [x, y];
-}
-
-function get_direction(p1, p2) {
-    let [x1, y1] = p1;
-    let [x2, y2] = p2;
-
-    let [dx, dy] = [x2 - x1, y2 - y1];
-    let [ax, ay] = [abs(dx), abs(dy)];
-
-    if (dy <= -ax) {
-        return 'north';
-    } else if (dy >= ax) {
-        return 'south';
-    } else if (dx >= ay) {
-        return 'east';
-    } else if (dx <= -ay) {
-        return 'west';
-    }
-}
-
-function get_anchor(elem, pos) {
-    let [xmin, xmax] = elem.xlim;
-    let [ymin, ymax] = elem.ylim;
-
-    let xmid = 0.5*(xmin+xmax);
-    let ymid = 0.5*(ymin+ymax);
-
-    if (pos == 'north' || pos == 'top') {
-        return [xmid, ymin];
-    } else if (pos == 'south' || pos == 'bottom') {
-        return [xmid, ymax];
-    } else if (pos == 'east' || pos == 'right') {
-        return [xmax, ymid];
-    } else if (pos == 'west' || pos == 'left') {
-        return [xmin, ymid];
-    }
-}
-
-function norm_direc(direc) {
-    if (direc == 'n' || direc == 'north') {
-        return 'n';
-    } else if (direc == 's' || direc == 'south') {
-        return 's';
-    } else if (direc == 'e' || direc == 'east') {
-        return 'e';
-    } else if (direc == 'w' || direc == 'west') {
-        return 'w';
-    } else {
-        throw new Error(`Unrecognized direction specification: ${direc}`);
-    }
-}
-
-class Arrowhead extends Container {
-    constructor(direc, args) {
-        let {pos, rad, base, stroke_width, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
-        base = base ?? false;
-        stroke_width = stroke_width ?? 1;
-
-        // generate arrowhead polygon
-        let pattr = {stroke_width, ...attr};
-        let points = [[0, 0], [0.5, 0.5], [0, 1]];
-        let Maker = base ? Polygon : Polyline;
-        let shape = new Maker(points, pattr);
-
-        // calculate size
-        let rad2 = ensure_vector(rad, 2);
-        let rect = rad_rect(pos, rad2);
-
-        // pass to group for rotate
-        let child = [shape, {rect, rotate: -direc}];
-        super([child]);
-    }
-}
-
-class Edge extends Container {
-    constructor(beg, end, args) {
-        let {curve, arrow, arrow_beg, arrow_end, arrow_size, debug, ...attr0} = args ?? {};
-        let [arrow_beg_attr, arrow_end_attr, arrow_attr, line_attr, attr] = prefix_split(
-            ['arrow_beg', 'arrow_end', 'arrow', 'line'], attr0
-        );
-        curve = curve ?? 0.3;
-        arrow_size = arrow_size ?? 0.02;
-        debug = debug ?? false;
-
-        // accumulate arguments
-        arrow_beg_attr = {rad: arrow_size, ...arrow_attr, ...arrow_beg_attr};
-        arrow_end_attr = {rad: arrow_size, ...arrow_attr, ...arrow_end_attr};
-
-        // final arrowheads
-        arrow = arrow ?? false;
-        arrow_end = arrow || (arrow_end ?? false);
-
-        // determine directions
-        let [[p1, d1], [p2, d2]] = [beg, end].map(pd => is_array(pd[0]) ? pd : [pd, null]);
-        [d1, d2] = [d1 ?? get_direction(p1, p2), d2 ?? get_direction(p2, p1)];
-
-        // unpack positions
-        let [[x1, y1], [x2, y2]] = [p1, p2];
-        let [dx, dy] = [x2 - x1, y2 - y1];
-
-        // sort out directions
-        [d1, d2] = [norm_direc(d1), norm_direc(d2)];
-        let vert1 = d1 == 'n' || d1 == 's';
-        let vert2 = d2 == 'n' || d2 == 's';
-        let wide = abs(dx) > abs(dy);
-
-        // optional arrowheads
-        let arrow_dir = {'n': -90, 's': 90, 'e': 180, 'w': 0};
-        let [rot1, rot2] = [arrow_dir[d1], arrow_dir[d2]];
-        let ahead_beg = arrow_beg ? new Arrowhead(rot1, {pos: p1, ...arrow_beg_attr}) : null;
-        let ahead_end = arrow_end ? new Arrowhead(rot2, {pos: p2, ...arrow_end_attr}) : null;
-
-        // reorient so that when non-aliged:
-        // (1) when wide, we go vertical first
-        // (2) when tall, we go horizontal first
-        if (vert1 != vert2) {
-            if (vert1 != wide) {
-                [p1, p2] = [p2, p1];
-                [[x1, y1], [x2, y2]] = [[x2, y2], [x1, y1]];
-                [dx, dy] = [-dx, -dy];
-                [vert1, vert2] = [vert2, vert1];
-            }
-        }
-
-        // curve levels by direction
-        let curve1, curve2;
-        if (vert1 == vert2) {
-            [curve1, curve2] = [curve, curve];
-        } else {
-            [curve1, curve2] = [1.0, curve];
-        }
-
-        // anchor point 1
-        let px1;
-        if (vert1) {
-            px1 = [x1, y1 + curve1*dy];
-        } else {
-            px1 = [x1 + curve1*dx, y1];
-        }
-
-        // anchor point 2
-        let px2;
-        if (vert2) {
-            px2 = [x2, y2 - curve2*dy];
-        } else {
-            px2 = [x2 - curve2*dx, y2];
-        }
-
-        // center point
-        let pc;
-        if (vert1 == vert2) {
-            pc = [0.5*(x1+x2), 0.5*(y1+y2)];
-        } else {
-            if (wide) {
-                pc = [0.5*(x1+x2), y2];
-            } else {
-                pc = [x2, 0.5*(y1+y2)];
-            }
-        }
-
-        // create bezier curves
-        let BezClass = debug ? Bezier2PathDebug : Bezier2Path;
-        let line = new BezClass(p1, [[pc, px1], [p2, px2]], line_attr);
-
-        // pass to container
-        let children = [line, ahead_beg, ahead_end].filter(x => x != null);
-        super(children, attr);
-    }
-}
-
-class Network extends Container {
-    constructor(nodes, edges, args) {
-        let {node_size, directed, aspect, debug, arrow_size, ...attr0} = args ?? {};
-        let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
-        node_size = node_size ?? 0.1;
-        directed = directed ?? false;
-        arrow_size = arrow_size ?? [0.02, 0.015];
-
-        // sort out final edge attributes
-        arrow_size = aspect_invariant(arrow_size, 1/(aspect ?? 1));
-        edge_attr = {
-            arrow_end: directed, arrow_size, debug, ...edge_attr, ...prefix_add('arrow', arrow_attr)
-        };
-
-        // collect node boxes
-        let make_node = b => new Node(b, {flex: true, ...node_attr});
-        let bmap = Object.fromEntries(nodes.map(([s, b, p, r]) => {
-            b = is_element(b) ? b : make_node(b);
-            return [s, new Place(b, {pos: p, rad: r ?? node_size})];
-        }));
-
-        // collect edge paths
-        let lines = edges.map(([na1, na2, eattr]) => {
-            eattr = eattr ?? {};
-
-            let [n1, d1] = is_array(na1) ? na1 : [na1, null];
-            let [n2, d2] = is_array(na2) ? na2 : [na2, null];
-            let [b1, b2] = [bmap[n1], bmap[n2]];
-
-            let [p1, p2] = [get_center(b1), get_center(b2)];
-            [d1, d2] = [d1 ?? get_direction(p1, p2), d2 ?? get_direction(p2, p1)];
-            let [a1, a2] = [get_anchor(b1, d1), get_anchor(b2, d2)];
-
-            return new Edge([a1, d1], [a2, d2], {...edge_attr, ...eattr});
-        });
-
-        // find total limits
-        let boxes = Object.values(bmap);
-        let [xmins, xmaxs] = zip(...boxes.map(b => b.xlim));
-        let [ymins, ymaxs] = zip(...boxes.map(b => b.ylim));
-
-        // combine into container
-        let attr1 = {aspect, ...attr};
-        super([...boxes, ...lines], attr1);
-        this.xlim = [min(...xmins), max(...xmaxs)];
-        this.ylim = [min(...ymins), max(...ymaxs)];
-        this.bmap = bmap;
-    }
-
-    get_anchor(tag, pos) {
-        let box = this.bmap[tag];
-        return get_anchor(box, pos);
-    }
-}
-
-/**
  ** parametric paths
  **/
 
-function func_or_scalar(x) {
+ function func_or_scalar(x) {
     if (is_scalar(x)) {
         return () => x;
     } else {
@@ -2470,6 +2159,379 @@ class PointFill extends Polygon {
 }
 
 /**
+ ** fields
+ **/
+
+class Arrow extends Container {
+    constructor(direc, args) {
+        let {pos, head, tail, shape, graph, ...attr0} = args ?? {};
+        let [head_attr, tail_attr, attr] = prefix_split(['head', 'tail'], attr0);
+        pos = pos ?? [0.5, 0.5];
+        head = head ?? 0.3;
+        tail = tail ?? 2.0;
+        shape = shape ?? 'arrow';
+        graph = graph ?? true;
+
+        // baked in shapes
+        if (shape == 'circle') {
+            shape = (_, a) => new Dot(a);
+        } else if (shape == 'arrow') {
+            shape = (t, a) => new Arrowhead(t, a);
+        } else {
+            throw new Error(`Unrecognized arrow shape: ${shape}`);
+        }
+
+        // ensure vector direction
+        let theta;
+        if (is_scalar(direc)) {
+            theta = direc;
+            let radians = d2r*direc;
+            direc = [cos(radians), sin(radians)];
+        } else {
+            theta = r2d*Math.atan2(direc[1], direc[0]);
+            direc = normalize(direc, 2);
+        }
+
+        // sort out graph direction
+        direc = graph ? mul(direc, [1, -1]) : direc;
+
+        // create head (override with null direction)
+        let head_elem;
+        if (norm(direc, 2) == 0) {
+            head_elem = new Dot({pos, rad: head, ...head_attr});
+        } else {
+            head_elem = shape(theta, {pos, rad: head, ...head_attr});
+        }
+
+        // create tail
+        let tail_direc = direc.map(z => -tail*z);
+        let tail_elem = new Line(pos, add(pos, tail_direc), tail_attr);
+
+        super([head_elem, tail_elem], attr);
+    }
+}
+
+class Field extends Points {
+    constructor(points, direcs, args) {
+        let {marker, ...attr0} = args ?? {};
+        let [marker_attr, attr] = prefix_split(['marker'], attr0);
+        marker = marker ?? ((p, d, attr) => new Arrow(d, attr));
+        let field = zip(points, direcs).map(([p, d]) => [marker(p, d, marker_attr), p]);
+        super(field, attr);
+    }
+}
+
+class SymField extends Field {
+    constructor(func, args) {
+        let {xlim, ylim, N, ...attr} = args ?? {};
+        xlim = xlim ?? limit_base;
+        ylim = ylim ?? limit_base;
+        N = N ?? 10;
+
+        let points = lingrid(xlim, ylim, N);
+        let direcs = points.map(func);
+        super(points, direcs, attr);
+    }
+}
+
+/**
+ ** networks
+ **/
+
+function get_center(elem) {
+    let [xmin, xmax] = elem.xlim;
+    let [ymin, ymax] = elem.ylim;
+    let [x, y] = [0.5*(xmin+xmax), 0.5*(ymin+ymax)];
+    return [x, y];
+}
+
+function get_direction(p1, p2) {
+    let [x1, y1] = p1;
+    let [x2, y2] = p2;
+
+    let [dx, dy] = [x2 - x1, y2 - y1];
+    let [ax, ay] = [abs(dx), abs(dy)];
+
+    if (dy <= -ax) {
+        return 'n';
+    } else if (dy >= ax) {
+        return 's';
+    } else if (dx >= ay) {
+        return 'e';
+    } else if (dx <= -ay) {
+        return 'w';
+    }
+}
+
+function get_anchor(elem, direc) {
+    let [xmin, xmax] = elem.xlim;
+    let [ymin, ymax] = elem.ylim;
+
+    let xmid = 0.5 * (xmin + xmax);
+    let ymid = 0.5 * (ymin + ymax);
+
+    if (direc == 'n') {
+        return [xmid, ymin];
+    } else if (direc == 's') {
+        return [xmid, ymax];
+    } else if (direc == 'e') {
+        return [xmax, ymid];
+    } else if (direc == 'w') {
+        return [xmin, ymid];
+    } else {
+        throw new Error(`Unrecognized direction specification: ${direc}`);
+    }
+}
+
+function norm_direc(direc) {
+    if (direc == 'n' || direc == 'north') {
+        return 'n';
+    } else if (direc == 's' || direc == 'south') {
+        return 's';
+    } else if (direc == 'e' || direc == 'east') {
+        return 'e';
+    } else if (direc == 'w' || direc == 'west') {
+        return 'w';
+    } else {
+        throw new Error(`Unrecognized direction specification: ${direc}`);
+    }
+}
+
+function vec_direction(direc) {
+    if (direc == 'w') {
+        return [-1, 0];
+    } else if (direc == 'e') {
+        return [1, 0];
+    } else if (direc == 'n') {
+        return [0, -1];
+    } else if (direc == 's') {
+        return [0, 1];
+    } else {
+        throw new Error(`Unrecognized direction specification: ${direc}`);
+    }
+}
+
+class Arrowhead extends Container {
+    constructor(direc, args) {
+        let {pos, rad, base, stroke_width, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? [0.5, 0.5];
+        base = base ?? false;
+        stroke_width = stroke_width ?? 1;
+
+        // generate arrowhead polygon
+        let pattr = {stroke_width, ...attr};
+        let points = [[0, 0], [0.5, 0.5], [0, 1]];
+        let Maker = base ? Polygon : Polyline;
+        let shape = new Maker(points, pattr);
+
+        // calculate size
+        let rad2 = ensure_vector(rad, 2);
+        let rect = rad_rect(pos, rad2);
+
+        // pass to group for rotate
+        let child = [shape, {rect, rotate: -direc}];
+        super([child]);
+    }
+}
+
+function cubic_spline(x0, x1, d0, d1) {
+    let [a, b, c, d] = [
+        x0, d0,
+        3*(x1 - x0) - (2*d0 + d1),
+        -2*(x1 - x0) + (d0 + d1),
+    ];
+    return t => a + b*t + c*t**2 + d*t**3;
+}
+
+class CubicSpline extends SymPath {
+    constructor(pos0, pos1, direc0, direc1, args) {
+        let attr = args ?? {};
+        let [x0, y0] = pos0;
+        let [x1, y1] = pos1;
+        let [dx0, dy0] = direc0;
+        let [dx1, dy1] = direc1;
+        let fx = cubic_spline(x0, x1, dx0, dx1);
+        let fy = cubic_spline(y0, y1, dy0, dy1);
+        super({fx, fy, ...attr});
+    }
+}
+
+function unit_direc(direc) {
+    if (is_scalar(direc)) {
+        let radians = d2r*direc;
+        return [cos(radians), sin(radians)];
+    } else {
+        return normalize(direc, 2);
+    }
+}
+
+function vector_angle(vector) {
+    return r2d*Math.atan2(vector[1], vector[0]);
+}
+
+class Arrowpath extends Container {
+    constructor(pos_beg, pos_end, direc_beg, direc_end, args) {
+        let {arrow, arrow_beg, arrow_end, arrow_size, ...attr0} = args ?? {};
+        let [path_attr, arrow_beg_attr, arrow_end_attr, arrow_attr, attr] = prefix_split(
+            ['path', 'arrow_beg', 'arrow_end', 'arrow'], attr0
+        );
+        arrow_beg = arrow ?? arrow_beg ?? false;
+        arrow_end = arrow ?? arrow_end ?? true;
+        arrow_size = arrow_size ?? 0.02;
+
+        // accumulate arguments
+        arrow_beg_attr = {...arrow_attr, ...arrow_beg_attr};
+        arrow_end_attr = {...arrow_attr, ...arrow_end_attr};
+
+        // get unit vectors
+        let [vector_beg, vector_end] = [direc_beg, direc_end].map(unit_direc);
+        let [angle_beg, angle_end] = [vector_beg, vector_end].map(vector_angle);
+
+        // create cubic spline path
+        let path = new CubicSpline(pos_beg, pos_end, vector_beg, vector_end, path_attr);
+        let children = [path];
+
+        // make arrowheads
+        if (arrow_beg) {
+            const head_beg = new Arrowhead(180-angle_beg, arrow_beg_attr);
+            children.push([head_beg, {pos: pos_beg, rad: arrow_size}]);
+        }
+        if (arrow_end) {
+            const head_end = new Arrowhead(-angle_end, arrow_end_attr);
+            children.push([head_end, {pos: pos_end, rad: arrow_size}]);
+        }
+
+        // get limits
+        let [xvals, yvals] = zip(pos_beg, pos_end);
+        let xlim = [min(...xvals), max(...xvals)];
+        let ylim = [min(...yvals), max(...yvals)];
+
+        // pass to container
+        super(children, attr);
+        this.xlim = xlim;
+        this.ylim = ylim;
+    }
+}
+
+// this should provide a rect for positioning
+class Node extends Place {
+    constructor(text, pos, args) {
+        let {size, ...attr0} = args ?? {};
+        let [text_attr, attr] = prefix_split(['text'], attr0);
+        size = size ?? 0.1;
+
+        // handle text node
+        if (!is_element(text)) {
+            text = new MultiText(text, text_attr);
+        }
+
+        // make frame
+        let attr1 = {flex: true, padding: 0.1, border: 1, ...attr};
+        let frame = new Frame(text, attr1);
+
+        // get realized size
+        if (is_scalar(size) && frame.aspect != null) {
+            size = aspect_invariant(size, frame.aspect);
+        }
+        let rect = rad_rect(pos, size);
+
+        // pass to place
+        super(frame, {rect});
+
+        // store properties
+        [this.xlim, this.ylim] = rect_lims(rect);
+    }
+
+    get_center() {
+        return get_center(this);
+    }
+
+    get_anchor(direc) {
+        return get_anchor(this, direc);
+    }
+}
+
+class Edge extends Arrowpath {
+    constructor(beg, end, args) {
+        let attr = args ?? {};
+
+        // unpack inputs
+        let [node1, direc1] = is_element(beg) ? [beg, null] : beg;
+        let [node2, direc2] = is_element(end) ? [end, null] : end;
+
+        // auto-detect directions
+        let [center1, center2] = [node1.get_center(), node2.get_center()];
+        direc1 = norm_direc(direc1 ?? get_direction(center1, center2));
+        direc2 = norm_direc(direc2 ?? get_direction(center2, center1));
+
+        // get anchors and directions
+        let anchor1 = node1.get_anchor(direc1);
+        let anchor2 = node2.get_anchor(direc2);
+        let grad1 = vec_direction(direc1);
+        let grad2 = multiply(vec_direction(direc2), -1);
+
+        // pass to arrowpath
+        super(anchor1, anchor2, grad1, grad2, attr);
+    }
+}
+
+// this is a basically turing into a graph. just make nodes and edges declarative like paths
+class Network extends Container {
+    constructor(nodes, edges, args) {
+        let {directed, aspect, debug, node_size, arrow_size, ...attr0} = args ?? {};
+        let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
+        directed = directed ?? false;
+        node_size = node_size ?? 0.1;
+        arrow_size = arrow_size ?? [0.02, 0.015];
+
+        // sort out final edge attributes
+        arrow_size = aspect_invariant(arrow_size, 1/(aspect ?? 1));
+        edge_attr = {
+            arrow_end: directed, arrow_size, ...edge_attr, ...prefix_add('arrow', arrow_attr)
+        };
+
+        // collect node boxes
+        let bmap = new Map(nodes.map(n => {
+            if (is_element(n)) {
+                return [n, n];
+            } else {
+                let [label, text, pos, size] = n;
+                let node = new Node(text, pos, {size: size ?? node_size, ...node_attr});
+                return [label, node];
+            }
+        }));
+
+        // collect edge paths
+        let lines = edges.map(e => {
+            if (is_element(e)) {
+                return e;
+            } else {
+                let [beg, end, eattr] = e;
+                eattr = eattr ?? {};
+                let [nl1, d1] = is_array(beg) ? beg : [beg, null];
+                let [nl2, d2] = is_array(end) ? end : [end, null];
+                let n1 = bmap.get(nl1);
+                let n2 = bmap.get(nl2);
+                return new Edge([n1, d1], [n2, d2], {...edge_attr, ...eattr});
+            }
+        });
+
+        // find total limits
+        let [xmins, xmaxs] = zip(...bmap.values().map(b => b.xlim));
+        let [ymins, ymaxs] = zip(...bmap.values().map(b => b.ylim));
+        let xlim = [min(...xmins), max(...xmaxs)];
+        let ylim = [min(...ymins), max(...ymaxs)];
+
+        // combine into container
+        let attr1 = {aspect, ...attr};
+        super([...bmap.values(), ...lines], attr1);
+        this.xlim = xlim;
+        this.ylim = ylim;
+    }
+}
+
+/**
  ** bar components
  **/
 
@@ -2594,7 +2656,7 @@ class HBars extends Bars {
 function make_ticklabel(s, prec, attr) {
     let attr1 = {border: 0, padding: 0, text_vshift: -0.13, ...attr};
     let text = rounder(s, prec);
-    let node = new Node(text, attr1);
+    let node = new TextFrame(text, attr1);
     return node;
 }
 
@@ -3419,7 +3481,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Emoji, Tex, Node, FlexNode, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Text, MultiText, Emoji, Tex, TextFrame, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Arrowhead, Arrowpath, Node, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3562,5 +3624,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Arrowhead, Text, Emoji, Tex, Node, FlexNode, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Text, MultiText, Emoji, Tex, TextFrame, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Arrowhead, Arrowpath, Node, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, sum, prod, normalize, is_string, is_array, is_element
 };
