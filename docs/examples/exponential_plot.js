@@ -11,8 +11,8 @@ let steady2 = HLine(yss1, {lim: [0, 1], stroke_dasharray: [4, 4]});
 let plot = Plot([path0, path1, start, steady1, steady2], {
     xlim: [0, 1], ylim: [0, ymax], aspect: phi,
     xlabel: 'Time (t)', ylabel: 'Output (y)',
-    xticks: [[t0, Tex('t_0')]], label_offset: 0.1,
-    yticks: [[yss1, Tex('y^{\\ast}_1')], [1, Tex('y^{\\ast}_0')]]
+    xticks: [[t0, Latex('t_0')]], label_offset: 0.1,
+    yticks: [[yss1, Latex('y^{\\ast}_1')], [1, Latex('y^{\\ast}_0')]]
 });
 let frame = Frame(plot, {padding: 0.2});
 return frame;

@@ -5,6 +5,8 @@ There are a number of functions designed to make working with arrays easier. The
 ## Functions
 
 - `zip(...arrs)` — combine arrays `arrs` element-wise
+- `min(...arrs)` — the minimum of arrays `arrs`
+- `max(...arrs)` — the maximum of arrays `arrs`
 - `reshape(arr, shape)` — reshape array `arr` to given dimensions `shape`
 - `split(arr, len)` — split array `arr` into subarrays of length `len`
 - `sum(arr)` — sum the elements of array `arr`

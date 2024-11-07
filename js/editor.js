@@ -147,7 +147,7 @@ class GumEditor {
     setDisplay(svg) {
         this.disp.classList.remove('error');
         this.disp.innerHTML = svg;
-        // this.addSvgBorder();
+        this.addSvgBorder();
     }
 
     addSvgBorder() {

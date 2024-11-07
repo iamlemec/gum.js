@@ -24,7 +24,5 @@ Here we collect a variety of global mathematical functions and constants. You ca
 - `floor(x)` — the floor function
 - `ceil(x)` — the ceiling function
 - `round(x)` — the rounding function
-- `min(...vals)` — the minimum of `vals`
-- `max(...vals)` — the maximum of `vals`
 - `clamp(x, lim)` — clamp `x` to the range `lim`
 - `rescale(x, lim)` — linearly rescale `x` to the range `lim`

@@ -9,4 +9,4 @@ Positional arguments:
 
 Keyword arguments (plus any [Place](#Place) arguments):
 - `pos`/`rad` = `[0.5, 0.5]` — a position and radius specifying rectangle placement
-- `latex` — whether to run through LaTeX renderer
+- `latex` = `false` — whether to interpret the text as LaTeX

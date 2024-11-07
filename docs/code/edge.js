@@ -2,7 +2,7 @@
 let node1 = Node('hello', [0.2, 0.3]);
 let node2 = Node('world', [0.8, 0.7]);
 let edge = Edge(node1, node2, {
-  arrow_beg: true, arrow_end: true, arrow_base: true,
-  arrow_beg_fill: '#ff0d57', arrow_end_fill: '#1e88e5',
+    arrow: true, arrow_base: true,
+    arrow_beg_fill: red, arrow_end_fill: blue,
 });
 return Group([node1, node2, edge]);

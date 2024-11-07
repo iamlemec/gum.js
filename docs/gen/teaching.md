@@ -228,7 +228,7 @@ let xlim = [-3, 3]; let ylim = [0, 1.5];
 let func = x => exp(-x*x);
 let line = SymPath({fy: func, xlim, fill: '#eee'});
 let plot = Plot(line, {aspect: phi, xlim, ylim, yticks: 4, grid: true});
-let tex = Tex('f(x) = \\exp(-x^2)');
+let tex = Latex('f(x) = \\exp(-x^2)');
 let frame = TitleFrame(plot, tex, {margin: 0.15, title_size: 0.08, adjust: false});
 return frame;
 ```

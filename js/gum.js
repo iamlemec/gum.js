@@ -631,12 +631,11 @@ function align_frac(align) {
 
 class Context {
     constructor(prect, args) {
-        let {coord, rrect, trans, aspec, prec, debug} = args ?? {};
+        let {coord, rrect, trans, prec, debug} = args ?? {};
         this.prect = prect;
         this.rrect = rrect;
         this.coord = coord;
         this.trans = trans;
-        this.aspec = aspec;
         this.prec = prec;
         this.debug = debug ?? false;
     }
@@ -717,7 +716,6 @@ class Context {
         // get absolute sizes
         let [apw1, aph1] = [abs(pw1), abs(ph1)];
         let [arw1, arh1] = [abs(rw1), abs(rh1)];
-        let aspec = apw1/aph1;
 
         // get rotated/unrotated pixel rect
         let cx = (1-halign)*px1 + halign*px2 + (0.5-halign)*rw1;
@@ -731,9 +729,7 @@ class Context {
         let [sx, sy] = [vx, vy].map(z => rounder(z, this.prec));
         let trans = (rotate != 0) ? `rotate(${rounder(rotate, this.prec)} ${rounder(sx, this.prec)} ${rounder(sy, this.prec)})` : null;
 
-        return new Context(prect, {
-            coord, rrect, trans, aspec, prec: this.prec, debug: this.debug
-        });
+        return new Context(prect, {coord, rrect, trans, prec: this.prec, debug: this.debug});
     }
 }
 
@@ -804,10 +800,27 @@ function parse_bounds(bnd) {
     }
 }
 
+function match_rect_sign(coord1, coord2) {
+    let [cx1, cy1, cx2, cy2] = coord1;
+    let [px1, py1, px2, py2] = coord2;
+    if (cx2 < cx1 && px2 > px1) {
+        [cx1, cx2] = [cx2, cx1];
+    } else if (cx2 > cx1 && px2 < px1) {
+        [cx1, cx2] = [cx2, cx1];
+    }
+    if (cy2 < cy1 && py2 > py1) {
+        [cy1, cy2] = [cy2, cy1];
+    } else if (cy2 > cy1 && py2 < py1) {
+        [cy1, cy2] = [cy2, cy1];
+    }
+    return [cx1, cy1, cx2, cy2];
+}
+
 class Container extends Element {
     constructor(children, args) {
-        let {tag, aspect, coord, clip, debug, ...attr} = args ?? {};
+        let {tag, aspect, coord, inherit, clip, debug, ...attr} = args ?? {};
         tag = tag ?? 'g';
+        inherit = inherit ?? false;
         clip = clip ?? true;
         debug = debug ?? false;
 
@@ -847,6 +860,7 @@ class Container extends Element {
         super(tag, false, attr1);
         this.children = children;
         this.coord = coord;
+        this.inherit = inherit;
         this.debug = debug;
         this.xlim = xlim;
         this.ylim = ylim;
@@ -858,9 +872,16 @@ class Container extends Element {
             return '\n';
         }
 
+        // inherit coordinate from parent
+        // this is necessary because context mapping nullifies inverted coordinates
+        // and always produces an upright pixel rectangle on output
+        let coord1 = (this.inherit && ctx.coord != null) ?
+            match_rect_sign(this.coord ?? coord_base, ctx.coord ?? coord_base) :
+            this.coord;
+
         // map to new contexts and render
         let inside = this.children.map(([c, a]) => c.svg(
-            ctx.map({aspect: c.aspect, coord: this.coord, ...a})
+            ctx.map({aspect: c.aspect, coord: coord1, ...a})
         )).filter(s => s.length > 0).join('\n');
 
         // debug rects
@@ -1803,8 +1824,8 @@ class Text extends Element {
     constructor(text, args) {
         let {font_family, font_weight, offset, scale, ...attr0} = args ?? {};
         let [calc_args, attr] = prefix_split(['calc'], attr0);
-        offset = offset ?? [0.0, -0.13];
-        scale = scale ?? 1.0;
+        offset = offset ?? [0, -0.13];
+        scale = scale ?? 1;
 
         // compute text box
         let fargs = {family: font_family, weight: font_weight, ...calc_args};
@@ -1872,11 +1893,11 @@ function get_attributes(elem) {
     )
 }
 
-class Tex extends Element {
+class Latex extends Element {
     constructor(text, args) {
-        let {pos, size, ...attr} = args ?? {};
-        pos = pos ?? [0, 0];
-        size = size ?? 1;
+        let {offset, scale, ...attr} = args ?? {};
+        offset = offset ?? [0, 0];
+        scale = scale ?? 1;
 
         // render with katex (or do nothing if katex is not available)
         let svg_attr, math, width, height;
@@ -1897,7 +1918,6 @@ class Tex extends Element {
             // get tag info and inner svg
             svg_attr = get_attributes(svg);
             math = svg.innerHTML;
-
         } else {
             math = text;
         }
@@ -1908,15 +1928,15 @@ class Tex extends Element {
         super('svg', false, attr1);
 
         // store metrics
-        self.pos = pos;
-        this.size = size;
+        this.offset = offset;
+        this.scale = scale;
         this.math = math;
     }
 
     props(ctx) {
         // get pixel position
-        let [x, y] = ctx.coord_to_pixel(self.pos);
-        let [w, h] = ctx.coord_to_pixel_size([this.size, this.size]);
+        let [x, y] = ctx.coord_to_pixel(this.offset);
+        let [w, h] = ctx.coord_to_pixel_size([this.scale, this.scale]);
 
         let base = {x, y, width: w, height: h, font_size: `${h}px`};
         return {...base, ...this.attr};
@@ -1942,9 +1962,9 @@ class TextFrame extends Frame {
             if (emoji) {
                 child = new Emoji(text, text_attr);
             } else if (latex) {
-                child = new Tex(text, text_attr);
+                child = new Latex(text, text_attr);
             } else {
-                child = new Text(text, text_attr);
+                child = new MultiText(text, text_attr);
             }
         } else if (is_array(text)) {
             let lines = text.map(s => is_string(s) ? new Text(s, text_attr) : s);
@@ -2315,27 +2335,32 @@ function vec_direction(direc) {
     }
 }
 
-class Arrowhead extends Container {
+class Arrowhead extends Polyline {
     constructor(direc, args) {
-        let {pos, rad, base, stroke_width, ...attr} = args ?? {};
-        pos = pos ?? [0.5, 0.5];
-        rad = rad ?? [0.5, 0.5];
+        let {size, angle, base, ...attr} = args ?? {};
+        size = size ?? 0.5;
+        angle = angle ?? 90;
         base = base ?? false;
-        stroke_width = stroke_width ?? 1;
+
+        // get size and angle offsets
+        let [sx, sy] = ensure_vector(size, 2);
+        let [dx1, dy1] = [cos(d2r*(-direc-angle/2)), sin(d2r*(-direc-angle/2))];
+        let [dx2, dy2] = [cos(d2r*(-direc+angle/2)), sin(d2r*(-direc+angle/2))];
 
         // generate arrowhead polygon
-        let pattr = {stroke_width, ...attr};
-        let points = [[0, 0], [0.5, 0.5], [0, 1]];
-        let Maker = base ? Polygon : Polyline;
-        let shape = new Maker(points, pattr);
+        let points = [
+            [0.5 - sx * dx1, 0.5 - sy * dy1],
+            [0.5, 0.5],
+            [0.5 - sx * dx2, 0.5 - sy * dy2]
+        ];
 
-        // calculate size
-        let rad2 = ensure_vector(rad, 2);
-        let rect = rad_rect(pos, rad2);
+        // make base if requested
+        if (base) {
+            points.push(points[0]);
+        }
 
         // pass to group for rotate
-        let child = [shape, {rect, rotate: -direc}];
-        super([child]);
+        super(points, attr);
     }
 }
 
@@ -2374,8 +2399,7 @@ function vector_angle(vector) {
     return r2d*Math.atan2(vector[1], vector[0]);
 }
 
-// make direc_beg and direc_end optional, using straight line if not specified
-class Arrowpath extends Container {
+class ArrowPath extends Container {
     constructor(pos_beg, pos_end, args) {
         let {direc_beg, direc_end, arrow, arrow_beg, arrow_end, arrow_size, ...attr0} = args ?? {};
         let [path_attr, arrow_beg_attr, arrow_end_attr, arrow_attr, attr] = prefix_split(
@@ -2383,7 +2407,7 @@ class Arrowpath extends Container {
         );
         arrow_beg = arrow ?? arrow_beg ?? false;
         arrow_end = arrow ?? arrow_end ?? true;
-        arrow_size = arrow_size ?? 0.02;
+        arrow_size = arrow_size ?? 0.03;
 
         // accumulate arguments
         arrow_beg_attr = {...arrow_attr, ...arrow_beg_attr};
@@ -2462,7 +2486,7 @@ class Node extends Place {
     }
 }
 
-class Edge extends Arrowpath {
+class Edge extends ArrowPath {
     constructor(beg, end, args) {
         let attr = args ?? {};
 
@@ -2482,63 +2506,8 @@ class Edge extends Arrowpath {
         let grad2 = multiply(vec_direction(direc2), -1);
 
         // pass to arrowpath
-        let attr1 = {direc_beg: grad1, direc_end: grad2, ...attr};
+        let attr1 = {direc_beg: grad1, direc_end: grad2, inherit: true, ...attr};
         super(anchor1, anchor2, attr1);
-    }
-}
-
-// this is a basically turing into a graph. just make nodes and edges declarative like paths
-class Network extends Container {
-    constructor(nodes, edges, args) {
-        let {directed, aspect, debug, node_size, arrow_size, ...attr0} = args ?? {};
-        let [node_attr, edge_attr, arrow_attr, attr] = prefix_split(['node', 'edge', 'arrow'], attr0);
-        directed = directed ?? false;
-        node_size = node_size ?? 0.1;
-        arrow_size = arrow_size ?? [0.02, 0.015];
-
-        // sort out final edge attributes
-        arrow_size = aspect_invariant(arrow_size, 1/(aspect ?? 1));
-        edge_attr = {
-            arrow_end: directed, arrow_size, ...edge_attr, ...prefix_add('arrow', arrow_attr)
-        };
-
-        // collect node boxes
-        let bmap = new Map(nodes.map(n => {
-            if (is_element(n)) {
-                return [n, n];
-            } else {
-                let [label, text, pos, size] = n;
-                let node = new Node(text, pos, {size: size ?? node_size, ...node_attr});
-                return [label, node];
-            }
-        }));
-
-        // collect edge paths
-        let lines = edges.map(e => {
-            if (is_element(e)) {
-                return e;
-            } else {
-                let [beg, end, eattr] = e;
-                eattr = eattr ?? {};
-                let [nl1, d1] = is_array(beg) ? beg : [beg, null];
-                let [nl2, d2] = is_array(end) ? end : [end, null];
-                let n1 = bmap.get(nl1);
-                let n2 = bmap.get(nl2);
-                return new Edge([n1, d1], [n2, d2], {...edge_attr, ...eattr});
-            }
-        });
-
-        // find total limits
-        let [xmins, xmaxs] = zip(...bmap.values().map(b => b.xlim));
-        let [ymins, ymaxs] = zip(...bmap.values().map(b => b.ylim));
-        let xlim = [min(...xmins), max(...xmaxs)];
-        let ylim = [min(...ymins), max(...ymaxs)];
-
-        // combine into container
-        let attr1 = {aspect, ...attr};
-        super([...bmap.values(), ...lines], attr1);
-        this.xlim = xlim;
-        this.ylim = ylim;
     }
 }
 
@@ -2931,7 +2900,7 @@ class Note extends Place {
         latex = latex ?? false;
         let [text_attr, attr] = prefix_split(['text'], attr0);
 
-        let Maker = latex ? Tex : Text;
+        let Maker = latex ? Latex : Text;
         let label = new Maker(text, text_attr);
         super(label, attr);
     }
@@ -3492,7 +3461,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Text, MultiText, Emoji, Tex, TextFrame, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Arrowhead, Arrowpath, Node, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
@@ -3635,5 +3604,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Text, MultiText, Emoji, Tex, TextFrame, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Arrowhead, Arrowpath, Node, Edge, Network, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Path, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, MoveTo, LineTo, VerticalTo, VerticalDel, HorizontalTo, HorizontalDel, Bezier2, Bezier3, ArcTo, ArcDel, Bezier2Path, Bezier2Line, Bezier3Line, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, ClosePath, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, sum, prod, normalize, is_string, is_array, is_element
 };

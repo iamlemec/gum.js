@@ -22,6 +22,8 @@ body {
 
 #list {
     width: 10%;
+    overflow-y: scroll;
+    scrollbar-width: none;
     border-right: 1px solid #CCC;
 }
 
@@ -109,15 +111,6 @@ body {
 
 #list .item.last {
     border-bottom: 1px dashed #BBB;
-}
-
-#list .item:first-child {
-}
-
-#list #logo {
-    position: absolute;
-    left: 8px;
-    bottom: 5px;
 }
 
 /* document viewer */

@@ -9,8 +9,8 @@ let zero2 = VLine(ybar, {lim: ylim, opacity: 0.2});
 let line1 = HLine(gza, {lim: xlim, stroke_dasharray: 3});
 let line2 = VLine(ystar, {lim: ylim, stroke_dasharray: 3});
 let dot = Points([[ystar, gza]], {size: 0.04});
-let xticks = [[1, Tex('\\bar{y}')], [ystar, Tex('y^{\\ast}')], [xhi, '']];
-let yticks = [[0, '0'], [gz/alpha, Tex('\\frac{g_z}{\\alpha}')], [nbar, Tex('\\bar{n}')], [yhi, '']];
+let xticks = [[1, Latex('\\bar{y}')], [ystar, Latex('y^{\\ast}')], [xhi, '']];
+let yticks = [[0, '0'], [gz/alpha, Latex('\\frac{g_z}{\\alpha}')], [nbar, Latex('\\bar{n}')], [yhi, '']];
 let plot = Plot([path, zero1, zero2, line1, line2, dot], {
   aspect: phi, xlim, ylim, xticks, yticks, xlabel: 'Standard of living (y)',
   ylabel: 'Population growth (gL)', title: 'Modified Demographic Function'

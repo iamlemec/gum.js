@@ -2,8 +2,8 @@
 
 // ticks (top and bottom)
 let ticks = [
-  [0.1, Tex('q/\\gamma')], [0.3, Tex('B q/\\gamma')], [0.5, Tex('q')],
-  [0.7, Tex('B q')], [0.9, Tex('\\gamma^{\\prime} q')]
+  [0.1, Latex('q/\\gamma')], [0.3, Latex('B q/\\gamma')], [0.5, Latex('q')],
+  [0.7, Latex('B q')], [0.9, Latex('\\gamma^{\\prime} q')]
 ];
 let main = HAxis(ticks, {tick_pos: 'both', label_pos: 'top', tick_size: 0.07});
 let tops = [[0.1, 'Prev'], [0.3, ''], [0.5, 'Current'], [0.7, ''], [0.9, 'Next']];

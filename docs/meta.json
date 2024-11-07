@@ -36,12 +36,14 @@
     "networks": [
         "Node",
         "Edge",
-        "Network"
+        "Networks"
     ],
     "display": [
         "Text",
-        "Tex",
+        "Emoji",
+        "Latex",
         "Note",
+        "TextFrame",
         "TitleFrame"
     ],
     "functions": [
