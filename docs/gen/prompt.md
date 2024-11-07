@@ -70,7 +70,7 @@ type range = number[2];
 type rect = number[4];
 type frame = number | number[2] | rect;
 type spec = {pos?: point, rad?: size, rect?: rect, expand?: boolean, align?: string, rotate?: number, pivot?: string | number | number[2], invar?: boolean};
-type child = Element | [Element, spec];
+type child = Element | [Element, rect | spec];
 type valign = 'top' | 'bottom' | 'center' | number;
 type halign = 'left' | 'right' | 'center' | number;
 type aspect = number | 'auto';
@@ -78,18 +78,21 @@ type align = valign | halign;
 type label = string | Element;
 type ticks = number | number[] | [number, label][];
 type grid = number | number[];
-type bars = [number, number | Bar][];
+type bars = [string, number | Bar][];
 type edge_pos = point | [point, string];
 type node = [string, string, point] | [string, string, point, size];
 type edge = [string, string];
 type func1d = (x: number) => number;
+type path_spec = {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number, size: size};
 type sizefunc = (x: number, y: number, t: number, i: number) => size;
 type shapefunc = (x: number, y: number, t: number, i: number) => Element;
 ```
 
 Here are the generic utility functions used in the library. Many of them mimic the functionality of core Python and numpy and are used for array operations and aggregations. They are also for constructing arrays that can be mapped into series of `Element` objects.
 ```typescript
-function zip(arr1: any[], arr2: any[]): any[];
+function zip(...arrs: any[]): any[];
+function min(...vals: number[]): number;
+function max(...vals: number[]): number;
 function sum(arr: number[]): number;
 function all(arr: boolean[]): boolean;
 function any(arr: boolean[]): boolean;
@@ -110,26 +113,33 @@ function interpolateHex(c1: string, c2: string, alpha: number): string;
 Next are the constructors used to create the various types of `Element` objects that can be used in the library. For convenience, one does not have to use the `new` keyword, you can simply call them as functions, but they are functions that return the specified object of the same name. The two most important types of elements are `Element`, which represents a single element and `Group`, which represents a container that can hold multiple elements. All other elements are derived from one or both of these.
 ```typescript
 function Element(tag: string, unary: boolean, args?: {aspect: number}): Element;
-function Container(children: child[], args?: {tag: string, clip: boolean, coord: rect}): Container;
+function Container(children: child[], args?: {tag: string, clip: boolean, inherit: boolean, coord: rect}): Container;
 function Frame(child: Element, args?: {padding: frame, margin: frame, border: number, adjust: boolean, flex: boolean, shape: Element}): Frame;
 function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
 function Place(child: Element, args?: spec): Place;
 function Points(children: child[], args?: {size: size, shape: Element}): Points;
 function Rect(args?: {rect: rect, radius: number | number[2]}): Rect;
-function Circle(args?: {c: point, r: size}): Circle;
+function Circle(args?: {pos: point, rad: size}): Circle;
+function Line(p1: point, p2: point): Line;
+function UnitLine(direc: string, pos: number, args?: {lim: range}): UnitLine;
 function Polyline(points: point[]): Polyline;
-function Path(commands: Command[]): Path;
-function SymPath(args?: {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number}): SymPath;
-function SymPoints(args?: {fx: func1d, fy: func1d, xlim: range, ylim: range, tlim: range, xvals: number[], yvals: number[], tvals: number[], N: number, size: size, shape: Element, fr: sizefunc, fs: shapefunc}): SymPoints;
+function SymPath(args?: path_spec): SymPath;
+function SymPoints(args?: {...path_spec, shape: Element, fr: sizefunc, fs: shapefunc}): SymPoints;
+function SymFill(args?: {...path_spec, fill: string, stroke: string, stroke_width: number}): SymFill;
+function SymPoly(args?: {...path_spec, fill: string, stroke: string, stroke_width: number}): SymPoly;
 function Axis(dirc: string, ticks: ticks, args?: {label_size: number, lim: range, tick_pos: string}): Axis;
 function Graph(elems: Element[], args?: {xlim: range, ylim: range, padding: frame}): Graph;
 function Plot(elems: Element[], args?: {xlim: range, ylim: range, xanchor: number, yanchor: number, xticks: ticks, yticks: ticks, xgrid: grid, ygrid: grid, xlabel: label, ylabel: label, title: label}): Plot;
 function BarPlot(bars: bars, args?: {direc: string, shrink: number, color: string}): BarPlot;
-function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
 function Text(text: string, args?: {size: size, hshift: number, vshift: number}): Text;
-function Node(text: string, args?: {padding: frame, border: number, spacing: number, align: string}): Node;
-function Edge(beg: edge_pos, end: edge_pos, args?: {arrow: boolean, arrow_beg: boolean, arrow_end: boolean, arrow_size: number, curve: number}): Edge;
-function Network(nodes: node[], edges: edge[], args?: {size: size, directed: boolean}): Network;
+function MultiText(texts: label | label[], args?: {spacing: number}): MultiText;
+function Emoji(tag: string): Emoji;
+function Latex(text: string): Latex;
+function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
+function TextFrame(text: label | label[] | Element, args?: {latex: boolean, emoji: boolean}): TextFrame;
+function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: point, title_radius: size, adjust: boolean}): TitleFrame;
+function Node(text: string, pos: point, args?: {size: size}): Node;
+function Edge(beg: edge_pos, end: edge_pos, args?: {arrow: boolean, arrow_beg: boolean, arrow_end: boolean, arrow_size: number}): Edge;
 ```
 
 You will typically use one of the higher level constructors to create the elements you need, but you can also create your own custom elements by using the `Element` or `Container`constructor. Note that for ease of use, `Group` is an alias for `Container`. Additionally, elements with a direction notion such as `Stack` and `Axis` have specialized versions denoted by the prefixes `V` and `H`, for example `VStack` and `HStack` and `VAxis` and `HAxis`.

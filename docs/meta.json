@@ -18,8 +18,7 @@
         "Circle",
         "Line",
         "UnitLine",
-        "Polyline",
-        "Path"
+        "Polyline"
     ],
     "symbolic": [
         "SymPoints",
