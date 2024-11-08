@@ -81,12 +81,12 @@ let ibmFontFace = await makeFontFace(
 // get viewBox size
 function parseViewbox(elem) {
     let vbox = elem.getAttribute('viewBox');
-    let [xlo, ylo, xhi, yhi] = vbox.split(' ');
+    let [xlo, ylo, xhi, yhi] = vbox.split(' ').map(Number);
     let [width, height] = [xhi - xlo, yhi - ylo];
     return [width, height];
 }
 
-// embed fonts as data
+// strip border and embed fonts as data
 function prepareSvg(elem, embed) {
     // get true dims
     let [width, height] = parseViewbox(elem);
@@ -96,6 +96,11 @@ function prepareSvg(elem, embed) {
     elem.setAttribute('width', width);
     elem.setAttribute('height', height);
 
+    // remove border
+    let border = elem.getElementById('border');
+    border.remove();
+
+    // embed fonts as data
     if (embed) {
         // inject font data as style
         let style = document.createElement('style');

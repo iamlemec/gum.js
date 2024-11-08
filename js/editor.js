@@ -156,11 +156,16 @@ class GumEditor {
             return;
         }
 
+        // get svg dimensions
+        const [x, y, w, h] = svg.getAttribute('viewBox').split(' ').map(Number);
+
+        // add border
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute('x', '1px');
-        rect.setAttribute('y', '1px');
-        rect.setAttribute('width', 'calc(100% - 2px)');
-        rect.setAttribute('height', 'calc(100% - 2px)');
+        rect.setAttribute('id', 'border');
+        rect.setAttribute('x', `${x + 1}px`);
+        rect.setAttribute('y', `${y + 1}px`);
+        rect.setAttribute('width', `${w - 2}px`);
+        rect.setAttribute('height', `${h - 2}px`);
         rect.setAttribute('fill', 'white');
         rect.setAttribute('stroke', '#ccc');
         rect.setAttribute('stroke-width', '1');
