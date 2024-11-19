@@ -422,16 +422,19 @@ function rad_rect(p, r0) {
     return [x-rx, y-ry, x+rx, y+ry];
 }
 
-function merge_rects(rects) {
+function merge_rects(...rects) {
     let [xa, ya, xb, yb] = zip(...rects);
+    let [xs, ys] = [[...xa, ...xb], [...ya, ...yb]];
     return [
-        min(...xa), min(...ya), max(...xb), max(...yb)
+        min(...xs), min(...ys), max(...xs), max(...ys)
     ];
 }
 
-function rect_lims(rect) {
-    let [xa, ya, xb, yb] = rect;
-    return [[xa, xb], [ya, yb]];
+function merge_points(...points) {
+    let [xs, ys] = zip(...points);
+    return [
+        min(...xs), min(...ys), max(...xs), max(...ys)
+    ];
 }
 
 function rect_dims(rect) {
@@ -672,7 +675,7 @@ class Context {
         let prect = [...p1, ...p2];
         return prect;
     }
-    
+
     // project coordinates
     map(args) {
         let {rect, aspect, rotate, expand, invar, align, pivot, coord} = args ?? {};
@@ -835,13 +838,8 @@ class Container extends Element {
             .map(([c, r]) => [c, parse_bounds(r)]);
 
         // get data limits
-        let xlim, ylim;
-        if (children.length > 0) {
-            let [xmins, ymins, xmaxs, ymaxs] = zip(...children.map(([c, a]) => a.rect));
-            let [xall, yall] = [[...xmins, ...xmaxs], [...ymins, ...ymaxs]];
-            xlim = [min(...xall), max(...xall)];
-            ylim = [min(...yall), max(...yall)];
-        }
+        let bounds = (children.length > 0) ?
+            merge_rects(...children.map(([c, a]) => a.rect)) : null;
 
         // inherit aspect of clipped contents
         if (aspect == null && clip) {
@@ -850,7 +848,7 @@ class Container extends Element {
                 .filter(([c, a]) => c.aspect != null)
                 .map(([c, a]) => ctx.map({aspect: c.aspect, ...a}).rrect);
             if (rects.length > 0) {
-                let total = merge_rects(rects);
+                let total = merge_rects(...rects);
                 aspect = rect_aspect(total);
             }
         }
@@ -860,10 +858,9 @@ class Container extends Element {
         super(tag, false, attr1);
         this.children = children;
         this.coord = coord;
+        this.bounds = bounds;
         this.inherit = inherit;
         this.debug = debug;
-        this.xlim = xlim;
-        this.ylim = ylim;
     }
 
     inner(ctx) {
@@ -1227,7 +1224,7 @@ class Attach extends Container {
 
 class Points extends Container {
     constructor(points, args) {
-        let {size, shape, color, xlim, ylim, ...attr} = args ?? {};
+        let {size, shape, color, ...attr} = args ?? {};
         shape = shape ?? new Dot({color});
         size = size ?? 0.01;
 
@@ -1272,7 +1269,7 @@ class Line extends Element {
         let attr = args ?? {};
         super('line', true, attr);
         [this.p1, this.p2] = [p1, p2];
-        [this.xlim, this.ylim] = zip(p1, p2);
+        this.bounds = merge_points(p1, p2);
     }
 
     props(ctx) {
@@ -1311,7 +1308,7 @@ class Rect extends Element {
         super('rect', true, attr);
         this.rect = rect;
         this.radius = radius;
-        [this.xlim, this.ylim] = rect_lims(rect);
+        this.bounds = merge_rects(rect);
     }
 
     props(ctx) {
@@ -1366,8 +1363,7 @@ class Ellipse extends Element {
 
         let [px, py] = pos;
         let [rx, ry] = rad;
-        this.xlim = [px - rx, px + rx];
-        this.ylim = [py - ry, py + ry];
+        this.bounds = [px - rx, py - ry, px + rx, py + ry];
     }
 
     props(ctx) {
@@ -1454,13 +1450,11 @@ class Ray extends Element {
 
 class Pointstring extends Element {
     constructor(tag, points, args) {
-        let {xlim, ylim, ...attr} = args ?? {};
+        let attr = args ?? {};
         super(tag, true, attr);
         this.points = points;
         if (points.length > 0) {
-            let [xvals, yvals] = zip(...points);
-            this.xlim = xlim ?? [min(...xvals), max(...xvals)];
-            this.ylim = ylim ?? [min(...yvals), max(...yvals)];
+            this.bounds = merge_points(...points);
         }
     }
 
@@ -2048,10 +2042,9 @@ class SymField extends Field {
  **/
 
 function get_center(elem) {
-    let [xmin, xmax] = elem.xlim;
-    let [ymin, ymax] = elem.ylim;
-    let [x, y] = [0.5*(xmin+xmax), 0.5*(ymin+ymax)];
-    return [x, y];
+    let [xmin, ymin, xmax, ymax] = elem.bounds;
+    let [xmid, ymid] = [0.5 * (xmin + xmax), 0.5 * (ymin + ymax)];
+    return [xmid, ymid];
 }
 
 function get_direction(p1, p2) {
@@ -2073,11 +2066,8 @@ function get_direction(p1, p2) {
 }
 
 function get_anchor(elem, direc) {
-    let [xmin, xmax] = elem.xlim;
-    let [ymin, ymax] = elem.ylim;
-
-    let xmid = 0.5 * (xmin + xmax);
-    let ymid = 0.5 * (ymin + ymax);
+    let [xmin, ymin, xmax, ymax] = elem.bounds;
+    let [xmid, ymid] = get_center(elem);
 
     if (direc == 'n') {
         return [xmid, ymin];
@@ -2221,15 +2211,8 @@ class ArrowPath extends Container {
             children.push([head_end, {pos: pos_end, rad: arrow_size}]);
         }
 
-        // get limits
-        let [xvals, yvals] = zip(pos_beg, pos_end);
-        let xlim = [min(...xvals), max(...xvals)];
-        let ylim = [min(...yvals), max(...yvals)];
-
         // pass to container
         super(children, attr);
-        this.xlim = xlim;
-        this.ylim = ylim;
     }
 }
 
@@ -2257,9 +2240,6 @@ class Node extends Place {
 
         // pass to place
         super(frame, {rect});
-
-        // store properties
-        [this.xlim, this.ylim] = rect_lims(rect);
     }
 
     get_center() {
@@ -2394,11 +2374,7 @@ class Bars extends Container {
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
         this.locs = xlocs;
-
-        // set axis limits
-        this.xlim = lim ?? [xmin, xmax];
-        this.ylim = [ymin, ymax];
-        if (direc == 'h') { [this.xlim, this.ylim] = [this.ylim, this.xlim]; }
+        this.bounds = (direc == 'v') ? [xmin, ymin, xmax, ymax] : [ymin, xmin, ymax, xmax];
     }
 }
 
@@ -2571,11 +2547,11 @@ class Axis extends Container {
 
         // set limits
         if (direc == 'v') {
-            this.xlim = [pos, pos];
-            this.ylim = lim; 
+            let [ylo, yhi] = lim;
+            this.bounds = [pos, ylo, pos, yhi];
         } else {
-            this.xlim = lim;
-            this.ylim = [pos, pos];
+            let [xlo, xhi] = lim;
+            this.bounds = [xlo, pos, xhi, pos];
         }
     }
 }
@@ -2691,24 +2667,22 @@ class Note extends Place {
     }
 }
 
-// find minimal containing limits
-function outer_limits(elems, padding) {
-    padding = padding ?? 0;
-    let [xpad, ypad] = ensure_vector(padding, 2);
-
-    let [xmins, xmaxs] = zip(...elems.map(c => c.xlim).filter(z => z != null));
-    let [ymins, ymaxs] = zip(...elems.map(c => c.ylim).filter(z => z != null));
-
-    let xlim = expand_limits([min(...xmins), max(...xmaxs)], xpad);
-    let ylim = expand_limits([min(...ymins), max(...ymaxs)], ypad);
-
-    return [xlim, ylim];
-}
-
 function expand_limits(lim, fact) {
     let [lo, hi] = lim;
     let ex = fact*(hi-lo);
     return [lo-ex, hi+ex];
+}
+
+// find minimal containing limits
+function outer_limits(elems, padding) {
+    padding = padding ?? 0;
+    let [xpad, ypad] = ensure_vector(padding, 2);
+    let [xmin, ymin, xmax, ymax] = merge_rects(
+        ...elems.map(c => c.bounds).filter(z => z != null)
+    );
+    [xmin, xmax] = expand_limits([xmin, xmax], xpad);
+    [ymin, ymax] = expand_limits([ymin, ymax], ypad);
+    return [xmin, ymin, xmax, ymax];
 }
 
 class Graph extends Container {
@@ -2724,13 +2698,9 @@ class Graph extends Container {
         }
 
         // determine coordinate limits
-        let [xlim0, ylim0] = outer_limits(elems, padding);
-        xlim = xlim ?? xlim0;
-        ylim = ylim ?? ylim0;
-
-        // make coordinate box
-        let [xmin, xmax] = xlim;
-        let [ymin, ymax] = ylim;
+        let [xmin, ymin, xmax, ymax] = outer_limits(elems, padding);
+        [xmin, xmax] = xlim ?? [xmin, xmax];
+        [ymin, ymax] = ylim ?? [ymin, ymax];
         let coord = [xmin, ymax, xmax, ymin];
 
         // get automatic aspect
@@ -2739,8 +2709,6 @@ class Graph extends Container {
         // pass to container
         let attr1 = {aspect, coord, ...attr};
         super(elems, attr1);
-        this.xlim = xlim;
-        this.ylim = ylim;
     }
 }
 
@@ -2778,20 +2746,21 @@ class Plot extends Container {
         }
 
         // determine coordinate limits
-        let [xlim0, ylim0] = outer_limits(elems, padding);
-        [xlim, ylim] = [xlim ?? xlim0, ylim ?? ylim0];
-        let [[xlo, xhi], [ylo, yhi]] = [xlim, ylim];
-        let [xrange, yrange] = [abs(xhi-xlo), abs(yhi-ylo)];
+        let bounds = outer_limits(elems, padding);
+        let [xmin, ymin, xmax, ymax] = bounds;
+        xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
+        ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
+        let [xrange, yrange] = rect_dims(bounds);
 
         // ensure consistent apparent tick size
         aspect = (aspect == 'auto') ? xrange/yrange : aspect;
         let [xtick_size, ytick_size] = aspect_invariant(tick_size, aspect);
-        [xtick_size, ytick_size] = [yrange*xtick_size, xrange*ytick_size];
+        [xtick_size, ytick_size] = [yrange * xtick_size, xrange * ytick_size];
 
         // default xaxis generation
         if (xaxis === true) {
             xaxis = new HAxis(xticks, {
-                pos: ylo, lim: xlim, tick_size: xtick_size, ...xaxis_attr
+                pos: ymin, lim: xlim, tick_size: xtick_size, ...xaxis_attr
             });
         } else if (xaxis === false) {
             xaxis = null;
@@ -2800,7 +2769,7 @@ class Plot extends Container {
         // default yaxis generation
         if (yaxis === true) {
             yaxis = new VAxis(yticks, {
-                pos: xlo, lim: ylim, tick_size: ytick_size, ...yaxis_attr
+                pos: xmin, lim: ylim, tick_size: ytick_size, ...yaxis_attr
             });
         } else if (yaxis === false) {
             yaxis = null;
@@ -2925,7 +2894,7 @@ class Interactive {
         return elem;
     }
 
-    createAnchors(redraw) { // tag is where to append anc, redraw is where to redraw
+    createAnchors(redraw) {
         let i = this;
         let ancs = Object.entries(this.vars).map(([v, k]) => {
             try {
@@ -2947,7 +2916,7 @@ class Variable {
         );
     }
 
-    updateVal(val, ctx, redraw) {
+    updateValue(val, ctx, redraw) {
         this.value = val;
         ctx.create(redraw);
     }
@@ -3016,7 +2985,7 @@ class Slider extends Variable {
         input.addEventListener('input', function() {
             updateSliderValue(this);
             let val = Number(this.value);
-            v.updateVal(val, ctx, redraw);
+            v.updateValue(val, ctx, redraw);
         }, false);
 
         return cont;
@@ -3051,7 +3020,7 @@ class Toggle extends Variable {
 
         let v = this;
         input.addEventListener('input', function() {
-            v.updateVal(this.checked, ctx, redraw);
+            v.updateValue(this.checked, ctx, redraw);
         }, false);
 
         return cont;
@@ -3093,11 +3062,11 @@ class List extends Variable {
         cont.append(title, list);
 
         select.value = this.value;
-        this.updateVal(select.value, ctx, redraw);
+        this.updateValue(select.value, ctx, redraw);
 
         let v = this;
         select.addEventListener('input', function() {
-            v.updateVal(this.value, ctx, redraw);
+            v.updateValue(this.value, ctx, redraw);
         });
 
         return cont;
@@ -3246,7 +3215,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep,pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
+    Context, Element, Container, Group, SVG, Frame, Stack, VStack, HStack, Grid, Place, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow
 ];
 
 // detect object types
