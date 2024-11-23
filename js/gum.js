@@ -2885,7 +2885,7 @@ class Plot extends Container {
 
         // create graph from core elements
         let elems1 = [xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
-        let graph = new Graph(elems1, {xlim, ylim, aspect, padding, ...graph_attr});
+        let graph = new Graph(elems1, {xlim, ylim, aspect, flex, padding, ...graph_attr});
 
         // create base layout
         let children = [graph];
@@ -2931,7 +2931,7 @@ class Plot extends Container {
         }
 
         // pass to container
-        let attr1 = {aspect, ...attr};
+        let attr1 = {aspect, clip: false, ...attr};
         super(children, attr1);
     }
 }
