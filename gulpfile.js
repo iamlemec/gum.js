@@ -6,25 +6,6 @@ import { minify } from 'rollup-plugin-esbuild-minify';
 import { exec } from 'child_process';
 import fs from 'fs';
 
-/*
- * style
- */
-
-// katex css
-gulp.task('katex-css', () => gulp.src(['./node_modules/katex/dist/katex.css'])
-    .pipe(gulp.dest('./libs'))
-);
-
-// katex fonts
-gulp.task('katex-fonts', () => gulp.src(['./node_modules/katex/dist/fonts/*'])
-    .pipe(gulp.dest('./libs/fonts'))
-);
-
-// katex
-gulp.task('katex-style', gulp.parallel('katex-css', 'katex-fonts'));
-
-// style
-gulp.task('style', gulp.parallel('katex-style'));
 
 /*
  * javascript
@@ -53,11 +34,11 @@ function minify_file(file, name, args) {
     });
 }
 
+// minify marked
+gulp.task('minify-marked', () => minify_file('js/marked.js', 'marked'));
+
 // minify codemirror
 gulp.task('minify-codemirror', () => minify_file('js/codemirror.js', 'cm'));
-
-// minify katex
-gulp.task('minify-katex', () => minify_file('js/katex.js', 'katex'));
 
 // minify mathjax
 gulp.task('minify-mathjax', () => gulp.src(['node_modules/mathjax/es5/tex-svg.js'])
@@ -65,60 +46,12 @@ gulp.task('minify-mathjax', () => gulp.src(['node_modules/mathjax/es5/tex-svg.js
     .pipe(gulp.dest('./libs'))
 );
 
-// minify marked
-gulp.task('minify-marked', () => minify_file('js/marked.js', 'marked'));
-
 // minify all
-gulp.task('minify', gulp.parallel('minify-codemirror', 'minify-katex', 'minify-mathjax', 'minify-marked'));
+gulp.task('minify', gulp.parallel('minify-marked', 'minify-codemirror', 'minify-mathjax'));
 
 /*
  * build
  */
 
 // build all
-gulp.task('build', gulp.parallel('minify', 'style'));
-
-/*
- * playgen env
- */
-
-// minify katex
-gulp.task('env-katex-js', () => minify_file('js/katex.js', 'katex', {
-    output_dir: 'playgen',
-}));
-
-// copy gum css
-gulp.task('env-gum-css', () => gulp.src(['./css/fonts.css'])
-    .pipe(gulp.dest('playgen'))
-);
-
-// copy gum fonts
-gulp.task('env-gum-fonts', () => gulp.src(['./css/fonts/*'])
-    .pipe(gulp.dest('playgen/fonts'))
-);
-
-// copy katex css
-gulp.task('env-katex-css', () => gulp.src(['./node_modules/katex/dist/katex.css'])
-    .pipe(gulp.dest('playgen'))
-);
-
-// copy katex fonts
-gulp.task('env-katex-fonts', () => gulp.src(['./node_modules/katex/dist/fonts/*'])
-    .pipe(gulp.dest('playgen/fonts'))
-);
-
-// copy mathjax js
-gulp.task('env-mathjax-js', () => gulp.src(['./node_modules/mathjax/es5/tex-svg.js'])
-    .pipe(rename('mathjax.js'))
-    .pipe(gulp.dest('playgen'))
-);
-
-// make playgen env
-gulp.task('playgen', gulp.parallel(
-    'env-katex-js',
-    'env-gum-css',
-    'env-gum-fonts',
-    'env-katex-css',
-    'env-katex-fonts',
-    'env-mathjax-js',
-));
+gulp.task('build', gulp.parallel('minify'));

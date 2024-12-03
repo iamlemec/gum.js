@@ -1772,7 +1772,7 @@ class Latex extends Element {
         offset = offset ?? [0, 0];
         scale = scale ?? 1;
 
-        // render with katex (or do nothing if katex is not available)
+        // render with mathjax (or do nothing if mathjax is not available)
         let svg_attr, math, width, height;
         if (typeof MathJax !== 'undefined') {
             // render with mathjax

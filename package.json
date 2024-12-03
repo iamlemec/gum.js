@@ -1,16 +1,19 @@
 {
   "name": "gum.js",
-  "version": "0.5.0",
-  "description": "Grammar for SVG creation.",
+  "version": "0.9.0",
+  "description": "Javascript for SVG creation.",
   "type": "module",
   "author": "Doug Hanley and Evan Piermont",
   "license": "MIT",
   "exports": {
-    ".": "./js/gum.js"
+    ".": [
+      "./js/gum.js",
+      "./js/emoji.js"
+    ]
   },
   "scripts": {
     "build": "npx gulp build",
-    "playgen": "npx gulp playgen"
+    "prompt": "npx gulp prompt"
   },
   "dependencies": {
     "@codemirror/commands": "^6.1.2",
@@ -19,7 +22,7 @@
     "@codemirror/language": "^6.3.0",
     "@codemirror/state": "^6.1.2",
     "@codemirror/view": "^6.4.0",
-    "marked": "^4.2.3",
+    "marked": "^15.0.3",
     "mathjax": "^3.2.2"
   },
   "devDependencies": {
