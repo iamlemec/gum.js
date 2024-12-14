@@ -1,14 +1,17 @@
 {
-  "name": "gum.js",
-  "version": "0.9.0",
+  "name": "gumgen",
+  "version": "1.0.0",
   "description": "Javascript for SVG creation.",
   "type": "module",
   "author": "Doug Hanley and Evan Piermont",
   "license": "MIT",
+  "files": [
+    "js/gum.js",
+    "js/emoji.js"
+  ],
   "exports": {
     ".": [
-      "./js/gum.js",
-      "./js/emoji.js"
+      "./js/gum.js"
     ]
   },
   "scripts": {
