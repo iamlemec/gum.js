@@ -2844,7 +2844,7 @@ class Plot extends Container {
         let [xmin, ymin, xmax, ymax] = bounds;
         xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
         ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
-        let [xrange, yrange] = rect_dims(bounds);
+        let [xrange, yrange] = [xmax-xmin, ymax-ymin];
 
         // ensure consistent apparent tick size
         aspect = (aspect == 'auto') ? xrange/yrange : aspect;

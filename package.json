@@ -1,6 +1,6 @@
 {
   "name": "gumgen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Javascript for SVG creation.",
   "type": "module",
   "author": "Doug Hanley and Evan Piermont",
@@ -10,15 +10,13 @@
     "js/emoji.js"
   ],
   "exports": {
-    ".": [
-      "./js/gum.js"
-    ]
+    ".": "./js/gum.js"
   },
   "scripts": {
     "build": "npx gulp build",
     "prompt": "npx gulp prompt"
   },
-  "dependencies": {
+  "optionalDependencies": {
     "@codemirror/commands": "^6.1.2",
     "@codemirror/lang-javascript": "^6.1.1",
     "@codemirror/lang-xml": "^6.0.1",
