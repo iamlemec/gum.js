@@ -1372,9 +1372,9 @@ class Square extends Rect {
         pos = pos ?? [0.5, 0.5];
         rad = rad ?? 0.5;
 
-        let p1 = pos.map(z => z - rad);
-        let p2 = pos.map(z => z + rad);
-        let base = {p1, p2, aspect: 1};
+        let [x, y] = pos;
+        let rect = [x - rad, y - rad, x + rad, y + rad];
+        let base = {rect, aspect: 1};
         super({...base, ...attr});
     }
 }

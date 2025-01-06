@@ -16,6 +16,7 @@
     "simple": [
         "Rect",
         "Circle",
+        "Ellipse",
         "Line",
         "UnitLine",
         "Polyline"
