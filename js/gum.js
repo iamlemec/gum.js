@@ -1204,9 +1204,10 @@ class Place extends Container {
 
 class Bounds extends Container {
     constructor(child, rect, args) {
-        let {expand, align, coord, ...attr} = args ?? {};
+        let {expand, align, coord, clip, ...attr} = args ?? {};
         let spec = [child, {rect, expand, align, coord}];
-        super([spec], attr);
+        let attr1 = {clip: clip ?? false, ...attr};
+        super([spec], attr1);
     }
 }
 
