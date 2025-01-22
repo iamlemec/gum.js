@@ -265,6 +265,10 @@ function is_element(x) {
     return x instanceof Element;
 }
 
+function is_metaelement(x) {
+    return x instanceof MetaElement;
+}
+
 /**
  ** core math
  **/
@@ -836,13 +840,13 @@ class Container extends Element {
         debug = debug ?? false;
 
         // handle singleton
-        if (children instanceof Element) {
+        if (is_element(children) || is_metaelement(children)) {
             children = [children];
         }
 
         // handle default positioning
         children = children
-            .map(c => c instanceof Element ? [c, null] : c)
+            .map(c => (is_element(c) || is_metaelement(c)) ? [c, null] : c)
             .map(([c, r]) => [c, parse_bounds(r)]);
 
         // get data limits
@@ -2512,7 +2516,7 @@ function ensure_tick(t, prec) {
         return [t, make_ticklabel(t, prec)];
     } else if (is_array(t) && t.length == 2) {
         let [p, x] = t;
-        if (x instanceof Element) {
+        if (is_element(x)) {
             return t;
         } else {
             return [p, make_ticklabel(x, prec)];
@@ -2798,7 +2802,7 @@ class Graph extends Container {
         padding = padding ?? 0;
 
         // handle singleton line
-        if (elems instanceof Element) {
+        if (is_element(elems)) {
             elems = [elems];
         }
 
@@ -2846,7 +2850,7 @@ class Plot extends Container {
         [xlabel_attr, ylabel_attr] = [{...label_attr, ...xlabel_attr}, {...label_attr, ...ylabel_attr}];
 
         // handle singleton line
-        if (elems instanceof Element) {
+        if (is_element(elems)) {
             elems = [elems];
         }
 
