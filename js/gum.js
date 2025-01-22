@@ -1605,7 +1605,7 @@ function random_hex() {
 class MetaElement {
     constructor(tag, args) {
         this.tag = tag;
-        this.args = args;
+        this.args = args ?? {};
     }
 
     inside(ctx) {
