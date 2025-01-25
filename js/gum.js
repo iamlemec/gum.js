@@ -3339,30 +3339,32 @@ function detect(g) {
 }
 
 // make functional interface
-function mapper(objs) {
-    let nams = objs.map(g => g.name);
-    let mako = objs.map(g => {
-        let t = detect(g);
-        if (t == 'class') {
-            let func = function(...args) {
-                return new g(...args);
-            };
-            func.class = g;
-            return func;
-        } else if (t == 'function') {
-            return function(...args) {
-                return g(...args);
-            }
-        } else {
-            return g;
+function mapper(g) {
+    let t = detect(g);
+    if (t == 'class') {
+        let func = function(...args) {
+            return new g(...args);
+        };
+        func.class = g;
+        return func;
+    } else if (t == 'function') {
+        return function(...args) {
+            return g(...args);
         }
-    });
-    return [nams, mako];
+    } else {
+        return g;
+    }
 }
 
 // main parser entry
-let [gums, mako] = mapper(Gum);
-function parseGum(src) {
+let gums0 = Gum.map(g => g.name);
+let mako0 = Gum.map(mapper);
+function parseGum(src, extra) {
+    extra = extra ?? [];
+    let gums1 = extra.map(g => g.name);
+    let mako1 = extra.map(mapper);
+    let gums = [...gums0, ...gums1];
+    let mako = [...mako0, ...mako1];
     let expr = new Function(gums, src);
     return expr(...mako);
 }
