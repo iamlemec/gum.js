@@ -110,7 +110,7 @@ function Frame(child: Element, args?: {padding: frame, margin: frame, border: nu
 function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
 function Place(child: Element, args?: spec): Place;
 function Points(children: child[], args?: {size: size, shape: Element}): Points;
-function Rect(args?: {rect: rect, radius: number | number[2]}): Rect;
+function Rect(args?: {rect: rect, rounded: number | number[2]}): Rect;
 function Circle(args?: {pos: point, rad: size}): Circle;
 function Line(p1: point, p2: point): Line;
 function UnitLine(direc: string, pos: number, args?: {lim: range}): UnitLine;
@@ -129,7 +129,7 @@ function Emoji(tag: string): Emoji;
 function Latex(text: string): Latex;
 function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
 function TextFrame(text: label | label[] | Element, args?: {latex: boolean, emoji: boolean}): TextFrame;
-function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: point, title_radius: size, adjust: boolean}): TitleFrame;
+function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: point, title_rounded: size, adjust: boolean}): TitleFrame;
 function Node(text: string, pos: point, args?: {size: size}): Node;
 function Edge(beg: edge_pos, end: edge_pos, args?: {arrow: boolean, arrow_beg: boolean, arrow_end: boolean, arrow_size: number}): Edge;
 ```

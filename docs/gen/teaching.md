@@ -35,7 +35,7 @@ let plot = Plot([sine, peaks, ...quads], {
 
 // Return the framed plot
 return TitleFrame(plot, 'Quadratic Functions with Sine Wave Peaks', {
-    margin: 0.15, label_size: 0.06, label_border_radius: 0.03, border: 1
+    margin: 0.15, label_size: 0.06, label_border_rounded: 0.03, border: 1
 });
 ```
 
@@ -69,8 +69,8 @@ let plot = Plot([...waves], {
 // Add a frame and return the result
 return TitleFrame(plot, 'Sine Waves at Various Frequencies', {
     padding: 0.15, margin: 0.1,
-    label_size: 0.05, label_border_radius: 0.03,
-    border_opacity: 0.25, border_radius: 0.01
+    label_size: 0.05, label_border_rounded: 0.03,
+    border_opacity: 0.25, border_rounded: 0.01
 });
 ```
 
@@ -108,7 +108,7 @@ let plot = Plot([curve, markers, label1, label2, zero], {
 
 // Frame the plot
 return TitleFrame(plot, 'Cubic Function with Local Extrema', {
-  margin: 0.15, title_size: 0.06, title_border_radius: 0.05
+  margin: 0.15, title_size: 0.06, title_border_rounded: 0.05
 });
 ```
 
@@ -136,12 +136,12 @@ let edges = meshgrid(range(N), range(M)).map(([i, j]) =>
 
 // Create the network
 let network = Network(nodes, edges, {
-  size: 0.07, node_fill: '#EEE', node_border_radius: 0.05, edge_opacity: 0.4
+  size: 0.07, node_fill: '#EEE', node_border_rounded: 0.05, edge_opacity: 0.4
 });
 
 // Frame the entire diagram
 return TitleFrame(network, 'Wikipedia and Science', {
-  margin: 0.1, aspect: 1.5, title_border_radius: 0.03
+  margin: 0.1, aspect: 1.5, title_border_rounded: 0.03
 });
 ```
 
@@ -165,7 +165,7 @@ let plot = Graph([spiral, sparkles], {xlim, ylim, xticks: 0, yticks: 0});
 
 // Add a frame around the plot
 return TitleFrame(plot, 'Sparkle Motion', {
-  margin: 0.1, padding: 0.05, border_radius: 0.02, title_size: 0.06
+  margin: 0.1, padding: 0.05, border_rounded: 0.02, title_size: 0.06
 });
 ```
 
@@ -189,7 +189,7 @@ let plot = Graph([spiral, circle], {xlim: [-1, 1], ylim: [-1, 1]});
 
 // Add a frame
 return TitleFrame(plot, 'Sparkle Motion', {
-  margin: 0.1, padding: 0.05, border_radius: 0.02, title_size: 0.06,
+  margin: 0.1, padding: 0.05, border_rounded: 0.02, title_size: 0.06,
   border_stroke: '#999'
 });
 ```
@@ -215,7 +215,7 @@ let plots = freqs.map(f => {
 // Create grid and frame
 let grid = Grid(split(plots, 3), {spacing: 0.1});
 return TitleFrame(grid, 'Different Frequencies', {
-  margin: 0.1, padding: 0.1, border_radius: 0.02, title_size: 0.055
+  margin: 0.1, padding: 0.1, border_rounded: 0.02, title_size: 0.055
 });
 ```
 

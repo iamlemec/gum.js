@@ -968,11 +968,14 @@ class Group extends Container {
     }
 }
 
+// TODO: auto-adjust padding/margin for aspect
+//       it seems adjust only does this if child aspect is not null
+//       but we also want to do it if own aspect is not null
 class Frame extends Container {
     constructor(child, args) {
         let {
             padding, margin, border, aspect, adjust, flex, rotate, invar, align,
-            shrink, shape, radius, ...attr0
+            shrink, shape, rounded, ...attr0
         } = args ?? {};
         let [border_attr, attr] = prefix_split(['border'], attr0);
         border = border ?? 0;
@@ -980,14 +983,13 @@ class Frame extends Container {
         margin = margin ?? 0;
         adjust = adjust ?? true;
         flex = flex ?? false;
-        radius = radius ?? 0;
 
         // ensure shape is a function
         if (shape == null) {
-            if (radius == 0) {
+            if (rounded == null) {
                 shape = (a => new Rect(a));
             } else {
-                shape = (a => new RoundedRect({radius, ...a}));
+                shape = (a => new RoundedRect({rounded, ...a}));
             }
         } else {
             shape = ensure_function(shape);
@@ -1336,12 +1338,13 @@ class HLine extends UnitLine {
 
 class Rect extends Element {
     constructor(args) {
-        let {rect, radius, ...attr} = args ?? {};
-        rect = rect ?? coord_base;
+        let {pos, rad, rounded, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? [0.5, 0.5];
         super('rect', true, attr);
-        this.rect = rect;
-        this.radius = radius;
-        this.bounds = merge_rects(rect);
+        this.rect = rad_rect(pos, rad);
+        this.rounded = rounded;
+        this.bounds = merge_rects(this.rect);
     }
 
     props(ctx) {
@@ -1353,15 +1356,14 @@ class Rect extends Element {
         if (w < 0) { x += w; w *= -1; }
         if (h < 0) { y += h; h *= -1; }
 
-        // scale border radius
+        // scale border rounded
         let rx, ry;
-        if (this.radius != null) {
-            if (is_scalar(this.radius)) {
-                let s = 0.5*(w+h);
-                rx = s*this.radius;
+        if (this.rounded != null) {
+            let s = 0.5*(w+h);
+            if (is_scalar(this.rounded)) {
+                rx = s*this.rounded;
             } else {
-                let [rx0, ry0] = this.radius;
-                [rx, ry] = [w*rx0, h*ry0];
+                [rx, ry] = multiply(this.rounded, s);
             }
         }
 
@@ -1540,28 +1542,29 @@ function arc_points(pos, rad, th0, th1, args) {
     );
 }
 
-function parse_radius(radius) {
-    if (is_scalar(radius)) {
-        radius = [radius, radius, radius, radius];
-    } else if (is_array(radius) && radius.length == 2) {
-        const [rx, ry] = radius;
-        radius = [[rx, ry], [rx, ry], [rx, ry], [rx, ry]];
+function parse_rounded(rounded) {
+    if (is_scalar(rounded)) {
+        rounded = [rounded, rounded, rounded, rounded];
+    } else if (is_array(rounded) && rounded.length == 2) {
+        const [rx, ry] = rounded;
+        rounded = [[rx, ry], [rx, ry], [rx, ry], [rx, ry]];
     }
-    return radius.map(r => ensure_vector(r, 2));
+    return rounded.map(r => ensure_vector(r, 2));
 }
 
-// supports different radius for each corner
+// supports different rounded for each corner
+// TODO: implement this in props so we can make the corners nice for any aspect
 class RoundedRect extends Polygon {
     constructor(args) {
-        let {radius, N, ...attr} = args ?? {};
-        radius = radius ?? 0;
+        let {rounded, N, ...attr} = args ?? {};
+        rounded = rounded ?? 0;
         N = N ?? 10;
 
         // arc function
         let arc = (pos, rad, th0, th1) => arc_points(pos, rad, d2r*th0, d2r*th1, {N});
 
         // convert to array of arrays
-        let [rtl, rtr, rbr, rbl] = parse_radius(radius);
+        let [rtl, rtr, rbr, rbl] = parse_rounded(rounded);
         let [rtlx, rtly] = rtl; let [rtrx, rtry] = rtr;
         let [rbrx, rbry] = rbr; let [rblx, rbly] = rbl;
 
@@ -1869,13 +1872,13 @@ class TextFrame extends Frame {
 }
 
 class TitleFrame extends Frame {
-    constructor(child, text, attr) {
-        let {title_size, title_fill, title_offset, title_radius, adjust, padding, margin, border, ...attr0} = attr ?? {};
+    constructor(child, title, attr) {
+        let {title_size, title_fill, title_offset, title_rounded, adjust, padding, margin, border, ...attr0} = attr ?? {};
         let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
         title_size = title_size ?? 0.075;
         title_fill = title_fill ?? 'white';
         title_offset = title_offset ?? 0;
-        title_radius = title_radius ?? 0.05;
+        title_rounded = title_rounded ?? 0.05;
         adjust = adjust ?? false;
         padding = padding ?? 0;
         margin = margin ?? 0;
@@ -1893,12 +1896,12 @@ class TitleFrame extends Frame {
 
         // fill in default attributes
         let frame_attr = {margin, border, ...frame_attr0};
-        let title_attr = {fill: title_fill, border_radius: title_radius, ...title_attr0};
+        let title_attr = {fill: title_fill, rounded: title_rounded, ...title_attr0};
 
         // place label at top
         let base = title_offset * title_size;
-        let title = new TextFrame(text, title_attr);
-        let place = new Place(title, {pos: [0.5, base], rad: [null, title_size], expand: true});
+        let text = new TextFrame(title, title_attr);
+        let place = new Place(text, {pos: [0.5, base], rad: [null, title_size], expand: true});
         let frame = new Frame(child, {padding});
         let group = new Group([frame, place], {clip: false, aspect: frame.aspect});
 
