@@ -110,7 +110,7 @@ function Frame(child: Element, args?: {padding: frame, margin: frame, border: nu
 function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
 function Place(child: Element, args?: spec): Place;
 function Points(children: child[], args?: {size: size, shape: Element}): Points;
-function Rect(args?: {rect: rect, rounded: number | number[2]}): Rect;
+function Rect(args?: {pos: point, rad: size, rounded: number | number[2]}): Rect;
 function Circle(args?: {pos: point, rad: size}): Circle;
 function Line(p1: point, p2: point): Line;
 function UnitLine(direc: string, pos: number, args?: {lim: range}): UnitLine;

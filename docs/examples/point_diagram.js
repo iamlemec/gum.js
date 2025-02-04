@@ -18,8 +18,8 @@ let steps1a = Points([[0.36, y1]], {shape: Circle({fill: red}), size: 0.02});
 let steps2 = Points(p2.map(x => [x, y2]), {shape: Circle({fill: red}), size});
 
 // gray rectangles
-let pat1 = Rect({rect: [b1, y1-bsize, b1+B1, y1+bsize], fill: '#DDD', opacity: 0.75});
-let pat2 = Rect({rect: [b2, y2-bsize, b2+B2, y2+bsize], fill: '#DDD', opacity: 0.75});
+let pat1 = Rect({pos: [b1+0.5*B1, y1], rad: [0.5*B1, bsize], fill: '#DDD', opacity: 0.75});
+let pat2 = Rect({pos: [b2+0.5*B2, y2], rad: [0.5*B2, bsize], fill: '#DDD', opacity: 0.75});
 
 // labels
 let label1 = Note('"Low B"', {pos: [0.47, y1-0.15], rad: 0.06});

@@ -143,7 +143,7 @@ return Interactive({
   y: Slider(50, {max: 100, title: 'Width'})
 }, ({x, y}) => {
   let [a, w] = [x / 100, y / 100];
-  let r = Rect({rect: [0, 0, w, w], fill: 'red', opacity: a});
+  let r = Rect({pos: [0.5*w, 0.5*w], rad: [0.5*w, 0.5*w], fill: 'red', opacity: a});
   let f = Frame(r, {margin: 0.1});
   return f;
 });
@@ -554,7 +554,7 @@ return Animation({
   w: Continuous([0, 0.5], {tlim: [0, 1]}),
   o: Continuous([0.1, 1], {tlim: [1, 2]}),
 }, ({w, o}) => {
-  let rect = Rect({rect: [0, 0, w, w], fill: red, opacity: o});
+  let rect = Rect({pos: [0.5*w, 0.5*w], rad: [0.5*w, 0.5*w], fill: red, opacity: o});
   return Frame(rect, {margin: 0.1});
 }, {
   tlim: [0, 2]

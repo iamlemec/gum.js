@@ -11,7 +11,7 @@ let top = HAxis(tops, {line_stroke: 0, tick_size: 0.05});
 
 // shaded box with albels
 let vline = VLine(0.5, {opacity: 0.25, stroke_dasharray: 4});
-let shade = Rect({rect: [0.3, 0, 0.7, 1], stroke: 'black', fill: '#BBB', opacity: 0.15});
+let shade = Rect({rad: [0.2, 0.5], stroke: 'black', fill: '#BBB', opacity: 0.15});
 let lag = Place(Text('Lagging', {stroke: '#444'}), {pos: [0.4, 0.15], rad: 0.08});
 let led = Place(Text('Leading', {stroke: '#444'}), {pos: [0.6, 0.15], rad: 0.08});
 let pat = Place(Text('Patent Coverage', {stroke: '#444'}), {pos: [0.5, 0.9], rad: 0.18});
