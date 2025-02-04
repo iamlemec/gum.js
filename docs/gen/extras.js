@@ -49,6 +49,6 @@ let blades = Group(linspace(0, 360, 24).slice(1).map(th =>
 ), {clip: false});
 // frame the result
 return Frame(blades, {
-  padding: 0.05, margin: 0.1, border: 1, border_radius: 0.05,
+  padding: 0.05, margin: 0.1, border: 1, border_rounded: 0.05,
   border_fill: '#EEE', border_stroke: '#999'
 });

@@ -6,7 +6,7 @@ let net = Network([
 ], [
   ['input', 'attn'], ['attn', 'percep']
 ], {
-  aspect: 8, directed: true, node_border_radius: 0.05, arrow_size: 0.03
+  aspect: 8, directed: true, node_border_rounded: 0.05, arrow_size: 0.03
 });
 let notes = Points([[0.32, 0.4], [0.67, 0.4]], {
     shape: Text('Layer Norm'), size: 0.08

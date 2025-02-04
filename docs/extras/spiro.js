@@ -3,11 +3,11 @@ let paths = range(1, 6).map(i => {
     let R = 0.35;  // outer circle radius
     let r = R * (0.3 + 0.1 * i);  // inner circle radius
     let d = 0.7 * r;  // distance from center of inner circle
-    
+
     // Parametric equations for hypotrochoid
     let fx = t => (R-r) * cos(t) + d * cos((R-r)/r * t);
     let fy = t => (R-r) * sin(t) - d * sin((R-r)/r * t);
-    
+
     // Create path with varying color from blue to red
     return SymPath({
         fx, fy,
@@ -31,5 +31,5 @@ return TitleFrame(graph, 'Spirograph', {
     margin: 0.1,
     title_size: 0.08,
     border: 1,
-    border_radius: 0.02,
+    border_rounded: 0.02,
 });

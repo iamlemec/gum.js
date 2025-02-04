@@ -6,6 +6,6 @@ let spiral = SymPath({
 });
 let frame = Frame(spiral, {
   padding: 0.05, border: 1, margin: 0.05,
-  border_radius: 0.02, border_fill: '#111'
+  border_rounded: 0.02, border_fill: '#111'
 });
 return frame;

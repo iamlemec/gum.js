@@ -10,5 +10,5 @@ let poly = SymPoly({
 let graph = Graph(poly, {aspect: 1});
 return Frame(graph, {
   padding: 0.1, border: 1, margin: 0.1,
-  border_radius: 0.05, border_fill: '#EEE'
+  border_rounded: 0.05, border_fill: '#EEE'
 });

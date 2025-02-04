@@ -8,5 +8,5 @@ return Network([
   ...range(1, 4).map(i => [`pc${i}`, `wt${i}`, {arrow: true}]),
   ...conns.map(([i1, i2]) => [[`wt${i1}`, 'south'], [`pa${i2}`, 'north']])
 ], {
-  aspect: phi, coord: [0, 0, 6, 6], node_border_radius: 0.05, edge_arrow_size: 0.1
+  aspect: phi, coord: [0, 0, 6, 6], node_border_rounded: 0.05, edge_arrow_size: 0.1
 });
