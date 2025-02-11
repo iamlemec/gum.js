@@ -1275,15 +1275,6 @@ class Points extends Container {
     }
 }
 
-class Point extends Place {
-    constructor(pos, args) {
-        let {size, shape, ...attr} = args ?? {};
-        shape = shape ?? new Dot(attr);
-        size = size ?? 0.01;
-        super(shape, {pos, rad: size});
-    }
-}
-
 /**
  ** basic geometry
  **/
@@ -1338,11 +1329,12 @@ class HLine extends UnitLine {
 
 class Rect extends Element {
     constructor(args) {
-        let {pos, rad, rounded, ...attr} = args ?? {};
+        let {pos, rad, rect, rounded, ...attr} = args ?? {};
         pos = pos ?? [0.5, 0.5];
         rad = rad ?? [0.5, 0.5];
+        rect = rect ?? rad_rect(pos, rad);
         super('rect', true, attr);
-        this.rect = rad_rect(pos, rad);
+        this.rect = rect;
         this.rounded = rounded;
         this.bounds = merge_rects(this.rect);
     }
@@ -1504,7 +1496,8 @@ class Pointstring extends Element {
 
 class Polyline extends Pointstring {
     constructor(points, attr) {
-        super('polyline', points, attr);
+        const attr1 = {fill: 'none', ...attr};
+        super('polyline', points, attr1);
     }
 }
 
@@ -2800,10 +2793,10 @@ function outer_limits(elems, padding) {
 
 class Graph extends Container {
     constructor(elems, args) {
-        let {xlim, ylim, aspect, flex, padding, ...attr} = args ?? {};
+        let {coord, aspect, flex, ...attr} = args ?? {};
         flex = flex ?? false;
         aspect = flex ? null : (aspect ?? 'auto');
-        padding = padding ?? 0;
+        coord = coord ?? coord_base;
 
         // handle singleton line
         if (is_element(elems)) {
@@ -2811,10 +2804,8 @@ class Graph extends Container {
         }
 
         // determine coordinate limits
-        let [xmin, ymin, xmax, ymax] = outer_limits(elems, padding);
-        [xmin, xmax] = xlim ?? [xmin, xmax];
-        [ymin, ymax] = ylim ?? [ymin, ymax];
-        let coord = [xmin, ymax, xmax, ymin];
+        let [xmin, ymin, xmax, ymax] = coord;
+        coord = [xmin, ymax, xmax, ymin];
 
         // get automatic aspect
         aspect = (aspect == 'auto') ? rect_aspect(coord) : aspect;
@@ -2831,7 +2822,7 @@ class Plot extends Container {
             xlim, ylim, xaxis, yaxis, xticks, yticks, grid, xgrid, ygrid, xlabel, ylabel,
             title, tick_size, label_size, label_offset, label_align, title_size, title_offset,
             xlabel_size, ylabel_size, xlabel_offset, ylabel_offset, xlabel_align, ylabel_align,
-            padding, prec, aspect, flex, ...attr0
+            padding, prec, aspect, flex, fill, ...attr0
         } = args ?? {};
         xaxis = xaxis ?? true;
         yaxis = yaxis ?? true;
@@ -2844,10 +2835,9 @@ class Plot extends Container {
         // some advanced piping
         let [
             xaxis_attr, yaxis_attr, axis_attr, xgrid_attr, ygrid_attr, grid_attr, xlabel_attr,
-            ylabel_attr, label_attr, title_attr, graph_attr, attr
+            ylabel_attr, label_attr, title_attr, attr
         ] = prefix_split([
-            'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label',
-            'title', 'graph'
+            'xaxis', 'yaxis', 'axis', 'xgrid', 'ygrid', 'grid', 'xlabel', 'ylabel', 'label', 'title'
         ], attr0);
         [xaxis_attr, yaxis_attr] = [{...axis_attr, ...xaxis_attr}, {...axis_attr, ...yaxis_attr}];
         [xgrid_attr, ygrid_attr] = [{...grid_attr, ...xgrid_attr}, {...grid_attr, ...ygrid_attr}];
@@ -2863,7 +2853,8 @@ class Plot extends Container {
         let [xmin, ymin, xmax, ymax] = bounds;
         xlim = xlim ?? [xmin, xmax]; [xmin, xmax] = xlim;
         ylim = ylim ?? [ymin, ymax]; [ymin, ymax] = ylim;
-        let [xrange, yrange] = [xmax-xmin, ymax-ymin];
+        let coord = [xmin, ymin, xmax, ymax];
+        let [xrange, yrange] = [xmax - xmin, ymax - ymin];
 
         // ensure consistent apparent tick size
         aspect = (aspect == 'auto') ? xrange/yrange : aspect;
@@ -2888,6 +2879,11 @@ class Plot extends Container {
             yaxis = null;
         }
 
+        // fill background
+        if (fill != null) {
+            fill = new Rect({rect: coord, fill});
+        }
+
         // automatic grid path
         if (grid === true || xgrid === true) {
             xgrid = (xaxis != null) ? xaxis.ticks.map(([x, t]) => x) : null;
@@ -2903,8 +2899,8 @@ class Plot extends Container {
         }
 
         // create graph from core elements
-        let elems1 = [xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
-        let graph = new Graph(elems1, {xlim, ylim, aspect, flex, padding, ...graph_attr});
+        let elems1 = [fill, xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
+        let graph = new Graph(elems1, {coord, aspect});
 
         // create base layout
         let children = [graph];
@@ -3346,7 +3342,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3491,5 +3487,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
 };
