@@ -11,14 +11,14 @@ D8,1.3766574480218001
 D9,1.1919663726530039
 D10,1.0828717612939973
 */
-let { cgdppc_bin, pop_growth } = getData('test.csv');
+
+// this might call for a DataFrame construct?
+let { cgdppc_bin, pop_growth } = getData('plot.csv');
 gdp_data = enumerate(cgdppc_bin);
 pop_data = enumerate(pop_growth);
 
 let line = Polyline(pop_data, {stroke_width: 2});
-let points = Points(pop_data, {
-  size: 0.1, shape: Circle({fill: blue})
-});
+let points = Points(pop_data, {size: 0.1, fill: blue});
 
 let plot = Plot([line, points], {
   aspect: 2, grid: true, fill: 'white',

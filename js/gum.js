@@ -1259,8 +1259,9 @@ class Attach extends Container {
 
 class Points extends Container {
     constructor(points, args) {
-        let {size, shape, color, ...attr} = args ?? {};
-        shape = shape ?? new Dot({color});
+        let {size, shape, stroke, fill, stroke_width, ...attr} = args ?? {};
+        fill = fill ?? 'black';
+        shape = shape ?? new Dot({stroke, fill, stroke_width});
         size = size ?? 0.01;
 
         // handle different forms
@@ -1988,7 +1989,7 @@ class TitleFrame extends Frame {
         title_size = title_size ?? 0.075;
         title_fill = title_fill ?? 'white';
         title_offset = title_offset ?? 0;
-        title_rounded = title_rounded ?? 0.05;
+        title_rounded = title_rounded ?? 0.1;
         adjust = adjust ?? false;
         padding = padding ?? 0;
         margin = margin ?? 0;
