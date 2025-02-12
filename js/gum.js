@@ -1525,13 +1525,13 @@ class Triangle extends Polygon {
 
 class Path extends Element {
     constructor(cmds, args) {
-        let {path, ...attr} = args ?? {};
+        let attr = args ?? {};
         super('path', true, attr);
         this.cmds = cmds;
     }
 
     props(ctx) {
-        let d = this.cmds.map(c => c.svg(ctx)).join(' ');
+        let d = this.cmds.map(c => c.data(ctx)).join(' ');
         return {d, ...this.attr};
     }
 }
@@ -1545,7 +1545,7 @@ class Command {
         return '';
     }
 
-    svg(ctx) {
+    data(ctx) {
         return `${this.cmd} ${this.args(ctx)}`;
     }
 }
@@ -1592,13 +1592,14 @@ class ArcCmd extends Command {
 
 // this makes a rounded corner between two points
 // the direction is by default counter-clockwise
+// this assumes the cursor is at pos0
 class CornerCmd {
     constructor(pos0, pos1) {
         this.pos0 = pos0;
         this.pos1 = pos1;
     }
 
-    svg(ctx) {
+    data(ctx) {
         let [x0, y0] = ctx.coord_to_pixel(this.pos0);
         let [x1, y1] = ctx.coord_to_pixel(this.pos1);
 
@@ -1621,8 +1622,7 @@ class CornerCmd {
 
         // full command
         return (
-            `M ${rounder(x0, ctx.prec)} ${rounder(y0, ctx.prec)} `
-            + ((diag != wide) ? `L ${rounder(x0p, ctx.prec)} ${rounder(y0p, ctx.prec)} ` : '')
+            ((diag != wide) ? `L ${rounder(x0p, ctx.prec)} ${rounder(y0p, ctx.prec)} ` : '')
             + `A ${rounder(rad, ctx.prec)} ${rounder(rad, ctx.prec)} 0 0 0 ${rounder(x1p, ctx.prec)} ${rounder(y1p, ctx.prec)} `
             + ((diag == wide) ? `L ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)} ` : '')
         );
@@ -1668,18 +1668,6 @@ class Arc extends Path {
     }
 }
 
-function arc_points(pos, rad, th0, th1, args) {
-    let { N } = args ?? {};
-    N = N ?? 10;
-
-    let [x, y] = pos;
-    let [rx, ry] = rad;
-
-    return linspace(th0, th1, N).map(
-        t => [x + rx*cos(t), y + ry*sin(t)]
-    );
-}
-
 function parse_rounded(rounded) {
     if (is_scalar(rounded)) {
         rounded = [rounded, rounded, rounded, rounded];
@@ -1691,48 +1679,31 @@ function parse_rounded(rounded) {
 }
 
 // supports different rounded for each corner
-// TODO: implement this in props so we can make the corners nice for any aspect
-class RoundedRect extends Polygon {
+class RoundedRect extends Path {
     constructor(args) {
-        let {rounded, adjust, aspect, N, ...attr} = args ?? {};
+        let {rounded, N, ...attr} = args ?? {};
         rounded = rounded ?? 0;
-        adjust = adjust ?? true;
-        N = N ?? 10;
-
-        // arc function
-        let arc = (pos, rad, th0, th1) => arc_points(pos, rad, d2r*th0, d2r*th1, {N});
 
         // convert to array of arrays
         let [rtl, rtr, rbr, rbl] = parse_rounded(rounded);
         let [rtlx, rtly] = rtl; let [rtrx, rtry] = rtr;
         let [rbrx, rbry] = rbr; let [rblx, rbly] = rbl;
 
-        // get edge points
-        let top = [[rtlx, 0], [1 - rtrx, 0]];
-        let right = [[1, rtry], [1, 1 - rbry]];
-        let bottom = [[1 - rbrx, 1], [rblx, 1]];
-        let left = [[0, 1 - rbly], [0, rtly]];
-
-        // get radial nodes
-        let ntl = [rtlx, rtly];
-        let ntr = [1 - rtrx, rtry];
-        let nbr = [1 - rbrx, 1 - rbry];
-        let nbl = [rblx, 1 - rbly];
-
-        // get corner points
-        let top_left = arc(ntl, rtl, 180, 270);
-        let top_right = arc(ntr, rtr, 270, 360);
-        let bottom_right = arc(nbr, rbr, 0, 90);
-        let bottom_left = arc(nbl, rbl, 90, 180);
-
-        // make combined path
-        let points = [
-            ...top_left, ...top, ...top_right, ...right,
-            ...bottom_right, ...bottom, ...bottom_left, ...left,
+        // make command list
+        let cmds = [
+            new MoveCmd([1 - rtrx, 0]),
+            new LineCmd([rtlx, 0]),
+            new CornerCmd([rtlx, 0], [0, rtly]),
+            new LineCmd([0, 1 - rbly]),
+            new CornerCmd([0, 1 - rbly], [rblx, 1]),
+            new LineCmd([rbrx, 1]),
+            new CornerCmd([rbrx, 1], [1, 1 - rbry]),
+            new LineCmd([1, rtry]),
+            new CornerCmd([1, rtry], [1 - rtrx, 0]),
         ];
 
-        // pass to Polygon
-        super(points, attr);
+        // pass to Path
+        super(cmds, attr);
     }
 }
 
