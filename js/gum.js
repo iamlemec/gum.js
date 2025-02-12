@@ -1591,8 +1591,7 @@ class ArcCmd extends Command {
 }
 
 // this makes a rounded corner between two points
-// it will shrink one of the radii to match the aspect
-// it expected to already be moved to pos0
+// the direction is by default counter-clockwise
 class CornerCmd {
     constructor(pos0, pos1) {
         this.pos0 = pos0;
@@ -1603,16 +1602,30 @@ class CornerCmd {
         let [x0, y0] = ctx.coord_to_pixel(this.pos0);
         let [x1, y1] = ctx.coord_to_pixel(this.pos1);
 
-        // get corner point
-        let [cx, cy] = [Math.max(x0, x1), Math.min(y0, y1)];
+        // compute aspect ratio
         let [dx, dy] = [Math.abs(x1 - x0), Math.abs(y1 - y0)];
+        let aspect = dx / dy;
+
+        // are we in quadrants 1/3 or 2/4?
+        let [top, right] = [x1 < x0, y1 < y0];
+        let [diag, wide] = [top == right, aspect > 1];
+
+        // get corner point and fitted radius
+        let [cx, cy] = diag ? [x0, y1] : [x1, y0];
         let rad = Math.min(dx, dy);
 
-        // get aspect-adjusted radii
-        let [x2, y2] = [cx - rad, cy];
-        let line = `L ${rounder(x2, ctx.prec)} ${rounder(y2, ctx.prec)}`;
-        let arc = `A ${rounder(rad, ctx.prec)} ${rounder(rad, ctx.prec)} 0 0 1 ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)}`;
-        return `${line} ${arc}`;
+        // get the intra-radial points
+        let sigx = right ? -1 : 1; let sigy = top ? 1 : -1;
+        let [x0p, y0p] = diag ? [cx, cy + sigy*rad] : [cx + sigx*rad, cy];
+        let [x1p, y1p] = diag ? [cx + sigx*rad, cy] : [cx, cy + sigy*rad];
+
+        // full command
+        return (
+            `M ${rounder(x0, ctx.prec)} ${rounder(y0, ctx.prec)} `
+            + ((diag != wide) ? `L ${rounder(x0p, ctx.prec)} ${rounder(y0p, ctx.prec)} ` : '')
+            + `A ${rounder(rad, ctx.prec)} ${rounder(rad, ctx.prec)} 0 0 0 ${rounder(x1p, ctx.prec)} ${rounder(y1p, ctx.prec)} `
+            + ((diag == wide) ? `L ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)} ` : '')
+        );
     }
 }
 
