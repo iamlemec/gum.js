@@ -2924,12 +2924,12 @@ class Graph extends Container {
             let [xmin, ymin, xmax, ymax] = outer_limits(elems);
             [xmin, xmax] = xlim ?? [xmin, xmax];
             [ymin, ymax] = ylim ?? [ymin, ymax];
-            coord = [xmin, ymax, xmax, ymin];
+            coord = [xmin, ymin, xmax, ymax];
         }
 
         // invert coordinate limits
-        let [xmin, ymax, xmax, ymin] = coord;
-        coord = [xmin, ymin, xmax, ymax];
+        let [xmin, ymin, xmax, ymax] = coord;
+        coord = [xmin, ymax, xmax, ymin];
 
         // get automatic aspect
         aspect = (aspect == 'auto') ? rect_aspect(coord) : aspect;
