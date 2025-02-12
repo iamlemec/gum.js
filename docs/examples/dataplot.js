@@ -12,19 +12,18 @@ D9,1.1919663726530039
 D10,1.0828717612939973
 */
 let { cgdppc_bin, pop_growth } = getData('test.csv');
+gdp_data = enumerate(cgdppc_bin);
+pop_data = enumerate(pop_growth);
 
-let line = Polyline(zip(range(10), pop_growth), {
-  stroke_width: 2
-});
-
-let points = Points(zip(range(10), pop_growth), {
+let line = Polyline(pop_data, {stroke_width: 2});
+let points = Points(pop_data, {
   size: 0.1, shape: Circle({fill: blue})
 });
 
 let plot = Plot([line, points], {
   aspect: 2, grid: true, fill: 'white',
   xlim: [-1, 10], ylim: [0.5, 3.0],
-  yticks: 6, xticks: zip(range(10), cgdppc_bin),
+  yticks: 6, xticks: gdp_data,
   xlabel: 'GDP/pop Decile',
   ylabel: 'Population Growth (%)'
 });

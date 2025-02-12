@@ -1523,6 +1523,138 @@ class Triangle extends Polygon {
     }
 }
 
+class Path extends Element {
+    constructor(cmds, args) {
+        let {path, ...attr} = args ?? {};
+        super('path', true, attr);
+        this.cmds = cmds;
+    }
+
+    props(ctx) {
+        let d = this.cmds.map(c => c.svg(ctx)).join(' ');
+        return {d, ...this.attr};
+    }
+}
+
+class Command {
+    constructor(cmd) {
+        this.cmd = cmd;
+    }
+
+    args(ctx) {
+        return '';
+    }
+
+    svg(ctx) {
+        return `${this.cmd} ${this.args(ctx)}`;
+    }
+}
+
+class MoveCmd extends Command {
+    constructor(pos) {
+        super('M');
+        this.pos = pos;
+    }
+
+    args(ctx) {
+        let [x, y] = ctx.coord_to_pixel(this.pos);
+        return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`;
+    }
+}
+
+class LineCmd extends Command {
+    constructor(pos) {
+        super('L');
+        this.pos = pos;
+    }
+
+    args(ctx) {
+        let [x, y] = ctx.coord_to_pixel(this.pos);
+        return `${rounder(x, ctx.prec)} ${rounder(y, ctx.prec)}`;
+    }
+}
+
+class ArcCmd extends Command {
+    constructor(pos, rad, large, sweep) {
+        super('A');
+        this.pos = pos;
+        this.rad = rad;
+        this.large = large;
+        this.sweep = sweep;
+    }
+
+    args(ctx) {
+        let [x1, y1] = ctx.coord_to_pixel(this.pos);
+        let [rx, ry] = ctx.coord_to_pixel_size(this.rad);
+        return `${rounder(rx, ctx.prec)} ${rounder(ry, ctx.prec)} 0 ${this.large} ${this.sweep} ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)}`;
+    }
+}
+
+// this makes a rounded corner between two points
+// it will shrink one of the radii to match the aspect
+// it expected to already be moved to pos0
+class CornerCmd {
+    constructor(pos0, pos1) {
+        this.pos0 = pos0;
+        this.pos1 = pos1;
+    }
+
+    svg(ctx) {
+        let [x0, y0] = ctx.coord_to_pixel(this.pos0);
+        let [x1, y1] = ctx.coord_to_pixel(this.pos1);
+
+        // get corner point
+        let [cx, cy] = [Math.max(x0, x1), Math.min(y0, y1)];
+        let [dx, dy] = [Math.abs(x1 - x0), Math.abs(y1 - y0)];
+        let rad = Math.min(dx, dy);
+
+        // get aspect-adjusted radii
+        let [x2, y2] = [cx - rad, cy];
+        let line = `L ${rounder(x2, ctx.prec)} ${rounder(y2, ctx.prec)}`;
+        let arc = `A ${rounder(rad, ctx.prec)} ${rounder(rad, ctx.prec)} 0 0 1 ${rounder(x1, ctx.prec)} ${rounder(y1, ctx.prec)}`;
+        return `${line} ${arc}`;
+    }
+}
+
+function norm_angle(deg) {
+    if (deg == 360) return 359.99;
+    deg = deg % 360;
+    return deg < 0 ? deg + 360 : deg;
+}
+
+class Arc extends Path {
+    constructor(deg0, deg1, args) {
+        let {pos, rad, ...attr} = args ?? {};
+        pos = pos ?? [0.5, 0.5];
+        rad = rad ?? [0.5, 0.5];
+        deg0 = norm_angle(deg0);
+        deg1 = norm_angle(deg1);
+
+        // get radian angles
+        let th0 = d2r * deg0;
+        let th1 = d2r * deg1;
+
+        // get start/stop points
+        let [x0, y0] = pos;
+        let [rx, ry] = rad;
+        let pos0 = [x0 + rx * cos(th0), y0 - ry * sin(th0)];
+        let pos1 = [x0 + rx * cos(th1), y0 - ry * sin(th1)];
+
+        // get large/sweep flags
+        let delta = deg1 - deg0;
+        if (delta < 0) delta += 360;
+        let large = delta > 180 ? 1 : 0;
+        let sweep = delta < 0 ? 1 : 0;
+
+        // send commands to path
+        let cmds = [
+            new MoveCmd(pos0),
+            new ArcCmd(pos1, rad, large, sweep),
+        ];
+        super(cmds, attr);
+    }
+}
+
 function arc_points(pos, rad, th0, th1, args) {
     let { N } = args ?? {};
     N = N ?? 10;
@@ -1549,8 +1681,9 @@ function parse_rounded(rounded) {
 // TODO: implement this in props so we can make the corners nice for any aspect
 class RoundedRect extends Polygon {
     constructor(args) {
-        let {rounded, N, ...attr} = args ?? {};
+        let {rounded, adjust, aspect, N, ...attr} = args ?? {};
         rounded = rounded ?? 0;
+        adjust = adjust ?? true;
         N = N ?? 10;
 
         // arc function
@@ -2793,10 +2926,9 @@ function outer_limits(elems, padding) {
 
 class Graph extends Container {
     constructor(elems, args) {
-        let {coord, aspect, flex, ...attr} = args ?? {};
+        let {xlim, ylim, coord, aspect, flex, ...attr} = args ?? {};
         flex = flex ?? false;
         aspect = flex ? null : (aspect ?? 'auto');
-        coord = coord ?? coord_base;
 
         // handle singleton line
         if (is_element(elems)) {
@@ -2804,8 +2936,16 @@ class Graph extends Container {
         }
 
         // determine coordinate limits
-        let [xmin, ymin, xmax, ymax] = coord;
-        coord = [xmin, ymax, xmax, ymin];
+        if (coord == null) {
+            let [xmin, ymin, xmax, ymax] = outer_limits(elems);
+            [xmin, xmax] = xlim ?? [xmin, xmax];
+            [ymin, ymax] = ylim ?? [ymin, ymax];
+            coord = [xmin, ymax, xmax, ymin];
+        }
+
+        // invert coordinate limits
+        let [xmin, ymax, xmax, ymin] = coord;
+        coord = [xmin, ymin, xmax, ymax];
 
         // get automatic aspect
         aspect = (aspect == 'auto') ? rect_aspect(coord) : aspect;
@@ -3342,7 +3482,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3487,5 +3627,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, Mesh, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
 };
