@@ -129,7 +129,7 @@ function Emoji(tag: string): Emoji;
 function Latex(text: string): Latex;
 function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
 function TextFrame(text: label | label[] | Element, args?: {latex: boolean, emoji: boolean}): TextFrame;
-function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: point, title_rounded: size, adjust: boolean}): TitleFrame;
+function TitleFrame(child: Element, title: label, args?: {title_size: number, title_fill: string, title_offset: number, title_rounded: size, adjust: boolean}): TitleFrame;
 function Node(text: string, pos: point, args?: {size: size}): Node;
 function Edge(beg: edge_pos, end: edge_pos, args?: {arrow: boolean, arrow_beg: boolean, arrow_end: boolean, arrow_size: number}): Edge;
 ```

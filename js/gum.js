@@ -1823,6 +1823,14 @@ class Merge extends MetaContainer {
  ** text elements
  **/
 
+function escape_xml(text) {
+    return text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;')
+               .replace(/"/g, '&quot;')
+               .replace(/'/g, '&apos;');
+}
+
 class Text extends Element {
     constructor(text, args) {
         let {font_family, font_weight, offset, scale, ...attr0} = args ?? {};
@@ -1847,7 +1855,7 @@ class Text extends Element {
         this.offset = offset1;
         this.size = size;
         this.scale = scale;
-        this.text = text;
+        this.text = escape_xml(text);
     }
 
     props(ctx) {
