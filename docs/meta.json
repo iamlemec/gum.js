@@ -17,6 +17,7 @@
         "Rect",
         "Circle",
         "Ellipse",
+        "Triangle",
         "Line",
         "UnitLine",
         "Polyline"
