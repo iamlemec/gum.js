@@ -1167,7 +1167,7 @@ class Grid extends Container {
 
         // aggregate aspect ratios along rows and columns (assuming null goes to 1)
         let aspect_grid = children.map(row => row.map(e => e.aspect ?? 1));
-        widths =  normalize(widths ?? zip(...aspect_grid).map(mean));
+        widths = normalize(widths ?? zip(...aspect_grid).map(mean));
         heights = normalize(heights ?? aspect_grid.map(row => mean(row.map(a => 1/a))));
 
         // adjust widths and heights to account for spacing
@@ -2235,7 +2235,7 @@ class Arrow extends Container {
         if (norm(direc, 2) == 0) {
             head_elem = new Dot({pos, rad: head, ...head_attr});
         } else {
-            head_elem = shape(theta, {pos, rad: head, ...head_attr});
+            head_elem = new Place(shape(theta, {...head_attr}), {pos, rad: head});
         }
 
         // create tail

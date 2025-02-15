@@ -108,6 +108,7 @@ function Element(tag: string, unary: boolean, args?: {aspect: number}): Element;
 function Container(children: child[], args?: {tag: string, clip: boolean, inherit: boolean, coord: rect}): Container;
 function Frame(child: Element, args?: {padding: frame, margin: frame, border: number, adjust: boolean, flex: boolean, shape: Element}): Frame;
 function Stack(direc: string, children: child[], args?: {expand: boolean, align: align, spacing: number, aspect: aspect, debug: boolean}): Stack;
+function Grid(children: child[][], args?: {rows: number, cols: number, widths: number[], heights: number[], spacing: size}): Grid;
 function Place(child: Element, args?: spec): Place;
 function Points(children: child[], args?: {size: size, shape: Element}): Points;
 function Rect(args?: {pos: point, rad: size, rounded: number | number[2]}): Rect;
