@@ -123,9 +123,9 @@ function Axis(dirc: string, ticks: ticks, args?: {label_size: number, lim: range
 function Graph(elems: Element[], args?: {xlim: range, ylim: range, padding: frame}): Graph;
 function Plot(elems: Element[], args?: {xlim: range, ylim: range, xanchor: number, yanchor: number, xticks: ticks, yticks: ticks, xgrid: grid, ygrid: grid, xlabel: label, ylabel: label, title: label}): Plot;
 function BarPlot(bars: bars, args?: {direc: string, shrink: number, color: string}): BarPlot;
-function Text(text: string, args?: {size: size, hshift: number, vshift: number}): Text;
+function Text(text: string, args?: {font_family: string, font_weight: number, offset: size, scale: number}): Text;
 function MultiText(texts: label | label[], args?: {spacing: number}): MultiText;
-function Emoji(tag: string): Emoji;
+function Emoji(name: string): Emoji;
 function Latex(text: string): Latex;
 function Note(text: string, args?: {pos: point, rad: size, latex: boolean}): Note;
 function TextFrame(text: label | label[] | Element, args?: {latex: boolean, emoji: boolean}): TextFrame;
