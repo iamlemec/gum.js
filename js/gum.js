@@ -3222,25 +3222,9 @@ class Interactive {
         this.vars = vars;
     }
 
-    create(redraw) {
+    element() {
         let vals = map_object(this.vars, v => v.value);
-        let elem = this.func(vals);
-        if (redraw != null) {
-            redraw.innerHTML = renderElem(elem);
-        }
-        return elem;
-    }
-
-    createAnchors(redraw) {
-        let i = this;
-        let ancs = Object.entries(this.vars).map(([k, v]) => {
-            try {
-                return v.anchor(k, i, redraw);
-            } catch {
-                return null;
-            }
-        });
-        return ancs.filter(z => z != null);
+        return this.func(vals);
     }
 }
 
@@ -3251,17 +3235,9 @@ class Variable {
         this.attr = filter_object(args, v => v != null);
     }
 
-    updateValue(val, ctx, redraw) {
+    update(val) {
         this.value = val;
-        ctx.create(redraw);
     }
-}
-
-function updateSliderValue(slider) {
-    let pos = (slider.value - slider.min) / (slider.max - slider.min);
-    let lab = slider.parentNode.querySelector('.slider_thumb');
-    lab.innerHTML = slider.value;
-    lab.style.left = `${100*pos}%`;
 }
 
 class Slider extends Variable {
@@ -3274,91 +3250,12 @@ class Slider extends Variable {
         let attr1 = {min, max, step, ...attr};
         super(init, attr1);
     }
-
-    // ctx is an interactive context
-    anchor(name, ctx, redraw) {
-        let {min, max, step} = this.attr;
-
-        let cont = document.createElement('div');
-        cont.className = 'var_cont slider_cont';
-
-        let slider = document.createElement('div');
-        slider.className = 'slider';
-
-        let title = document.createElement('div');
-        title.className = 'var_title';
-        title.innerHTML = this.attr.title ?? `Slider: ${name}`;
-
-        let min_lim = document.createElement('div');
-        min_lim.innerHTML = min;
-        min_lim.className = 'min_lim';
-        let max_lim = document.createElement('div');
-        max_lim.innerHTML = max;
-        max_lim.className = 'max_lim';
-
-        let input = document.createElement('input');
-        input.type = 'range';
-        input.min = min;
-        input.max = max;
-        input.step = step;
-        input.value = this.value;
-        input.className = 'slider_input'; // set the CSS class
-
-        let outer = document.createElement('div');
-        outer.className = 'slider_outer';
-        let track = document.createElement('div');
-        track.className = 'slider_track';
-        let thumb = document.createElement('div');
-        thumb.className = 'slider_thumb';
-
-        outer.append(track, thumb);
-        slider.append(min_lim, input, max_lim, outer);
-        cont.append(title, slider); // slider in cont in targ!
-
-        updateSliderValue(input);
-        let v = this;
-        input.addEventListener('input', function() {
-            updateSliderValue(this);
-            let val = Number(this.value);
-            v.updateValue(val, ctx, redraw);
-        }, false);
-
-        return cont;
-    }
 }
 
 class Toggle extends Variable {
     constructor(init, args) {
-        init = init == undefined ? true : init;
-        args = args ?? {};
+        init = init ?? true;
         super(init, args);
-    }
-
-    // ctx is an interactive context
-    anchor(name, ctx, redraw) {
-        let cont = document.createElement('div');
-        cont.className = 'var_cont toggle_cont';
-
-        let toggle = document.createElement('label');
-        toggle.className = 'toggle';
-
-        let title = document.createElement('div');
-        title.className = 'var_title';
-        title.innerHTML = this.attr.title ?? `Toggle: ${name}`;
-
-        let input = document.createElement('input');
-        input.type = 'checkbox';
-        input.checked = this.value;
-
-        toggle.append(input);
-        cont.append(title, toggle); // slider in cont in targ!
-
-        let v = this;
-        input.addEventListener('input', function() {
-            v.updateValue(this.checked, ctx, redraw);
-        }, false);
-
-        return cont;
     }
 }
 
@@ -3373,39 +3270,6 @@ class List extends Variable {
 
         let attr1 = {choices, ...attr};
         super(init, attr1);
-    }
-
-    // ctx is an interactive context
-    anchor(name, ctx, redraw) {
-        let select = document.createElement('select');
-        Object.entries(this.attr.choices).forEach(([label, value]) => {
-            let o = document.createElement('option');
-            o.setAttribute('value', value);
-            o.innerHTML = label;
-            select.append(o);
-        });
-
-        let cont = document.createElement('div');
-        cont.className = 'var_cont list-cont';
-
-        let title = document.createElement('div');
-        title.className = 'var_title';
-        title.innerHTML = this.attr.title ?? `List: ${name}`;
-
-        let list = document.createElement('div');
-        list.className = 'list-outer';
-        list.append(select);
-        cont.append(title, list);
-
-        select.value = this.value;
-        this.updateValue(select.value, ctx, redraw);
-
-        let v = this;
-        select.addEventListener('input', function() {
-            v.updateValue(this.value, ctx, redraw);
-        });
-
-        return cont;
     }
 }
 
