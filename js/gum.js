@@ -80,7 +80,7 @@ try {
 }
 
 /**
- ** general utils
+ ** array utils
  **/
 
 function* gzip(...iterables) {
@@ -119,6 +119,10 @@ function split(arr, len) {
 function concat(arrs) {
     return arrs.flat();
 }
+
+/**
+ ** vector utils
+ **/
 
 function sum(arr) {
     arr = arr.filter(v => v != null);
@@ -172,15 +176,6 @@ function cumsum(arr, first) {
     return (first ?? true) ? [0, ...ret.slice(0, -1)] : ret;
 }
 
-// fill in missing values to ensure: sum(vals) == target
-function distribute_extra(vals, target) {
-    target = target ?? 1;
-    let nmiss = vals.filter(v => v == null).length;
-    let total = sum(vals);
-    let fill = (nmiss > 0) ? (target-total)/nmiss : 0;
-    return vals.map(v => v ?? fill);
-}
-
 function norm(vals, degree) {
     degree = degree ?? 1;
     return sum(vals.map(v => v**degree))**(1/degree);
@@ -226,6 +221,26 @@ function lingrid(xlim, ylim, N) {
     let ygrid = linspace(...ylim, Ny);
     return meshgrid(xgrid, ygrid);
 }
+
+/**
+ ** object utils
+ **/
+
+function map_object(obj, fn) {
+    return Object.fromEntries(
+        Object.entries(obj).map(([k, v]) => [k, fn(v)])
+    );
+}
+
+function filter_object(obj, fn) {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([k, v]) => fn(v))
+    );
+}
+
+/**
+ ** type utils
+ **/
 
 function ensure_vector(x, n) {
     if (!is_array(x)) {
@@ -773,9 +788,7 @@ class Element {
         this.aspect = aspect ?? null;
 
         // store non-null attributes
-        this.attr = Object.fromEntries(
-            Object.entries(attr).filter(([k, v]) => v != null)
-        );
+        this.attr = filter_object(attr, v => v != null);
     }
 
     props(ctx) {
@@ -1050,6 +1063,15 @@ function get_orient(direc) {
     } else {
         throw new Error(`Unrecognized direction specification: ${direc}`);
     }
+}
+
+// fill in missing values to ensure: sum(vals) == target
+function distribute_extra(vals, target) {
+    target = target ?? 1;
+    let nmiss = vals.filter(v => v == null).length;
+    let total = sum(vals);
+    let fill = (nmiss > 0) ? (target-total)/nmiss : 0;
+    return vals.map(v => v ?? fill);
 }
 
 // expects list of Element or [Element, height]
@@ -3201,9 +3223,7 @@ class Interactive {
     }
 
     create(redraw) {
-        let vals = Object.fromEntries(Object.entries(this.vars).map(
-            ([k, v]) => [k, v.value]
-        ));
+        let vals = map_object(this.vars, v => v.value);
         let elem = this.func(vals);
         if (redraw != null) {
             redraw.innerHTML = renderElem(elem);
@@ -3213,14 +3233,14 @@ class Interactive {
 
     createAnchors(redraw) {
         let i = this;
-        let ancs = Object.entries(this.vars).map(([v, k]) => {
+        let ancs = Object.entries(this.vars).map(([k, v]) => {
             try {
-                return k.anchor(v, i, redraw);
+                return v.anchor(k, i, redraw);
             } catch {
                 return null;
             }
         });
-        return ancs;
+        return ancs.filter(z => z != null);
     }
 }
 
@@ -3228,9 +3248,7 @@ class Variable {
     constructor(init, args) {
         args = args ?? {};
         this.value = init;
-        this.attr = Object.fromEntries(
-            Object.entries(args).filter(([k, v]) => v != null)
-        );
+        this.attr = filter_object(args, v => v != null);
     }
 
     updateValue(val, ctx, redraw) {
@@ -3346,14 +3364,15 @@ class Toggle extends Variable {
 
 class List extends Variable {
     constructor(init, args) {
-        args = args ?? {};
-        args.choices = args.choices ?? {};
+        let {choices, ...attr} = args ?? {};
+        choices = choices ?? {};
 
-        if (args.choices instanceof Array) {
-            args.choices = args.choices.reduce((a, v) => ({ ...a, [v]: v}), {});
+        if (is_array(choices)) {
+            choices = Object.fromEntries(choices.map(v => [v, v]));
         }
 
-        super(init, args);
+        let attr1 = {choices, ...attr};
+        super(init, attr1);
     }
 
     // ctx is an interactive context
@@ -3439,90 +3458,29 @@ class Discrete extends Transition {
 
 class Animation {
     constructor(vars, func, args) {
-        let {fps, loop, tlim} = args ?? {};
-        this.func = func;
-        this.vars = vars;
-
-        // options
-        this.fps = fps ?? 30;
-        this.loop = loop ?? false;
-        this.tlim = tlim ?? [0, 1];
+        let {tlim, N} = args ?? {};
+        tlim = tlim ?? [0, 1];
+        N = N ?? 10;
 
         // total frames
-        let [t0f, t1f] = this.tlim;
-        this.n = ceil(this.fps * (t1f - t0f));
-        this.time = linspace(t0f, t1f, this.n);
+        let [t0f, t1f] = tlim;
+        let time = linspace(t0f, t1f, N);
 
         // animation state
-        this.pos = 0; // current frame
-        this.playing = false;
-        this.frameList = null;
-    }
-
-    create() {
-        let [t0f, t1f] = this.tlim;
-        let vals = Object.fromEntries(Object.entries(this.vars).map(
-            ([k, v]) => [k, v.value(t0f, this.tlim)]
-        ));
-        return this.func(vals);
-    }
-
-    createAnchors(redraw) {
-        let i = this;
-
-        let cont = document.createElement('div');
-        cont.className = 'var_cont animate_cont';
-
-        let input = document.createElement('button');
-        input.textContent = 'Play';
-        input.className = 'animateplay__input';
-
-        cont.append(input);
-        input.addEventListener('click', function() {
-            i.playpause(redraw, input);
-        }, false);
-
-        return [cont];
-    }
-
-    createFrameList() {
-        return this.time.map(t => {
-            let vals = Object.fromEntries(Object.entries(this.vars).map(
-                ([k, v]) => [k, v.value(t, this.tlim)]
-            ));
-            let elem = this.func(vals);
-            return renderElem(elem);
+        this.frames = time.map(t => {
+            let vals = map_object(vars, v => v.value(t, tlim));
+            return func(vals);
         });
     }
 
-    animate(redraw, input) {
-        if (this.frameList == null) {
-            this.frameList = this.createFrameList();
-        }
-        this.metronome = setInterval(() => {
-            if (this.pos < this.frameList.length) {
-                redraw.innerHTML = this.frameList[this.pos];
-                this.pos += 1;
-            } else {
-                this.pos = 0;
-                if (!this.loop) {
-                    clearInterval(this.metronome);
-                    this.playing = false;
-                    input.textContent = 'Play';
-                }
-            }
-        }, 1000/this.fps);
+    frame(i) {
+        let frame = this.frames[i];
+        return renderElem(frame);
     }
 
-    playpause(redraw, input) {
-        if (this.playing) {
-            clearInterval(this.metronome);
-            input.textContent = 'Play';
-            this.playing = false;
-        } else {
-            this.animate(redraw, input);
-            input.textContent = 'Pause';
-            this.playing = true;
+    *animate() {
+        for (let i = 0; i < this.frames.length; i++) {
+            yield this.frame(i);
         }
     }
 }

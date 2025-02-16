@@ -12,7 +12,7 @@ let mid = document.querySelector('#mid');
 
 // fetcher
 async function getData(url, json=false) {
-    let resp = await fetch(url);
+    let resp = await fetch(url, {cache: 'reload'});
     if (resp.ok) {
         if (json) {
             return resp.json();
