@@ -154,8 +154,16 @@ function mul(arr1, arr2) {
     return zip(arr1, arr2).map(([a, b]) => a * b);
 }
 
+function div(arr1, arr2) {
+    return zip(arr1, arr2).map(([a, b]) => a / b);
+}
+
 function multiply(arr, scalar) {
     return arr.map(x => x*scalar);
+}
+
+function divide(arr, scalar) {
+    return arr.map(x => x/scalar);
 }
 
 function cumsum(arr, first) {
@@ -455,6 +463,11 @@ function rect_dims(rect) {
     return [abs(w), abs(h)];
 }
 
+function rect_center(rect) {
+    let [xa, ya, xb, yb] = rect;
+    return [(xa + xb)/2, (ya + yb)/2];
+}
+
 function rect_aspect(rect) {
     let [w, h] = rect_dims(rect);
     return w/h;
@@ -688,7 +701,9 @@ class Context {
         return prect;
     }
 
-    // project coordinates
+    // NOTE: this is the main mapping function! be very careful when changing it!
+    // implement placement logic: map from placement specification to pixel rectangle (prect)
+    // also outputs coordinate system (coord), rotation rect (rrect), and transform string (trans)
     map(args) {
         let {rect, aspect, rotate, expand, invar, align, pivot, coord} = args ?? {};
         rect = rect ?? coord_base;
@@ -723,9 +738,11 @@ class Context {
         let asp1 = rotate_aspect_radians(rasp, theta);
 
         // shrink down if aspect mismatch
+        let wide = asp1 > asp0;
+        let [hexpand, vexpand] = ensure_vector(expand, 2);
         let [tw, th] = [cos(theta)+sin(theta)/rasp, rasp*sin(theta)+cos(theta)];
         let [rw0, rh0] = [pw0/tw, ph0/th];
-        let [pw1, ph1] = (expand ^ (asp0 >= asp1)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
+        let [pw1, ph1] = ((wide & hexpand) | (!wide & !vexpand)) ? [rasp*rh0, rh0] : [rw0, rw0/rasp];
         let [rw1, rh1] = [pw1*tw, ph1*th];
 
         // get absolute sizes
@@ -1273,6 +1290,32 @@ class Points extends Container {
         let children = points.map(([s, p, r]) => [s, rad_rect(p, r)]);
         let attr1 = {clip: false, ...attr};
         super(children, attr1);
+    }
+}
+
+class Absolute extends Element {
+    constructor(child, size, args) {
+        let attr = args ?? {};
+        super('g', false);
+        this.child = child;
+        this.size = size;
+        this.place = attr;
+    }
+
+    inner(ctx) {
+        let { prect } = ctx;
+        let { child, place } = this;
+        let { aspect } = child;
+
+        // get relative size from absolute size
+        let bsize = rect_dims(prect);
+        let psize = ensure_vector(this.size, 2);
+        let rad = divide(div(psize, bsize), 2);
+
+        // render child element
+        let args = parse_bounds({rad, aspect, ...place});
+        let ctx1 = ctx.map(args);
+        return this.child.svg(ctx1);
     }
 }
 
@@ -1876,11 +1919,21 @@ class Text extends Element {
     }
 }
 
+class TextSize extends Absolute {
+    constructor(text, size, args) {
+        let child = new Text(text, args);
+        let expand = [true, false];
+        let { aspect } = child;
+        super(child, size, {expand});
+    }
+}
+
 class MultiText extends VStack {
     constructor(texts, args) {
+        let {spacing, align, ...attr} = args ?? {};
         texts = is_array(texts) ? texts : [texts];
-        let children = texts.map(t => new Text(t, args));
-        super(children, args);
+        let children = texts.map(t => new Text(t, attr));
+        super(children, {spacing, align});
     }
 }
 
@@ -1962,10 +2015,11 @@ class TextFrame extends Frame {
     constructor(text, args) {
         let {padding, border, spacing, align, latex, emoji, ...attr0} = args ?? {};
         let [text_attr, attr] = prefix_split(['text'], attr0);
+        border = border ?? 1;
         padding = padding ?? 0.1;
         spacing = spacing ?? 0.02;
-        border = border ?? 1;
         latex = latex ?? false;
+        emoji = emoji ?? false;
 
         // generate core elements
         let child;
@@ -1974,8 +2028,10 @@ class TextFrame extends Frame {
                 child = new Emoji(text, text_attr);
             } else if (latex) {
                 child = new Latex(text, text_attr);
-            } else {
+            } else if (is_array(text)) {
                 child = new MultiText(text, text_attr);
+            } else {
+                child = new Text(text, text_attr);
             }
         } else if (is_array(text)) {
             let lines = text.map(s => is_string(s) ? new Text(s, text_attr) : s);
@@ -1992,11 +2048,12 @@ class TextFrame extends Frame {
 
 class TitleFrame extends Frame {
     constructor(child, title, attr) {
-        let {title_size, title_fill, title_offset, title_rounded, adjust, padding, margin, border, ...attr0} = attr ?? {};
+        let {title_size, title_fill, title_offset, title_rounded, title_border, adjust, padding, margin, border, ...attr0} = attr ?? {};
         let [title_attr0, frame_attr0] = prefix_split(['title'], attr0);
         title_size = title_size ?? 0.075;
         title_fill = title_fill ?? 'white';
         title_offset = title_offset ?? 0;
+        title_border = title_border ?? 1;
         title_rounded = title_rounded ?? 0.1;
         adjust = adjust ?? false;
         padding = padding ?? 0;
@@ -2015,7 +2072,7 @@ class TitleFrame extends Frame {
 
         // fill in default attributes
         let frame_attr = {margin, border, ...frame_attr0};
-        let title_attr = {fill: title_fill, rounded: title_rounded, ...title_attr0};
+        let title_attr = {fill: title_fill, border: title_border, rounded: title_rounded, ...title_attr0};
 
         // place label at top
         let base = title_offset * title_size;
@@ -3475,7 +3532,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3620,5 +3677,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
 };
