@@ -2122,8 +2122,9 @@ class TitleFrame extends Frame {
 
 // determines actual values given combinations of limits, values, and functions
 function sympath(args) {
-    let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N} = args ?? {};
+    let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N} = args ?? {};
     tlim = tlim ?? limit_base;
+    clip = clip ?? true;
     fx = func_or_scalar(fx);
     fy = func_or_scalar(fy);
 
@@ -2150,16 +2151,32 @@ function sympath(args) {
         xvals = yvals.map(fx);
     }
 
+    // clip values
+    if (clip) {
+        if (xlim != null) {
+            let [xmin, xmax] = xlim;
+            xvals = xvals.map(x =>
+                (xmin <= x && x <= xmax) ? x : null
+            );
+        }
+        if (ylim != null) {
+            let [ymin, ymax] = ylim;
+            yvals = yvals.map(y =>
+                (ymin <= y && y <= ymax) ? y : null
+            );
+        }
+    }
+
     return [tvals, xvals, yvals];
 }
 
 class SymPath extends Polyline {
     constructor(args) {
-        let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N, ...attr} = args ?? {};
+        let {fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N, ...attr} = args ?? {};
 
         // compute path values
         [tvals, xvals, yvals] = sympath({
-            fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, N
+            fx, fy, xlim, ylim, tlim, xvals, yvals, tvals, clip, N
         });
 
         // get valid point pairs
@@ -2183,7 +2200,11 @@ class SymFill extends Polygon {
         let [tvals2, xvals2, yvals2] = sympath({
             fx: fx2, fy: fy2, xlim, ylim, tlim, xvals, yvals, tvals, N
         });
-        let points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()];
+
+        // get valid point pairs
+        let points = [...zip(xvals1, yvals1), ...zip(xvals2, yvals2).reverse()].filter(
+            ([x, y]) => (x != null) && (y != null)
+        );
 
         // pass to element
         super(points, attr);
@@ -2230,29 +2251,38 @@ class SymPoints extends Container {
     }
 }
 
-function pointpath(args) {
+function datapoints(args) {
     let {xvals, yvals, xlim, ylim, N} = args ?? {};
     if (xvals == null) {
+        N = N ?? yvals.length;
         xlim = xlim ?? [0, N-1];
         xvals = linspace(...xlim, N);
     }
     if (yvals == null) {
+        N = N ?? xvals.length;
         ylim = ylim ?? [0, N-1];
         yvals = linspace(...ylim, N);
     }
-    [xvals, yvals] = [xvals, yvals].map(v => ensure_vector(v, N));
     return zip(xvals, yvals);
 }
 
-class PointPath extends Polyline {
+class DataPath extends Polyline {
     constructor(args) {
         let {xvals, yvals, xlim, ylim, ...attr} = args ?? {};
-        let points = pointpath({xvals, yvals, xlim, ylim});
+        let points = datapoints({xvals, yvals, xlim, ylim});
         super(points, attr);
     }
 }
 
-class PointFill extends Polygon {
+class DataPoints extends Points {
+    constructor(args) {
+        let {xvals, yvals, xlim, ylim, ...attr} = args ?? {};
+        let points = datapoints({xvals, yvals, xlim, ylim});
+        super(points, attr);
+    }
+}
+
+class DataFill extends Polygon {
     constructor(args) {
         let {xvals1, yvals1, xvals2, yvals2, xlim, ylim, ...attr} = args ?? {};
 
@@ -2263,8 +2293,8 @@ class PointFill extends Polygon {
         );
 
         // make forward-backard shape
-        let points1 = pointpath({xvals: xvals1, yvals: yvals1, xlim, ylim, N});
-        let points2 = pointpath({xvals: xvals2, yvals: yvals2, xlim, ylim, N});
+        let points1 = datapoints({xvals: xvals1, yvals: yvals1, xlim, ylim, N});
+        let points2 = datapoints({xvals: xvals2, yvals: yvals2, xlim, ylim, N});
         let points = [...points1, ...points2.reverse()];
 
         // pass to pointstring
@@ -3112,7 +3142,7 @@ class Plot extends Container {
 
         // create graph from core elements
         let elems1 = [fill, xgrid, ygrid, ...elems, xaxis, yaxis].filter(z => z != null);
-        let graph = new Graph(elems1, {coord, aspect});
+        let graph = new Graph(elems1, {coord, aspect, flex});
 
         // create base layout
         let children = [graph];
@@ -3354,7 +3384,7 @@ class Animation {
  **/
 
 let Gum = [
-    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
+    Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, sum, prod, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, pi, phi, r2d, d2r, rounder, make_ticklabel, aspect_invariant, random, uniform, normal, cumsum, blue, red, green, Filter, Effect, DropShadow, Image
 ];
 
 // detect object types
@@ -3499,5 +3529,5 @@ function injectImages(elem) {
  **/
 
 export {
-    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, PointPath, PointFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
+    Gum, Context, Element, Container, Group, SVG, Defs, Style, Frame, Stack, VStack, HStack, Grid, Place, Bounds, Rotate, Anchor, Attach, Points, Absolute, Spacer, Ray, Line, UnitLine, HLine, VLine, Rect, RoundedRect, Square, Ellipse, Circle, Dot, Polyline, Polygon, Path, Command, MoveCmd, LineCmd, ArcCmd, CornerCmd, Arc, Triangle, Text, TextSize, MultiText, Emoji, Latex, TextFrame, TitleFrame, Arrow, Field, SymField, Arrowhead, ArrowPath, Node, Edge, SymPath, SymFill, SymPoly, SymPoints, DataPath, DataPoints, DataFill, Bar, VMultiBar, HMultiBar, Bars, VBars, HBars, Scale, VScale, HScale, Labels, VLabels, HLabels, Axis, HAxis, VAxis, XLabel, YLabel, Mesh, Graph, Plot, BarPlot, Legend, Note, Interactive, Variable, Slider, Toggle, List, Animation, Continuous, Discrete, gzip, zip, reshape, split, concat, pos_rect, pad_rect, rad_rect, demangle, props_repr, range, linspace, enumerate, repeat, meshgrid, lingrid, hex2rgb, rgb2hex, rgb2hsl, interpolateVectors, interpolateHex, interpolateVectorsPallet, exp, log, sin, cos, min, max, abs, pow, sqrt, floor, ceil, round, atan, norm, add, sub, mul, clamp, mask, rescale, sigmoid, logit, smoothstep, e, pi, phi, r2d, d2r, rounder, make_ticklabel, mapper, parseGum, renderElem, renderGum, renderGumSafe, parseHTML, injectImage, injectImages, injectScripts, aspect_invariant, random, uniform, normal, cumsum, Filter, Effect, DropShadow, Image, sum, prod, normalize, is_string, is_array, is_element
 };
